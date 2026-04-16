@@ -19,7 +19,7 @@
 
   outputs = inputs@{ self, nixpkgs, nix-darwin, home-manager, nix-homebrew, ... }: {
 
-    darwinConfigurations."Jakes-MacBook-Pro" = nix-darwin.lib.darwinSystem {
+    darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
       system = "aarch64-darwin";
       specialArgs = { inherit inputs; };
       modules = [

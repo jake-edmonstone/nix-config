@@ -81,7 +81,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     echo ""
     echo "  Either:"
     echo "    1. Add darwinConfigurations.\"$HOSTNAME\" to flake.nix"
-    echo "    2. Or rename this Mac: sudo scutil --set LocalHostName 'Jakes-MacBook-Pro'"
+    echo "    2. Or rename this Mac: sudo scutil --set LocalHostName 'Jakes-MacBook'"
     exit 1
   fi
 
