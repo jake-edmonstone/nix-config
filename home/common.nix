@@ -19,6 +19,8 @@
     ripgrep
     fd
     tree-sitter
+    typst
+    nodejs
   ];
 
   # ── Programs with native modules ──────────────────────────────────────────

@@ -16,8 +16,9 @@
 
   programs.zsh.enable = true;
 
-  fonts.packages = [
-    pkgs.maple-mono.NF
+  fonts.packages = with pkgs; [
+    maple-mono.NF
+    newcomputermodern   # full family (Book weight) for Typst documents
   ];
 
   # ---------------------------------------------------------------------------
