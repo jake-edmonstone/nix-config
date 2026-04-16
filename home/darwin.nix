@@ -6,6 +6,9 @@
     ../modules/ghostty.nix
   ];
 
+  home.username = "jbedm";
+  home.homeDirectory = "/Users/jbedm";
+
   home.packages = with pkgs; [
     anki-bin
   ];
