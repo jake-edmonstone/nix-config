@@ -28,7 +28,7 @@
     _rayconfig="${config.home.homeDirectory}/dotfiles-nix/dotfiles/raycast.rayconfig"
     _marker="${config.xdg.configHome}/.raycast_imported"
     if [[ -f "$_rayconfig" ]] && [[ ! -f "$_marker" ]]; then
-      open "$_rayconfig" && touch "$_marker"
+      /usr/bin/open "$_rayconfig" && touch "$_marker"
     fi
   '';
 }

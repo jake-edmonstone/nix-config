@@ -75,7 +75,8 @@
       AppleShowAllExtensions = true;
       KeyRepeat = 2;
       InitialKeyRepeat = 15;
-      ApplePressAndHoldEnabled = true;
+      ApplePressAndHoldEnabled = false; # disable diacritics popup, allow key repeat
+      AppleIconAppearanceTheme = "RegularDark"; # dark app icons
       NSAutomaticCapitalizationEnabled = true;
       NSAutomaticPeriodSubstitutionEnabled = true;
       NSAutomaticQuoteSubstitutionEnabled = false;
