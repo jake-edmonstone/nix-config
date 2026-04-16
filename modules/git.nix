@@ -82,18 +82,12 @@
     };
   };
 
+  # gh manages its own ~/.config/gh/config.yml (needs write access for auth).
+  # Don't use programs.gh.settings — it makes config.yml read-only and
+  # breaks `gh auth login` (cli/cli#4955, home-manager#1654).
   programs.gh = {
     enable = true;
-    settings = {
-      version = 1;
-      git_protocol = "https";
-      prompt = "enabled";
-      prefer_editor_prompt = "disabled";
-      color_labels = "disabled";
-      aliases = {
-        co = "pr checkout";
-      };
-    };
+    gitCredentialHelper.enable = true; # wires up git credential helper declaratively
   };
 
   home.file.".gitconfig-personal".text = ''

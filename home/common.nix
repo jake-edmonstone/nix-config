@@ -14,6 +14,11 @@
 
   home.stateVersion = "26.05";
 
+  # Enable XDG on macOS so programs (lazygit, etc.) use ~/.config/ instead of
+  # ~/Library/Application Support/. Many HM modules check config.xdg.enable
+  # to decide the config path on Darwin.
+  xdg.enable = true;
+
   home.packages = with pkgs; [
     claude-code
     ripgrep
