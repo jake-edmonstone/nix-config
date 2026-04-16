@@ -23,15 +23,12 @@
 
     setOptions = [
       "HIST_REDUCE_BLANKS"
-      "INC_APPEND_HISTORY"
+      # INC_APPEND_HISTORY dropped — mutually exclusive with SHARE_HISTORY (history.share = true)
     ];
 
     shellAliases = {
       rm = "rm -i";
       cp = "cp -i";
-      ls = "eza --icons=always";
-      la = "eza --icons=always -A";
-      ll = "eza --icons=always -Al";
       grep = "grep --ignore-case --color=auto";
       ta = "tmux attach -t";
       tn = "tmux new -s";
@@ -42,12 +39,9 @@
       fixpath = ''cd ''${PWD/#\/net\/jakee-vm\/srv\/nfs\/jakee-data/~}'';
     };
 
-    sessionVariables = {
-      XDG_CONFIG_HOME = "$HOME/.config";
-      DOTFILES = "$HOME/dotfiles-nix";
-      TYPST_ROOT = "$HOME/typst";
-      UNISONLOCALHOSTNAME = "FixedHostname";
-    } // lib.optionalAttrs isCerebras {
+    # LOCPATH references HOMEBREW_PREFIX from profileExtra, so must be a
+    # zsh-scoped sessionVariable (resolved when zsh profile runs).
+    sessionVariables = lib.optionalAttrs isCerebras {
       LOCPATH = "\${HOMEBREW_PREFIX:-}/opt/glibc/lib/locale";
     };
 

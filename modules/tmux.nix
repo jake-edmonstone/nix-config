@@ -1,4 +1,4 @@
-{ pkgs, lib, isCerebras, ... }:
+{ pkgs, isCerebras, ... }:
 
 let
   clip = if isCerebras then "xclip -selection clipboard" else "pbcopy";

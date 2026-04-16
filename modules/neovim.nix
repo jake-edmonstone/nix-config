@@ -1,11 +1,10 @@
-{ config, pkgs, ... }:
+{ config, ... }:
 
 {
   programs.neovim = {
     enable = true;
     defaultEditor = true;
-    withRuby = false;
-    withPython3 = false;
+    # withRuby/withPython3 default to false at home.stateVersion >= 26.05
   };
 
   # Deploy entire nvim config as a mutable symlink (instant edits, lazy.nvim can write lockfile)

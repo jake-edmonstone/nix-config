@@ -1,4 +1,4 @@
-{ config, pkgs, lib, isCerebras, ... }:
+{ pkgs, isCerebras, ... }:
 
 {
   imports = [
@@ -10,9 +10,16 @@
     ../modules/neovim.nix
     ../modules/claude.nix
     ../modules/scripts.nix
+    ../modules/sioyek.nix
   ];
 
   home.stateVersion = "26.05";
+
+  home.sessionVariables = {
+    DOTFILES = "$HOME/dotfiles-nix";
+    TYPST_ROOT = "$HOME/typst";
+    UNISONLOCALHOSTNAME = "FixedHostname";
+  };
 
   # Enable XDG on macOS so programs (lazygit, etc.) use ~/.config/ instead of
   # ~/Library/Application Support/. Many HM modules check config.xdg.enable
@@ -20,13 +27,12 @@
   xdg.enable = true;
 
   home.packages = with pkgs; [
-    claude-code
     ripgrep
     fd
     tree-sitter
     typst
     nodejs
-    clang-format
+    clang-tools # provides clang-format
     cmake
     docker-client
     mosh
@@ -45,7 +51,8 @@
 
   programs.eza = {
     enable = true;
-    enableZshIntegration = false; # we define our own aliases with --icons=always
+    icons = "always";
+    enableZshIntegration = true; # generates ls, ll, la, lt, lla aliases
   };
 
   programs.zoxide = {
@@ -68,8 +75,6 @@
   # ── XDG config files ─────────────────────────────────────────────────────
 
   xdg.configFile = {
-    "sioyek/keys_user.config".source = ../config/sioyek/keys_user.config;
-    "sioyek/prefs_user.config".source = ../config/sioyek/prefs_user.config;
-    "git/ignore".source = ../dotfiles/git-ignore;
+    "git/ignore".source = ../dotfiles/gitignore;
   };
 }

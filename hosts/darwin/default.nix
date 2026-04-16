@@ -12,7 +12,22 @@
   # nix-darwin's nix.* options are disabled to avoid conflicts.
   nix.enable = false;
 
-  security.pam.services.sudo_local.touchIdAuth = true;
+  security.pam.services.sudo_local = {
+    touchIdAuth = true;
+    reattach = true; # Touch ID works inside tmux via pam_reattach
+  };
+
+  system.keyboard = {
+    enableKeyMapping = true;
+    remapCapsLockToControl = true;
+    # Right Option → F19, used as Hyper trigger by Hammerspoon (modal).
+    userKeyMapping = [
+      {
+        HIDKeyboardModifierMappingSrc = 30064771302; # 0x7000000E6 right option
+        HIDKeyboardModifierMappingDst = 30064771182; # 0x70000006E F19
+      }
+    ];
+  };
 
   programs.zsh.enable = true;
 
@@ -38,11 +53,11 @@
       cleanup = "zap";
     };
     casks = [
+      "claude-code@latest"
       "docker-desktop"
       "hammerspoon"
       "obsidian"
       "orion"
-      "raycast"
       "spotify"
       "stats"
     ];
@@ -111,15 +126,6 @@
       "com.apple.finder" = {
         ShowSidebar = true;
       };
-      "com.raycast.macos" = {
-        useHyperKeyIcon = true;
-        raycastShouldFollowSystemAppearance = true;
-        raycast_hyperKey_state = {
-          enabled = true;
-          includeShiftKey = true;
-          keyCode = 230;
-        };
-      };
     };
   };
 
@@ -127,6 +133,5 @@
     /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
     killall Finder || true
     killall SystemUIServer || true
-    killall Raycast || true
   '';
 }

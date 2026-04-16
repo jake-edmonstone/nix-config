@@ -93,24 +93,11 @@
 
     # ── Static files ──────────────────────────────────────────────────────
 
-    ".claude/.gitignore".source      = ../claude/gitignore;
-    ".claude/statusline.sh"          = { source = ../claude/statusline.sh; executable = true; };
+    ".claude/statusline.sh" = { source = ../claude/statusline.sh; executable = true; };
 
-    # Agents
-    ".claude/agents/context-builder.md".source  = ../claude/agents/context-builder.md;
-    ".claude/agents/llvm-coder.md".source       = ../claude/agents/llvm-coder.md;
-    ".claude/agents/llvm-researcher.md".source  = ../claude/agents/llvm-researcher.md;
-    ".claude/agents/llvm-reviewer.md".source    = ../claude/agents/llvm-reviewer.md;
-    ".claude/agents/llvm-test-writer.md".source = ../claude/agents/llvm-test-writer.md;
-    ".claude/agents/nvim-lua-perf.md".source    = ../claude/agents/nvim-lua-perf.md;
-    ".claude/agents/typst-proofreader.md".source = ../claude/agents/typst-proofreader.md;
-    ".claude/agents/typst-reviewer.md".source   = ../claude/agents/typst-reviewer.md;
-    ".claude/agents/website-review.md".source   = ../claude/agents/website-review.md;
-
-    # Skills
-    ".claude/skills/llvm-build/SKILL.md".source   = ../claude/skills/llvm-build/SKILL.md;
-    ".claude/skills/llvm-develop/SKILL.md".source  = ../claude/skills/llvm-develop/SKILL.md;
-    ".claude/skills/llvm-lit-test/SKILL.md".source = ../claude/skills/llvm-lit-test/SKILL.md;
-    ".claude/skills/monolith-run/SKILL.md".source  = ../claude/skills/monolith-run/SKILL.md;
+    # Agents and skills — auto-picked up from the repo directories, so adding
+    # a new one just means dropping it in ../claude/agents or ../claude/skills
+    ".claude/agents" = { source = ../claude/agents; recursive = true; };
+    ".claude/skills" = { source = ../claude/skills; recursive = true; };
   };
 }

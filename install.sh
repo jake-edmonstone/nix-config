@@ -29,20 +29,27 @@ fi
 # ──────────────────────────────────────────────────────────────────────────────
 # Install Nix (Determinate Nix — native macOS package, shell installer on Linux)
 # ──────────────────────────────────────────────────────────────────────────────
-if ! command -v nix >/dev/null 2>&1; then
+if ! command -v nix >/dev/null 2>&1 && ! [ -x /nix/var/nix/profiles/default/bin/nix ]; then
   if [[ "$(uname -s)" == "Darwin" ]]; then
     msg "Installing Determinate Nix (macOS package)"
     _pkg="$(mktemp -d)/Determinate.pkg"
     curl --proto '=https' --tlsv1.2 -sSfL \
       https://install.determinate.systems/determinate-pkg/stable/Universal \
       -o "$_pkg"
-    sudo installer -verboseR -pkg "$_pkg" -target /
+    if ! sudo installer -verboseR -pkg "$_pkg" -target /; then
+      warn "macOS .pkg installer failed — falling back to shell installer"
+      curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+    fi
     rm -f "$_pkg"
   else
     msg "Installing Nix (Determinate Systems installer)"
     curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
   fi
-  # Source nix in this shell
+fi
+
+# Source nix into this shell if not already on PATH (e.g. fresh install or
+# fresh terminal session where profile hooks haven't run yet)
+if ! command -v nix >/dev/null 2>&1; then
   if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
     . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
   fi

@@ -1,14 +1,15 @@
-{ ... }:
+{ config, lib, ... }:
 
+let
+  repo = "${config.home.homeDirectory}/dotfiles-nix/scripts";
+  scripts = builtins.attrNames (builtins.readDir ../scripts);
+in
 {
-  home.file = {
-    ".local/bin/llvm-session"         = { source = ../scripts/llvm-session;         executable = true; };
-    ".local/bin/map"                  = { source = ../scripts/map;                  executable = true; };
-    ".local/bin/open-github"          = { source = ../scripts/open-github;          executable = true; };
-    ".local/bin/resume-update"        = { source = ../scripts/resume-update;        executable = true; };
-    ".local/bin/tmux-rename-session"  = { source = ../scripts/tmux-rename-session;  executable = true; };
-    ".local/bin/tmux-session-picker"  = { source = ../scripts/tmux-session-picker;  executable = true; };
-    ".local/bin/website-notes-update" = { source = ../scripts/website-notes-update; executable = true; };
-    ".local/bin/wts"                  = { source = ../scripts/wts;                  executable = true; };
-  };
+  # Mutable symlinks — scripts can be edited without rebuilding, and new ones
+  # dropped in ../scripts auto-deploy to ~/.local/bin/
+  home.file = lib.listToAttrs (map (name:
+    lib.nameValuePair ".local/bin/${name}" {
+      source = config.lib.file.mkOutOfStoreSymlink "${repo}/${name}";
+    }
+  ) scripts);
 }

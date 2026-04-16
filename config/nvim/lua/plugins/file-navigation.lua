@@ -24,28 +24,9 @@ return {
       })
     end,
     config = function(_, opts)
-      local chezmoi_mf = require("util.mini-files.chezmoi")
-      opts.content = { prefix = chezmoi_mf.prefix }
       require("mini.files").setup(opts)
       require("util.mini-files.git").setup()
       require("util.mini-files.symlinks").setup()
-
-      -- Override .tmpl extension so chezmoi templates get correct syntax in previews.
-      -- O(1) extension hash lookup — only fires for .tmpl files, no broad patterns.
-      local chezmoi_source = require("util.chezmoi").source
-      local chezmoi_target = require("util.chezmoi").to_target_name
-      vim.filetype.add({
-        extension = {
-          tmpl = function(path)
-            if path and path:find(chezmoi_source, 1, true) == 1 then
-              local target = chezmoi_target(path:match("[^/]+$") or path)
-              local ft = vim.filetype.match({ filename = target })
-              return ft and (ft .. ".chezmoitmpl") or "chezmoitmpl"
-            end
-            return "template"
-          end,
-        },
-      })
     end,
     opts = {
       options = { use_as_default_explorer = true },

@@ -1,40 +1,6 @@
 return {
   { "folke/persistence.nvim", enabled = false },
 
-  -- Resolve chezmoi-named files to their target icons globally
-  {
-    "nvim-mini/mini.icons",
-    config = function(_, opts)
-      require("mini.icons").setup(opts)
-      require("mini.icons").mock_nvim_web_devicons()
-      local chezmoi = require("util.chezmoi")
-      local orig = MiniIcons.get
-      local source = chezmoi.source
-      local find = string.find
-      local match = string.match
-      local to_target = chezmoi.to_target_name
-      MiniIcons.get = function(category, name) ---@diagnostic disable-line: duplicate-set-field
-        if category == "file" or category == "directory" then
-          -- Only transform chezmoi source paths (99%+ of calls skip instantly)
-          if find(name, source, 1, true) == 1 then
-            local basename = match(name, "[^/]+$") or name
-            local target = to_target(basename)
-            if target ~= basename then
-              return orig(category, target)
-            end
-          else
-            -- Bare basename with chezmoi prefix (e.g. from devicons shim)
-            local target = to_target(name)
-            if target ~= name then
-              return orig(category, target)
-            end
-          end
-        end
-        return orig(category, name)
-      end
-    end,
-  },
-
   {
     "nvim-mini/mini.ai",
     opts = {

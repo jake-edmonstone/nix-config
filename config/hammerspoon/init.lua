@@ -2,7 +2,16 @@
 
 hs.window.animationDuration = 0
 
-local hyper = { "cmd", "alt", "ctrl", "shift" }
+-- Right Option is remapped to F19 by nix-darwin's system.keyboard.userKeyMapping.
+-- Press-and-hold F19 to enter the modal; release exits it. Keys bound via
+-- hyper:bind() below fire while F19 is held.
+local hyper = hs.hotkey.modal.new()
+hs.hotkey.bind({}, "F19", function()
+	hyper:enter()
+end, function()
+	hyper:exit()
+end)
+
 local pendingTimer = nil
 local pendingPoll = nil
 
@@ -202,14 +211,14 @@ end
 
 -- Bind single-app hotkeys
 for key, bundleID in pairs(apps) do
-	hs.hotkey.bind(hyper, key, function()
+	hyper:bind({}, key, function()
 		switchTo(bundleID)
 	end)
 end
 
 -- Bind split-view hotkeys
 for key, split in pairs(splits) do
-	hs.hotkey.bind(hyper, key, function()
+	hyper:bind({}, key, function()
 		splitView(split.left, split.right, split.ratio)
 	end)
 end

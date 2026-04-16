@@ -17,11 +17,10 @@
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
   };
 
-  outputs = inputs@{ self, nixpkgs, nix-darwin, home-manager, nix-homebrew, ... }: {
+  outputs = { nixpkgs, nix-darwin, home-manager, nix-homebrew, ... }: {
 
     darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
       system = "aarch64-darwin";
-      specialArgs = { inherit inputs; };
       modules = [
         ./hosts/darwin
         nix-homebrew.darwinModules.nix-homebrew

@@ -21,9 +21,9 @@ sel=$(eval "$list_cmd" | fzf \
   --preview 'tmux capture-pane -t {1}: -ep 2>/dev/null || echo "(no pane)"' \
   --preview-window 'right:60%,noinfo,border-left,follow' \
   --bind 'ctrl-/:change-preview-window(hidden|right:60%)' \
-  --bind "ctrl-x:execute-silent(cur=\$(tmux display-message -p '#S') && target='{1}' && if [ \"\$target\" = \"\$cur\" ]; then tmux switch-client -n && tmux kill-session -t \"\$target\"; else tmux kill-session -t \"\$target\"; fi)+reload($list_cmd)" \
-  --bind "ctrl-r:execute(tmux-rename-session '{1}')+reload($list_cmd)" \
-  --bind "ctrl-n:become(tmux new-session -ds '{q}' && tmux switch-client -t '{q}')")
+  --bind "ctrl-x:execute-silent(cur=\$(tmux display-message -p '#S') && target={1} && if [ \"\$target\" = \"\$cur\" ]; then tmux switch-client -n && tmux kill-session -t \"\$target\"; else tmux kill-session -t \"\$target\"; fi)+reload($list_cmd)" \
+  --bind "ctrl-r:execute(tmux-rename-session {1})+reload($list_cmd)" \
+  --bind "ctrl-n:become(tmux new-session -ds {q} && tmux switch-client -t {q})")
 
 # If empty or current session (marked with tab), nothing to switch to
 [[ -z "$sel" || "$sel" == *$'\t'* ]] && exit 0

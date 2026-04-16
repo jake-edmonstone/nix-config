@@ -24,5 +24,5 @@
     };
   };
 
-  xdg.configFile."ghostty/shaders/cursor_smear.glsl".source = ../config/ghostty-shader/cursor_smear.glsl;
+  xdg.configFile."ghostty/shaders/cursor_smear.glsl".source = ../config/ghostty/shaders/cursor_smear.glsl;
 }

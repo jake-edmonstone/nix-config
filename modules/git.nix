@@ -1,73 +1,69 @@
-{ config, lib, pkgs, isCerebras, ... }:
+{ config, lib, isCerebras, ... }:
 
 {
   programs.git = {
     enable = true;
 
-    settings = {
-      user = {
-        name = if isCerebras then "Jake Edmonstone" else "jake-edmonstone";
-        email = if isCerebras then "jake.edmonstone@cerebras.net" else "jbedmonstone@gmail.com";
-      };
-      core = {
-        editor = "nvim";
-        fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
-        untrackedCache = true;
-      };
-      pull.rebase = true;
-      merge.conflictstyle = "zdiff3";
-      rebase = {
-        autostash = true;
-        updateRefs = true;
-      };
-      diff = {
-        algorithm = "histogram";
-        colorMoved = "default";
-        colorMovedWS = "allow-indentation-change";
-        renames = true;
-      };
-      rerere.enabled = true;
-      branch.sort = "-committerdate";
-      column.ui = "auto";
-      fetch = {
-        prune = true;
-        prunetags = true;
-        writeCommitGraph = true;
-      };
-      push = {
-        autoSetupRemote = true;
-        followTags = true;
-      } // lib.optionalAttrs isCerebras {
-        default = "simple";
-      };
-      help.autocorrect = "prompt";
-      feature.manyFiles = true;
-      pack.threads = 0;
-    } // lib.optionalAttrs isCerebras {
-      filter.lfs = {
-        smudge = "git-lfs smudge -- %f";
-        process = "git-lfs filter-process";
-        required = true;
-        clean = "git-lfs clean -- %f";
-      };
-      "credential \"https://github.com\"" = {
-        helper = [
-          ""
-          "!${config.home.homeDirectory}/.homebrew/bin/gh auth git-credential"
-        ];
-      };
-      "credential \"https://gist.github.com\"" = {
-        helper = [
-          ""
-          "!${config.home.homeDirectory}/.homebrew/bin/gh auth git-credential"
-        ];
-      };
-    };
+    settings = lib.mkMerge [
+      {
+        user = {
+          name = if isCerebras then "Jake Edmonstone" else "jake-edmonstone";
+          email = if isCerebras then "jake.edmonstone@cerebras.net" else "jbedmonstone@gmail.com";
+        };
+        core = {
+          editor = "nvim";
+          fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
+          untrackedCache = true;
+        };
+        pull.rebase = true;
+        merge.conflictstyle = "zdiff3";
+        rebase = {
+          autostash = true;
+          updateRefs = true;
+        };
+        diff = {
+          algorithm = "histogram";
+          colorMoved = "default";
+          colorMovedWS = "allow-indentation-change";
+          renames = true;
+        };
+        rerere.enabled = true;
+        branch.sort = "-committerdate";
+        column.ui = "auto";
+        fetch = {
+          prune = true;
+          prunetags = true;
+          writeCommitGraph = true;
+        };
+        push = {
+          autoSetupRemote = true;
+          followTags = true;
+        };
+        help.autocorrect = "prompt";
+        feature.manyFiles = true;
+        pack.threads = 0;
+      }
+      (lib.mkIf isCerebras {
+        push.default = "simple";
+        filter.lfs = {
+          smudge = "git-lfs smudge -- %f";
+          process = "git-lfs filter-process";
+          required = true;
+          clean = "git-lfs clean -- %f";
+        };
+        # Credential helpers for github.com and gist.github.com are set
+        # automatically by programs.gh.gitCredentialHelper.
+      })
+    ];
 
+    # On Cerebras, use personal identity for the dotfiles repo itself
     includes = lib.optionals isCerebras [
       {
         condition = "gitdir:${config.home.homeDirectory}/dotfiles-nix/";
-        path = "${config.home.homeDirectory}/.gitconfig-personal";
+        contents.user = {
+          name = "jake-edmonstone";
+          email = "jbedmonstone@gmail.com";
+        };
       }
     ];
   };
@@ -90,9 +86,4 @@
     gitCredentialHelper.enable = true; # wires up git credential helper declaratively
   };
 
-  home.file.".gitconfig-personal".text = ''
-    [user]
-    	name = jake-edmonstone
-    	email = jbedmonstone@gmail.com
-  '';
 }

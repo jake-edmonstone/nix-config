@@ -5,6 +5,7 @@
     enable = true;
 
     settings = {
+      disableStartupPopups = true;
       gui = {
         wrapLinesInStagingView = false;
         theme = {

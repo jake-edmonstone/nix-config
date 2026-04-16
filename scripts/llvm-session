@@ -34,7 +34,7 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   tmux select-window -t "$SESSION:1"
 fi
 
-if [ -n "$TMUX" ]; then
+if [ -n "${TMUX:-}" ]; then
   tmux switch-client -t "$SESSION"
 else
   tmux attach -t "$SESSION"
