@@ -29,7 +29,7 @@ return {
                 "nice", "-n", "15",
                 "prlimit", "--as=4294967296", "--",  -- 4GB memory limit
                 "cpulimit", "-l", "50", "--",
-                "/net/ozan-dev/srv/nfs/ozan-data/ws/workspace/llvm-project-llvmorg-18.1.7/build/bin/clangd",
+                vim.fn.expand("~/ws/clangd-18/bin/clangd"),
                 "--background-index=false",
                 "--compile-commands-dir=" .. vim.fn.getcwd(-1, -1) .. "/build-x86_64/buildroot/build-llvm/",
                 "--query-driver=/cb/nightly_builds/builds/master/latest/toolchain/sdk-x86_64/bin/x86_64-linux-g++",
