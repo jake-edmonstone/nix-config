@@ -84,7 +84,6 @@
   };
 
   home.file = {
-    ".hushlogin".text = "";
     ".clang-format".source = ../dotfiles/clang-format;
     ".vimrc".source = ../dotfiles/vimrc;
     ".p10k.zsh".source = ../dotfiles/p10k.zsh;
@@ -92,6 +91,15 @@
     ".vim/undodir/.keep".text = "";
     ".vim/backups/.keep".text = "";
   };
+
+  # ~/.hushlogin must be a REAL empty file (not a /nix/store symlink). On
+  # rootless Nix, /nix/store isn't mounted during the SSH login stage — sshd
+  # and PAM check for .hushlogin BEFORE nix-user-chroot is entered, so a
+  # symlink into the store dangles and hushlogin silently fails to suppress
+  # the MOTD / "Last login" banner.
+  home.activation.writeHushlogin = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    : > "$HOME/.hushlogin"
+  '';
 
   xdg.configFile = {
     "git/ignore".source = ../dotfiles/gitignore;

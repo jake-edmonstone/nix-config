@@ -99,13 +99,21 @@ EOF
 # Host-specific extras, written as a real file by home-manager activation
 [ -r "$HOME/.bashrc.extra" ] && . "$HOME/.bashrc.extra"
 
+# Match the host glibc's locale dir name before zsh is exec'd. RHEL/Rocky
+# ship /usr/lib/locale/en_US.utf8 (lowercase); the capitalized form doesn't
+# exist, so every LC_* category causes a nonexistent-path probe on startup.
+if [ -d /usr/lib/locale/en_US.utf8 ] && [ ! -d /usr/lib/locale/en_US.UTF-8 ]; then
+  export LANG=en_US.utf8
+fi
+
 # Switch interactive shells to zsh, entering the nix-user-chroot if installed
 # so zsh starts with /nix/store already visible. Prepend ~/.nix-profile/bin to
 # PATH before exec so `env zsh` inside the chroot finds Nix's zsh (patchelf'd
 # against Nix's glibc) — using the system zsh would fail to load plugin .so
 # files built against a newer glibc than the host ships.
 if [[ $- == *i* ]] && command -v zsh >/dev/null 2>&1; then
-  if [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix" ]; then
+  if [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix" ] \
+     && [ -z "${NIX_USER_CHROOT:-}" ]; then
     export NIX_USER_CHROOT=1
     export PATH="$HOME/.nix-profile/bin:$PATH"
     exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix" /usr/bin/env zsh -l

@@ -7,7 +7,10 @@
     # -C skips the slow insecure-directory check. Safe in single-user setups.
     completionInit = "autoload -U compinit && compinit -C";
     autosuggestion.enable = true;
-    syntaxHighlighting.enable = true;
+    # Use fast-syntax-highlighting (sourced in initContent below) instead of
+    # zsh-syntax-highlighting: drop-in replacement with materially less
+    # per-keystroke work — ~25% of interactive shell startup on cold caches.
+    syntaxHighlighting.enable = false;
     defaultKeymap = "emacs";
 
     history = {
@@ -42,6 +45,11 @@
     envExtra = ''
       # Deduplicate PATH, MANPATH, FPATH (zsh-specific; no HM equivalent)
       typeset -U path manpath fpath
+      # NOTE on $USERNAME: on SSS/LDAP hosts where the user isn't in
+      # /etc/passwd directly, nix's glibc can't resolve via nss_sss, so zsh's
+      # getpwuid-backed $USERNAME getter returns "". No assignment in zshenv
+      # can stick because zsh re-reads the getter on every access. The fix
+      # lives in ~/.p10k.zsh, which uses $USER (set by PAM) instead of %n.
     '';
 
     initContent = lib.mkMerge [
@@ -141,6 +149,12 @@
           cbllvmtest() { local j="''${1:-32}"; _cbrun "$j" test_llvm }
           cbcasmtest() { local j="''${1:-32}"; _cbrun "$j" test_casm }
         ''}
+      '')
+
+      # fast-syntax-highlighting — must come after any plugin that adds
+      # aliases/functions (fzf-tab, edit-command-line, etc.), before p10k.
+      (lib.mkOrder 1400 ''
+        source ${pkgs.zsh-fast-syntax-highlighting}/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
       '')
 
       # Powerlevel10k — after everything else

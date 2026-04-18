@@ -20,6 +20,6 @@
       marker = "#ff79c6";
       border = "#6272a4";
     };
-    defaultOptions = [ "--gutter=0" ];
+    defaultOptions = [ "--gutter=' '" ];
   };
 }

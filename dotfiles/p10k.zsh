@@ -902,15 +902,18 @@
   typeset -g POWERLEVEL9K_CONTEXT_FOREGROUND='#8be9fd'
 
   # Context format when running with privileges: bold red user, purple host.
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%B%F{#ff5555}%n%f in %F{#bd93f9}%m%f'
+  # NOTE: $USER (set by PAM) instead of %n (zsh USERNAME param) — zsh's USERNAME
+  # getter re-reads getpwuid() per access, which returns NULL under nix-glibc
+  # on SSS/LDAP hosts where the user isn't in /etc/passwd directly.
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%B%F{#ff5555}${USER}%f in %F{#bd93f9}%m%f'
   # Context format when in SSH without privileges: cyan user, purple host.
-  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_TEMPLATE='%F{#8be9fd}%n%f in %F{#bd93f9}%m%f'
+  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_TEMPLATE='%F{#8be9fd}${USER}%f in %F{#bd93f9}%m%f'
   # Default context format.
-  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='%F{#8be9fd}%n%f in %F{#bd93f9}%m%f'
+  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='%F{#8be9fd}${USER}%f in %F{#bd93f9}%m%f'
 
   # Hide context locally; on SSH only show in home directory
   typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO}_{CONTENT,VISUAL_IDENTIFIER}_EXPANSION=
-  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_CONTENT_EXPANSION='${${(M)${(%):-%~}:#\~}:+%F{#8be9fd\}%n%f in %F{#bd93f9\}%m%f in}'
+  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_CONTENT_EXPANSION='${${(M)${(%):-%~}:#\~}:+%F{#8be9fd\}${USER}%f in %F{#bd93f9\}%m%f in}'
   typeset -g POWERLEVEL9K_CONTEXT_VISUAL_IDENTIFIER_EXPANSION=
 
   # Custom icon.
