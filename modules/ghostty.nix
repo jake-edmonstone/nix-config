@@ -26,6 +26,10 @@
       shell-integration-features = "no-cursor,no-sudo,no-title";
       confirm-close-surface = false;
       bell-features = "attention";
+      # Disable Sparkle auto-update machinery: the app is nix-managed, so
+      # Sparkle-driven updates would clash. Also stops the recurring "Check
+      # for updates automatically?" prompt on launch (ghostty#9571).
+      auto-update = "off";
     };
   };
 

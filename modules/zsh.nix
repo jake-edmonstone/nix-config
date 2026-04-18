@@ -1,4 +1,4 @@
-{ config, pkgs, lib, isCerebras, ... }:
+{ config, pkgs, lib, isDarwin, isRootlessLinux, isCerebras, ... }:
 
 {
   programs.zsh = {
@@ -85,7 +85,7 @@
     initContent = lib.mkMerge [
       # Rootless Nix: re-exec into user-namespace chroot if nix-user-chroot is
       # installed and we're not already inside. No-op on macOS / daemon setups.
-      (lib.mkOrder 100 (lib.optionalString pkgs.stdenv.isLinux ''
+      (lib.mkOrder 100 (lib.optionalString isRootlessLinux ''
         # Sweep stale /tmp/nix-chroot.* dirs from sessions killed by SIGKILL/OOM/
         # abrupt SSH drop (nix-user-chroot's cleanup only runs on clean exit).
         # Same logic lives in install.sh's generated ~/.bashrc — this branch
@@ -151,8 +151,10 @@
 
       # zoxide init — sourced from a nix-built static file instead of the
       # `eval "$(zoxide init zsh)"` fork that programs.zoxide.enableZshIntegration
-      # emits. Mac only; on Cerebras zoxide is installed but not integrated.
-      (lib.mkOrder 680 (lib.optionalString (!isCerebras) ''
+      # emits. Mac only; on Cerebras zoxide is installed but not integrated
+      # (the user doesn't use z/zi there; skipping avoids adding another read
+      # path on an already-slow-fs host).
+      (lib.mkOrder 680 (lib.optionalString isDarwin ''
         source ${pkgs.runCommand "zoxide-init-zsh" {} ''
           ${pkgs.zoxide}/bin/zoxide init zsh > $out
         ''}
@@ -187,8 +189,14 @@
         zle -N edit-command-line
         bindkey '^x^e' edit-command-line
 
-        # Blinking block cursor
-        printf '\e[1 q'
+        # Re-assert blinking block cursor on every prompt. A one-shot printf at
+        # shell start gets clobbered when TUI apps (nvim, yazi, lazygit, etc.)
+        # change the cursor shape on entry and fail to fully restore it on exit
+        # — a known Ghostty quirk (ghostty-org/ghostty#9209). Ghostty's
+        # `cursor-style-blink = true` only sets the DEFAULT; DECSCUSR state
+        # from the last child TUI wins until something overrides it.
+        _cursor_blinking_block() { printf '\e[1 q' }
+        precmd_functions+=(_cursor_blinking_block)
 
         # Functions
         mkcd() { mkdir -p "$1" && cd "$1" }

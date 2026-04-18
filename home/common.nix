@@ -1,4 +1,4 @@
-{ config, lib, pkgs, isCerebras, ... }:
+{ config, lib, pkgs, isDarwin, isRootlessLinux, isCerebras, ... }:
 
 {
   imports = [

@@ -32,6 +32,14 @@
 
   outputs = { nixpkgs, determinate, nix-darwin, home-manager, nix-homebrew, claude-code, ... }: {
 
+    # Host-trait flags threaded through every module via extraSpecialArgs.
+    # - isDarwin: macOS (nix-darwin + full nix daemon).
+    # - isRootlessLinux: Linux using nix-user-chroot (no daemon, no root).
+    # - isCerebras: refinement of isRootlessLinux for the Cerebras host
+    #   specifically — implies EFS home, fast NFS at /net/jakee-vm/..., and
+    #   the corporate /cb/user_env/bashrc-latest env.
+    # Exactly one of isDarwin / isRootlessLinux should be true per host.
+    # Future daemon-Linux hosts would set both to false.
     darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
       system = "aarch64-darwin";
       modules = [
@@ -44,7 +52,11 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.backupFileExtension = "bak";
-          home-manager.extraSpecialArgs = { isCerebras = false; };
+          home-manager.extraSpecialArgs = {
+            isDarwin = true;
+            isRootlessLinux = false;
+            isCerebras = false;
+          };
           home-manager.users.jbedm = import ./home/darwin.nix;
         }
       ];
@@ -52,16 +64,18 @@
 
     # Keyed as "<user>@<hostname>" so bare `home-manager switch --flake .`
     # auto-resolves (home-manager's CLI tries $USER@$(hostname) variants).
-    # isCerebras is hardcoded true here because the attr key already names
-    # the Cerebras host — builtins.pathExists is unavailable in pure flake
-    # eval for paths outside the flake tree, so we can't detect at runtime.
+    # Flags hardcoded because the attr key already names the host.
     homeConfigurations."jakee@jakee-vm" = home-manager.lib.homeManagerConfiguration {
       pkgs = import nixpkgs {
         system = "x86_64-linux";
         config.allowUnfree = true;
         overlays = [ claude-code.overlays.default ];
       };
-      extraSpecialArgs = { isCerebras = true; };
+      extraSpecialArgs = {
+        isDarwin = false;
+        isRootlessLinux = true;
+        isCerebras = true;
+      };
       modules = [ ./home/cerebras.nix ];
     };
   };
