@@ -3,7 +3,10 @@
 {
   programs.fzf = {
     enable = true;
-    enableZshIntegration = true;
+    # Disabled: HM's implementation does `source <(fzf --zsh)` which forks fzf
+    # once per shell startup. We source the static plugin files directly from
+    # modules/zsh.nix mkOrder 650 instead. Saves ~6 ms per spawn (more under EDR).
+    enableZshIntegration = false;
     defaultCommand = "fd --hidden --strip-cwd-prefix";
     fileWidgetCommand = "fd --hidden --strip-cwd-prefix";
     changeDirWidgetCommand = "fd --type=d --hidden --strip-cwd-prefix";

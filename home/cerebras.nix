@@ -48,7 +48,19 @@ in
     # Set to 0 (or unset) to re-enable if you rely on flow/devenv.sh
     # auto-loading when cd'ing into a monolith repo.
     ENV_UPDATE_DISABLE = "1";
+
+    # Cache + compdump on the fast NFS mount (same volume as ~/.nix, which is
+    # symlinked to /net/jakee-vm/srv/nfs/jakee-data/.nix). p10k's instant-prompt
+    # cache is read on every prompt render, and .zcompdump is stat+read'd on
+    # every shell start — keeping them off the slow home NFS matters.
+    XDG_CACHE_HOME = "/net/jakee-vm/srv/nfs/jakee-data/.cache";
+    ZSH_COMPDUMP = "/net/jakee-vm/srv/nfs/jakee-data/.cache/zsh/zcompdump";
   };
+
+  # Ensure the cache dirs exist before zsh tries to write to them.
+  home.activation.createCerebrasCacheDirs = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
+    mkdir -p /net/jakee-vm/srv/nfs/jakee-data/.cache/zsh
+  '';
 
   home.activation.writeBashExtra = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     cat ${bashrcExtraCerebras} > "$HOME/.bashrc.extra"

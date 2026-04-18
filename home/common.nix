@@ -33,7 +33,6 @@
   };
 
   home.sessionPath = [
-    "${config.home.homeDirectory}/.local/share/nvim/mason/bin"
     "${config.home.homeDirectory}/.local/bin"
   ] ++ lib.optionals pkgs.stdenv.isLinux [
     # Standalone home-manager on Linux: no nix-darwin / NixOS module to set

@@ -4,8 +4,22 @@
   programs.zsh = {
     enable = true;
     enableCompletion = true;
-    # -C skips the slow insecure-directory check. Safe in single-user setups.
-    completionInit = "autoload -U compinit && compinit -C";
+    # Rebuild the compdump once per 24h; fast-path (-C) otherwise. -C skips the
+    # insecure-dir security check AND the dump-rebuild, which is the expensive
+    # part. Respects $ZSH_COMPDUMP so Cerebras can point it at local scratch.
+    # Background-compile the dump to .zwc so the next shell loads bytecode.
+    completionInit = ''
+      autoload -Uz compinit
+      _zcd=''${ZSH_COMPDUMP:-''${ZDOTDIR:-$HOME}/.zcompdump}
+      _stale=( $_zcd(Nmh+24) )
+      if [[ -s $_zcd ]] && (( ! ''${#_stale} )); then
+        compinit -C -d $_zcd
+      else
+        compinit -d $_zcd
+      fi
+      { [[ -s $_zcd && ( ! -s $_zcd.zwc || $_zcd -nt $_zcd.zwc ) ]] && zcompile $_zcd } &!
+      unset _zcd _stale
+    '';
     autosuggestion.enable = true;
     # Use fast-syntax-highlighting (sourced in initContent below) instead of
     # zsh-syntax-highlighting: drop-in replacement with materially less
@@ -14,9 +28,16 @@
     defaultKeymap = "emacs";
 
     history = {
-      size = 100000;
-      save = 100000;
-      path = "${config.home.homeDirectory}/.zsh_history";
+      # Smaller on Cerebras: SHARE_HISTORY appends+fsyncs the history file each
+      # prompt; on EFS (home dir) that's materially slow even at 100k capped.
+      size = if isCerebras then 10000 else 100000;
+      save = if isCerebras then 10000 else 100000;
+      # On Cerebras, move history off slow EFS onto the fast NFS volume where
+      # ~/.nix already lives. Mac keeps it in $HOME (fast local APFS).
+      path =
+        if isCerebras
+        then "/net/jakee-vm/srv/nfs/jakee-data/.zsh_history"
+        else "${config.home.homeDirectory}/.zsh_history";
       ignoreDups = true;
       ignoreSpace = true;
       findNoDups = true;
@@ -88,9 +109,15 @@
           source "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh"
         fi
         ${lib.optionalString isCerebras ''
-          : "''${PREV_GITTOP:= }"
-          global_bashrc="/cb/user_env/bashrc-latest"
-          [[ -r "$global_bashrc" ]] && source "$global_bashrc"
+          # Source the corporate bashrc once per process tree. Tmux splits /
+          # subshells inherit the sentinel and PATH, so they skip the 50-500 ms
+          # re-source cost. Unset _CB_BASHRC_SOURCED to force re-source.
+          if [[ -z "''${_CB_BASHRC_SOURCED:-}" ]]; then
+            : "''${PREV_GITTOP:= }"
+            global_bashrc="/cb/user_env/bashrc-latest"
+            [[ -r "$global_bashrc" ]] && source "$global_bashrc"
+            export _CB_BASHRC_SOURCED=1
+          fi
         ''}
       '')
 
@@ -100,6 +127,25 @@
         zstyle ':fzf-tab:*' use-fzf-default-opts yes
         zstyle ':fzf-tab:*' prefix ""
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+      '')
+
+      # fzf key bindings + completion — sourced from the nix store directly
+      # instead of `source <(fzf --zsh)` (the programs.fzf.enableZshIntegration
+      # default), which forks fzf once per shell startup. On macOS with EDR in
+      # the mix that's ~6 ms of pure overhead per spawn.
+      (lib.mkOrder 650 ''
+        source ${pkgs.fzf}/share/fzf/key-bindings.zsh
+        source ${pkgs.fzf}/share/fzf/completion.zsh
+      '')
+
+      # zsh-autosuggestions perf knobs — sourced after the plugin is enabled by
+      # home-manager (programs.zsh.autosuggestion.enable).
+      # MANUAL_REBIND avoids the well-known 200 ms precmd rebind (upstream #544).
+      # BUFFER_MAX_SIZE skips suggestions on huge pastes.
+      (lib.mkOrder 700 ''
+        ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+        ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+        ZSH_AUTOSUGGEST_STRATEGY=(history)
       '')
 
       (lib.mkOrder 1000 ''
@@ -182,4 +228,36 @@
       '')
     ];
   };
+
+  # Compile the big zsh source files to .zwc bytecode on every activation so
+  # zsh loads them via mmap instead of re-parsing. ~10-25 ms cold-start saving.
+  # ~/.zshrc and ~/.zshenv are symlinks into the nix store; zcompile reads the
+  # target but writes .zwc next to the symlink. We rebuild unconditionally
+  # because nix-store mtimes are frozen to epoch so a -nt check would never
+  # trigger; activations are rare (only on HM switch).
+  #
+  # On Cerebras, $HOME is slow EFS — writing .zwc there would negate the win,
+  # since reading the .zwc over EFS can cost as much as parsing the source that
+  # lives on fast NFS via the ~/.nix bind mount. So we compile to fast NFS and
+  # symlink $HOME/.FILE.zwc → that location.
+  home.activation.zcompileZshFiles = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+    if isCerebras then ''
+      zwc_dir="/net/jakee-vm/srv/nfs/jakee-data/.cache/zsh/zwc"
+      mkdir -p "$zwc_dir"
+      for name in zshrc zshenv p10k.zsh; do
+        src="$HOME/.$name"
+        out="$zwc_dir/$name.zwc"
+        if [[ -f "$src" ]]; then
+          ${pkgs.zsh}/bin/zsh -c "zcompile -R '$out' '$src'" 2>/dev/null \
+            && ln -sfn "$out" "$src.zwc"
+        fi
+      done
+    '' else ''
+      for f in "$HOME/.zshrc" "$HOME/.zshenv" "$HOME/.p10k.zsh"; do
+        if [[ -f "$f" ]]; then
+          ${pkgs.zsh}/bin/zsh -c "zcompile -R '$f'" 2>/dev/null || true
+        fi
+      done
+    ''
+  );
 }

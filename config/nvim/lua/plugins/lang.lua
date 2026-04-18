@@ -6,6 +6,11 @@ vim.filetype.add({
 })
 
 return {
+  -- LSP servers and formatters are installed via nix (modules/neovim.nix
+  -- extraPackages), not mason. Disabling mason drops ~15-22 ms from BufReadPre.
+  { "mason-org/mason.nvim",           enabled = false },
+  { "mason-org/mason-lspconfig.nvim", enabled = false },
+
   {
     "nvim-treesitter/nvim-treesitter",
     opts = {
