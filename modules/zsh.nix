@@ -1,4 +1,4 @@
-{ config, pkgs, lib, isRootlessLinux, isCerebras, ... }:
+{ config, pkgs, lib, isCerebras, ... }:
 
 {
   programs.zsh = {
@@ -73,36 +73,10 @@
     '';
 
     initContent = lib.mkMerge [
-      # Rootless Nix: re-exec into user-namespace chroot if nix-user-chroot is
-      # installed and we're not already inside. No-op on macOS / daemon setups.
-      (lib.mkOrder 100 (lib.optionalString isRootlessLinux ''
-        # Sweep stale /tmp/nix-chroot.* dirs from sessions killed by SIGKILL/OOM/
-        # abrupt SSH drop (nix-user-chroot's cleanup only runs on clean exit).
-        # Same logic lives in install.sh's generated ~/.bashrc — this branch
-        # covers zsh-as-login-shell hosts where bash never runs. Single grep
-        # over all /proc/*/mountinfo: ~10x faster than a per-file awk loop.
-        if [[ -z "''${NIX_USER_CHROOT:-}" ]]; then
-          _live_roots=$(grep -ohE '/tmp/nix-chroot\.[A-Za-z0-9]+' /proc/[0-9]*/mountinfo 2>/dev/null | sort -u)
-          _now=$(date +%s 2>/dev/null)
-          for _dir in /tmp/nix-chroot.*(N); do
-            [[ -d "$_dir" && -O "$_dir" ]] || continue
-            _mt=$(stat -c %Y "$_dir" 2>/dev/null) || continue
-            (( _now - _mt < 5 )) && continue
-            print -r -- "$_live_roots" | grep -qxF "$_dir" && continue
-            rm -rf -- "$_dir" 2>/dev/null || true
-          done
-          unset _live_roots _dir _now _mt
-        fi
-
-        if [[ -x "$HOME/.local/bin/nix-user-chroot" \
-           && -d "$HOME/.nix" \
-           && -z "''${NIX_USER_CHROOT:-}" ]]; then
-          export NIX_USER_CHROOT=1
-          exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix" /usr/bin/env zsh -l "$@"
-        fi
-      ''))
-
-      # Instant prompt — must be very first
+      # Instant prompt — must be very first. Sandbox entry is handled by the
+      # real ~/.bashrc (bash login via .bash_profile) or ~/.zprofile (zsh
+      # login) → ~/.nix-bootstrap.sh chain written by install.sh, so by the
+      # time this HM-managed .zshrc is read we're already inside the sandbox.
       (lib.mkOrder 500 ''
         if [[ -r "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh" ]]; then
           source "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh"
