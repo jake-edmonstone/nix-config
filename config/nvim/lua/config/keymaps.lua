@@ -46,6 +46,7 @@ vim.keymap.set("n", "<leader>gq", function()
 end, { desc = "Git conflicts to quickfix" })
 
 vim.keymap.set("n", "U", function()
+  vim.cmd.packadd("nvim.undotree") -- built-in optional plugin; load on first press
   require("undotree").open({ command = "50vnew" })
 end, { desc = "Undo tree", silent = true })
 

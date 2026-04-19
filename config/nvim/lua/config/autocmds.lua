@@ -8,11 +8,16 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Reload files changed outside of Neovim
-vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
+-- Extend LazyVim's built-in checktime autocmd (which listens on
+-- FocusGained/TermClose/TermLeave) with BufEnter, so switching BACK to a buffer
+-- whose underlying file was modified outside nvim also triggers a reload.
+-- LazyVim intentionally omits BufEnter from its default set — this is the delta.
+-- Guard: skip in command-line mode (don't redraw while you're typing :), and
+-- skip non-file buffers (terminals, quickfix, help, oil/mini-files, etc.).
+vim.api.nvim_create_autocmd("BufEnter", {
   group = augroup,
   callback = function()
-    if vim.api.nvim_get_mode().mode ~= "c" then
+    if vim.o.buftype ~= "nofile" and vim.api.nvim_get_mode().mode ~= "c" then
       vim.cmd.checktime()
     end
   end,

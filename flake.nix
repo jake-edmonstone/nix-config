@@ -28,9 +28,19 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Tracks upstream openai/codex hourly (native Rust binary, no Node dep).
+    # Same maintainer / pattern as claude-code above.
+    codex-cli = {
+      url = "github:sadjow/codex-cli-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { nixpkgs, determinate, nix-darwin, home-manager, nix-homebrew, claude-code, ... }: {
+  outputs = { nixpkgs, determinate, nix-darwin, home-manager, nix-homebrew, claude-code, codex-cli, ... }:
+    let
+      sharedOverlays = [ claude-code.overlays.default codex-cli.overlays.default ];
+    in {
 
     # Host-trait flags threaded through every module via extraSpecialArgs.
     # - isDarwin: macOS (nix-darwin + full nix daemon).
@@ -47,7 +57,7 @@
         determinate.darwinModules.default
         nix-homebrew.darwinModules.nix-homebrew
         home-manager.darwinModules.home-manager
-        { nixpkgs.overlays = [ claude-code.overlays.default ]; }
+        { nixpkgs.overlays = sharedOverlays; }
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
@@ -69,7 +79,7 @@
       pkgs = import nixpkgs {
         system = "x86_64-linux";
         config.allowUnfree = true;
-        overlays = [ claude-code.overlays.default ];
+        overlays = sharedOverlays;
       };
       extraSpecialArgs = {
         isDarwin = false;

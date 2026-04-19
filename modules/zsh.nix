@@ -1,4 +1,4 @@
-{ config, pkgs, lib, isDarwin, isRootlessLinux, isCerebras, ... }:
+{ config, pkgs, lib, isRootlessLinux, isCerebras, ... }:
 
 {
   programs.zsh = {
@@ -28,24 +28,14 @@
     defaultKeymap = "emacs";
 
     history = {
-      # Smaller on Cerebras: SHARE_HISTORY appends+fsyncs the history file each
-      # prompt; on EFS (home dir) that's materially slow even at 100k capped.
-      size = if isCerebras then 10000 else 100000;
-      save = if isCerebras then 10000 else 100000;
-      # On Cerebras, move history off slow EFS onto the fast NFS volume where
-      # ~/.nix already lives. Mac keeps it in $HOME (fast local APFS).
-      path =
-        if isCerebras
-        then "/net/jakee-vm/srv/nfs/jakee-data/.zsh_history"
-        else "${config.home.homeDirectory}/.zsh_history";
+      size = 100000;
+      save = 100000;
       ignoreDups = true;
       ignoreSpace = true;
       findNoDups = true;
       extended = true;
       share = true;
     };
-
-    historySubstringSearch.enable = false;
 
     setOptions = [
       "HIST_REDUCE_BLANKS"
@@ -58,9 +48,9 @@
       tn = "tmux new -s";
       tls = "tmux ls";
       trn = "tmux rename-session";
-      lg = "lazygit";
-    } // lib.optionalAttrs isCerebras {
-      fixpath = ''cd ''${PWD/#\/net\/jakee-vm\/srv\/nfs\/jakee-data/~}'';
+      # NB: no `lg` alias — programs.lazygit already injects an `lg()` zsh
+      # function that cd's back if lazygit wrote a newdir sentinel. A plain
+      # alias would be shadowed anyway (functions beat aliases in zsh resolution).
     };
 
     envExtra = ''
@@ -117,17 +107,6 @@
         if [[ -r "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh" ]]; then
           source "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh"
         fi
-        ${lib.optionalString isCerebras ''
-          # Source the corporate bashrc once per process tree. Tmux splits /
-          # subshells inherit the sentinel and PATH, so they skip the 50-500 ms
-          # re-source cost. Unset _CB_BASHRC_SOURCED to force re-source.
-          if [[ -z "''${_CB_BASHRC_SOURCED:-}" ]]; then
-            : "''${PREV_GITTOP:= }"
-            global_bashrc="/cb/user_env/bashrc-latest"
-            [[ -r "$global_bashrc" ]] && source "$global_bashrc"
-            export _CB_BASHRC_SOURCED=1
-          fi
-        ''}
       '')
 
       # fzf key bindings + completion — sourced from the nix store directly
@@ -149,25 +128,14 @@
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
       '')
 
-      # zoxide init — sourced from a nix-built static file instead of the
-      # `eval "$(zoxide init zsh)"` fork that programs.zoxide.enableZshIntegration
-      # emits. Mac only; on Cerebras zoxide is installed but not integrated
-      # (the user doesn't use z/zi there; skipping avoids adding another read
-      # path on an already-slow-fs host).
-      (lib.mkOrder 680 (lib.optionalString isDarwin ''
-        source ${pkgs.runCommand "zoxide-init-zsh" {} ''
-          ${pkgs.zoxide}/bin/zoxide init zsh > $out
-        ''}
-      ''))
-
-      # zsh-autosuggestions perf knobs — sourced after the plugin is enabled by
-      # home-manager (programs.zsh.autosuggestion.enable).
+      # zsh-autosuggestions perf knobs — emitted before HM's plugin-source line
+      # so they take effect on first precmd.
       # MANUAL_REBIND avoids the well-known 200 ms precmd rebind (upstream #544).
       # BUFFER_MAX_SIZE skips suggestions on huge pastes.
+      # (STRATEGY=(history) is already HM's default via programs.zsh.autosuggestion.strategy.)
       (lib.mkOrder 700 ''
         ZSH_AUTOSUGGEST_MANUAL_REBIND=1
         ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
-        ZSH_AUTOSUGGEST_STRATEGY=(history)
       '')
 
       (lib.mkOrder 1000 ''
@@ -207,40 +175,6 @@
             *)      echo "rebuild: unsupported OS: $(uname -s)" >&2; return 1 ;;
           esac
         }
-
-        ${lib.optionalString isCerebras ''
-          csapiformat() {
-            local base="/net/jakee-dev/srv/nfs/jakee-data/ws/llvm-project$1/cerebras/csapi"
-            "$base/build/run_in_docker.sh" -r "$base" -w "$base" \
-              "$base/scripts/format_py.sh" "$base/csapi/"
-          }
-          show_bits() {
-            python3 -c '
-          import sys
-          h = sys.argv[1].lower().removeprefix("0x")
-          v = int(h, 16)
-          width = 64 if len(h) > 8 else 32
-          bits = f"{v:0{width}b}"
-          print(" ".join(f"{i:2d}" for i in range(width-1, -1, -1)))
-          print("-" * (3*width))
-          print(" ".join(f"{b:>2}" for b in bits))
-          ' "$1"
-          }
-          _cbrun() {
-            local cores="$1" target="$2"; shift 2
-            MONOLITH_INSTALLROOT="$HOME/ws/monolith-install" \
-            INSTALLROOT="$(pwd)/build-install" \
-            cbrun -- srun -c"$cores" make "$@" "$target"
-          }
-          cbformat()   { local j="''${1:-16}"; _cbrun "$j" format }
-          cbclean()    { local j="''${1:-16}"; _cbrun "$j" clean }
-          cbinstall()  { local j="''${1:-32}"; _cbrun "$j" install }
-          cbtest()     { local j="''${1:-32}"; _cbrun "$j" test }
-          cbtestci()   { local j="''${1:-32}"; _cbrun "$j" test_ci }
-          cbbuild()    { local j="''${1:-32}"; _cbrun "$j" build -j"$j" }
-          cbllvmtest() { local j="''${1:-32}"; _cbrun "$j" test_llvm }
-          cbcasmtest() { local j="''${1:-32}"; _cbrun "$j" test_casm }
-        ''}
       '')
 
       # fast-syntax-highlighting — must come after any plugin that adds

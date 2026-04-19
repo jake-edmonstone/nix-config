@@ -1,66 +1,49 @@
-{ config, lib, isCerebras, ... }:
+{ ... }:
 
 {
   programs.git = {
     enable = true;
 
-    settings = lib.mkMerge [
-      {
-        user = {
-          name = if isCerebras then "Jake Edmonstone" else "jake-edmonstone";
-          email = if isCerebras then "jake.edmonstone@cerebras.net" else "jbedmonstone@gmail.com";
-        };
-        core = {
-          editor = "nvim";
-          fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
-          untrackedCache = true;
-        };
-        pull.rebase = true;
-        merge.conflictstyle = "zdiff3";
-        rebase = {
-          autostash = true;
-          updateRefs = true;
-        };
-        diff = {
-          algorithm = "histogram";
-          colorMoved = "default";
-          colorMovedWS = "allow-indentation-change";
-          renames = true;
-        };
-        rerere.enabled = true;
-        branch.sort = "-committerdate";
-        column.ui = "auto";
-        fetch = {
-          prune = true;
-          prunetags = true;
-          writeCommitGraph = true;
-        };
-        push = {
-          autoSetupRemote = true;
-          followTags = true;
-        };
-        help.autocorrect = "prompt";
-        feature.manyFiles = true;
-        pack.threads = 0;
-      }
-      (lib.mkIf isCerebras {
-        push.default = "simple";
-      })
-    ];
-
-    # On Cerebras, use personal identity for the dotfiles repo itself
-    includes = lib.optionals isCerebras [
-      {
-        condition = "gitdir:${config.home.homeDirectory}/dotfiles-nix/";
-        contents.user = {
-          name = "jake-edmonstone";
-          email = "jbedmonstone@gmail.com";
-        };
-      }
-    ];
+    settings = {
+      user = {
+        name = "jake-edmonstone";
+        email = "jbedmonstone@gmail.com";
+      };
+      core = {
+        editor = "nvim";
+        fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
+      };
+      pull.rebase = true;
+      merge.conflictstyle = "zdiff3";
+      rebase = {
+        autostash = true;
+        updateRefs = true;
+      };
+      diff = {
+        algorithm = "histogram";
+        colorMoved = "default";
+        colorMovedWS = "allow-indentation-change";
+        renames = true;
+      };
+      rerere.enabled = true;
+      branch.sort = "-committerdate";
+      column.ui = "auto";
+      fetch = {
+        prune = true;
+        prunetags = true;
+        writeCommitGraph = true;
+      };
+      push = {
+        autoSetupRemote = true;
+        followTags = true;
+        # push.default = "simple" is git's default since 2.0 (2014); no need to set it.
+      };
+      help.autocorrect = "prompt";
+      # feature.manyFiles implies pack.threads=0, index.version=4, core.untrackedCache=true
+      # — so we don't set those explicitly. https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
+      feature.manyFiles = true;
+    };
   };
-
-  programs.git.lfs.enable = isCerebras;
 
   programs.delta = {
     enable = true;

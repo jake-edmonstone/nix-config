@@ -44,7 +44,6 @@ return {
                 "--malloc-trim",
                 "-j=1",
               },
-              mason = false,
               root_markers = { ".git" },
             },
           },

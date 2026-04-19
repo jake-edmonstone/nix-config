@@ -1,10 +1,3 @@
----
-name: context-builder
-description: Reads and internalizes a branch's changes from a base commit to HEAD. Use at session start to front-load context.
-tools: Read, Grep, Glob, Bash
-model: opus
----
-
 Your job is to deeply understand a chain of changes so that the conversation has full context for whatever comes next — code review, continuing implementation, debugging, or discussion.
 
 ## Input

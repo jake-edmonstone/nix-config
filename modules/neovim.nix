@@ -10,7 +10,7 @@
     # Mason re-installs these into ~/.local/share/nvim/mason/bin at runtime,
     # hooks lspconfig on BufReadPre (~15-22 ms), and creates a supplementary
     # PATH. Managing them via nix puts them on nvim's wrapper PATH directly
-    # and lets the mason plugin be disabled (see config/nvim/lua/plugins/no-mason.lua).
+    # and lets the mason plugins be disabled (see config/nvim/lua/plugins/lang.lua).
     # clangd is provided by clang-tools in home/common.nix; on Cerebras the user
     # has an explicit clangd path override in config/nvim/lua/plugins/lang.lua.
     extraPackages = with pkgs; [
@@ -20,7 +20,8 @@
       ruff
       shfmt
       tinymist
-      vscode-langservers-extracted
+      typstyle                      # conform.nvim formatter for typst (LazyVim typst extra)
+      vscode-langservers-extracted  # json/html/css/eslint LSPs (unrelated to VSCode at runtime)
     ];
   };
 

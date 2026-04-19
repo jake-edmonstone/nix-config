@@ -14,9 +14,9 @@ export GITTOP=/net/jakee-dev/srv/nfs/jakee-data/ws/monolith ; source /net/jakee-
 
 If no `$ARGUMENTS` are provided, ask the user what command they want to run.
 
-## Common usage examples
+## Common argument examples
 
-- `/monolith-run pytest --all-cs-targets tests/ws/kernel/test_039_ws_io/ --collectonly -q`
-- `/monolith-run CS_TARGET=SDR pytest -m postbuild tests/ws/kernel/test_039_ws_io/`
-- `/monolith-run cmake --build obj --target pb_app_cluster_mgmt_py`
-- `/monolith-run make cmake_build`
+- `pytest --all-cs-targets tests/ws/kernel/test_039_ws_io/ --collectonly -q`
+- `CS_TARGET=SDR pytest -m postbuild tests/ws/kernel/test_039_ws_io/`
+- `cmake --build obj --target pb_app_cluster_mgmt_py`
+- `make cmake_build`

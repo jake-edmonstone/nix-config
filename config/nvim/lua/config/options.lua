@@ -30,5 +30,5 @@ vim.o.guicursor =
 
 vim.g.root_spec = { "cwd" } -- use cwd as root, not git repo
 
--- load built-in undo tree visualizer
-vim.cmd.packadd("nvim.undotree")
+-- (nvim.undotree is a built-in optional plugin; loaded on-demand from the `U`
+-- keymap in config/keymaps.lua via packadd, so we don't pay for it at startup.)
