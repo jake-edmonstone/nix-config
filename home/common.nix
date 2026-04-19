@@ -63,8 +63,6 @@
     tree
     unison
     wget
-  ] ++ lib.optionals pkgs.stdenv.isLinux [
-    xclip # tmux copy-mode on Linux pipes to xclip; Rocky 9 doesn't ship it
   ];
 
   programs.bat = {

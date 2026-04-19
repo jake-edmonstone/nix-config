@@ -72,9 +72,11 @@
       ];
     };
 
-    # Keyed as "<user>@<hostname>" so bare `home-manager switch --flake .`
-    # auto-resolves (home-manager's CLI tries $USER@$(hostname) variants).
-    # Flags hardcoded because the attr key already names the host.
+    # Keyed as "<user>@<hostname>" where hostname is stable, so bare
+    # `home-manager switch --flake .` auto-resolves via $USER@$(hostname).
+    # On hosts where hostname churns (UWaterloo student CS), the attr uses a
+    # logical name instead and `rebuild()` reads REBUILD_FLAKE_ATTR from
+    # home.sessionVariables to target it.
     homeConfigurations."jakee@jakee-vm" = home-manager.lib.homeManagerConfiguration {
       pkgs = import nixpkgs {
         system = "x86_64-linux";
@@ -87,6 +89,20 @@
         isCerebras = true;
       };
       modules = [ ./home/cerebras.nix ];
+    };
+
+    homeConfigurations."jbedmons@uwaterloo" = home-manager.lib.homeManagerConfiguration {
+      pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        config.allowUnfree = true;
+        overlays = sharedOverlays;
+      };
+      extraSpecialArgs = {
+        isDarwin = false;
+        isRootlessLinux = true;
+        isCerebras = false;
+      };
+      modules = [ ./home/uwaterloo.nix ];
     };
   };
 }

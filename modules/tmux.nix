@@ -1,8 +1,5 @@
 { pkgs, ... }:
 
-let
-  clip = if pkgs.stdenv.isDarwin then "pbcopy" else "xclip -selection clipboard";
-in
 {
   programs.tmux = {
     enable = true;
@@ -31,19 +28,26 @@ in
       set -as terminal-overrides ',xterm-ghostty:Tc'
       set -as terminal-overrides ',xterm-256color:Tc'
       set -as terminal-features 'xterm-ghostty:RGB:usstyle:overline:strikethrough:extkeys'
+      # Tell tmux every outer terminal supports OSC52 clipboard. Combined with
+      # `set-clipboard on` below, copying in copy-mode sends an OSC52 escape so
+      # the outer terminal emulator (Ghostty locally, whatever's connected over
+      # ssh remotely) writes to the system clipboard. No xclip/xsel/pbcopy
+      # dependency — works headlessly, works over ssh, works in tmux splits.
+      set -ag terminal-features '*:clipboard'
       set -s extended-keys on
 
       # Bell
       set -g bell-action any
       set -g visual-bell off
 
-      # Copy Mode
+      # Copy Mode — OSC52 via set-clipboard on (see terminal-features above).
+      # copy-selection-and-cancel writes to tmux's buffer AND sends OSC52.
       unbind [
       bind Escape copy-mode
       bind -T copy-mode-vi v send -X begin-selection
-      bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "${clip}"
+      bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel
       bind P paste-buffer
-      bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "${clip}"
+      bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
 
       # Sensible binds
       bind r source-file ~/.config/tmux/tmux.conf \; display "Reloaded!"

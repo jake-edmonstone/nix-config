@@ -168,10 +168,15 @@
 
         # Functions
         mkcd() { mkdir -p "$1" && cd "$1" }
+        # On hosts where $USER@$(hostname) matches the flake attr, leave
+        # REBUILD_FLAKE_ATTR unset and home-manager's auto-resolve picks it up.
+        # On hosts where hostname churns (UWaterloo student CS: interchangeable
+        # ubuntu2404-NNN boxes), the host sets REBUILD_FLAKE_ATTR in
+        # home.sessionVariables so this function targets the right config.
         rebuild() {
           case "$(uname -s)" in
             Darwin) sudo -H "$(command -v darwin-rebuild)" switch "$@" ;;
-            Linux)  home-manager switch --flake "$DOTFILES" "$@" ;;
+            Linux)  home-manager switch --flake "$DOTFILES''${REBUILD_FLAKE_ATTR:+#$REBUILD_FLAKE_ATTR}" "$@" ;;
             *)      echo "rebuild: unsupported OS: $(uname -s)" >&2; return 1 ;;
           esac
         }
