@@ -1,9 +1,10 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 
 {
   programs.tmux = {
     enable = true;
     terminal = "tmux-256color";
+    shell = "${config.programs.zsh.package}/bin/zsh";
     keyMode = "vi";
     mouse = true;
     baseIndex = 1;
