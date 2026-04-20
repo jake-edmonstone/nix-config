@@ -6,6 +6,13 @@
     defaultEditor = true;
     # withRuby/withPython3 default to false at home.stateVersion >= 26.05
 
+    # Keep ~/.config/nvim fully owned by our own repo. Without this,
+    # programs.neovim writes an init.lua (provider disables) into
+    # .config/nvim/init.lua, which collides with our whole-dir symlink.
+    # sideloadInitLua = true skips writing init.lua and passes the same
+    # content via `--cmd 'lua dofile(...)'` (additive, doesn't shadow ours).
+    sideloadInitLua = true;
+
     # LSP servers + formatters, declared declaratively instead of mason.
     # Mason re-installs these into ~/.local/share/nvim/mason/bin at runtime,
     # hooks lspconfig on BufReadPre (~15-22 ms), and creates a supplementary

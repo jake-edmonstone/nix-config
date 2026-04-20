@@ -30,6 +30,8 @@
   home.sessionVariables = {
     DOTFILES = "${config.home.homeDirectory}/nix-config";
     TYPST_ROOT = "${config.home.homeDirectory}/typst";
+    TYPST_IGNORE_SYSTEM_FONTS = "true";
+    TYPST_FONT_PATHS = "/Library/Fonts/Nix Fonts";
     UNISONLOCALHOSTNAME = "FixedHostname";
   };
 
