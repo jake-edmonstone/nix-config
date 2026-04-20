@@ -73,24 +73,21 @@ install_nix_linux_daemon() {
 write_linux_bootstrap() {
   # Home-manager writes ~/.zshrc, ~/.zshenv, etc. as symlinks into /nix/store,
   # which isn't visible at SSH login before the rootless-Nix sandbox is entered.
-  # We write five small REAL files (not store symlinks) to bootstrap sandbox
-  # entry whichever shell the user's login account uses:
-  #   ~/.nix-bootstrap.sh               shared logic: locale fix + sandbox exec
-  #   ~/.bash_profile                   stub sourcing ~/.bashrc
-  #   ~/.bashrc                         system bashrc + host extras + nix-bootstrap
-  #   ~/.zprofile                       nix-bootstrap (fires pre-HM-activation)
-  #   ~/.config/zsh/.zprofile           nix-bootstrap (fires post-activation when
-  #                                     HM's xdg stub .zshenv exports ZDOTDIR on
-  #                                     Debian/Ubuntu — mirrored so either path
-  #                                     zsh picks up the bootstrap)
+  # Bash is the login shell on every rootless host we support, so we only write
+  # bash bootstrap files (real, not store symlinks) — the bash → .nix-bootstrap
+  # → `exec zsh -l` chain lands us inside the sandbox where HM's zsh config is
+  # visible, without needing a parallel .zprofile / ZDOTDIR-mirror bootstrap.
+  #   ~/.nix-bootstrap.sh   shared logic: locale fix + sandbox exec → zsh -l
+  #   ~/.bash_profile       stub sourcing ~/.bashrc
+  #   ~/.bashrc             system bashrc + host extras + nix-bootstrap
   # Host-specific pre-sandbox env (e.g. Cerebras corp bashrc for non-interactive
   # ssh cmds) goes in ~/.bashrc.extra, materialized by a per-host HM activation.
   # Also back up legacy ~/.gitconfig — if present, it overrides HM's
   # ~/.config/git/config (git's precedence) and forces stale user.name/email.
-  msg "Writing bootstrap (.nix-bootstrap.sh, .bash_profile, .bashrc, .zprofile + .zprofile mirror)"
+  msg "Writing bootstrap (.nix-bootstrap.sh, .bash_profile, .bashrc)"
 
   # One-time backup of any pre-existing non-managed file before we stomp it
-  for f in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.zprofile" "$HOME/.gitconfig"; do
+  for f in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.gitconfig"; do
     if [[ -f "$f" && ! -L "$f" && ! -e "$f.before-nix" ]] \
       && ! grep -q 'dotfiles-nix install.sh' "$f" 2>/dev/null; then
       cp "$f" "$f.before-nix"
@@ -106,10 +103,9 @@ write_linux_bootstrap() {
 
   cat > "$HOME/.nix-bootstrap.sh" <<'EOF'
 # Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
-# Sourced by ~/.bashrc and ~/.zprofile on rootless-Nix hosts. Enters the Nix
-# sandbox (nix-portable or nix-user-chroot, whichever is installed) and
-# re-execs as an interactive zsh login shell. POSIX-compatible so both bash
-# and zsh can source it.
+# Sourced by ~/.bashrc on rootless-Nix hosts. Enters the Nix sandbox
+# (nix-portable or nix-user-chroot, whichever is installed) and re-execs as
+# an interactive zsh login shell.
 
 # Locale fix — RHEL/Rocky ship /usr/lib/locale/en_US.utf8 (lowercase) but not
 # en_US.UTF-8, so a default uppercase LANG causes ~240 wasted glibc probes
@@ -171,20 +167,6 @@ EOF
 [ -r "$HOME/.bashrc.extra" ] && . "$HOME/.bashrc.extra"
 [ -r "$HOME/.nix-bootstrap.sh" ] && . "$HOME/.nix-bootstrap.sh"
 EOF
-
-  cat > "$HOME/.zprofile" <<'EOF'
-# Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
-[ -r "$HOME/.nix-bootstrap.sh" ] && . "$HOME/.nix-bootstrap.sh"
-EOF
-
-  # Mirror to HM's xdg ZDOTDIR. When HM runs with xdg.enable = true, the stub
-  # .zshenv it writes at $HOME exports ZDOTDIR=$HOME/.config/zsh — but on
-  # Debian/Ubuntu hosts zsh evidently processes that stub partially even when
-  # it dangles (the shell semantics here are fuzzy), so .zprofile lookup
-  # happens under $ZDOTDIR instead of $HOME. Writing the same bootstrap to
-  # both locations makes the lookup path irrelevant.
-  mkdir -p "$HOME/.config/zsh"
-  cp "$HOME/.zprofile" "$HOME/.config/zsh/.zprofile"
 }
 
 install_nix_linux_userns() {

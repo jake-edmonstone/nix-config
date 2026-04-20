@@ -90,9 +90,9 @@
 
     initContent = lib.mkMerge [
       # Instant prompt — must be very first. Sandbox entry is handled by the
-      # real ~/.bashrc (bash login via .bash_profile) or ~/.zprofile (zsh
-      # login) → ~/.nix-bootstrap.sh chain written by install.sh, so by the
-      # time this HM-managed .zshrc is read we're already inside the sandbox.
+      # install.sh-written ~/.bash_profile → ~/.bashrc → ~/.nix-bootstrap.sh
+      # chain, which execs zsh -l inside the sandbox, so by the time this
+      # HM-managed .zshrc is read we're already inside.
       (lib.mkOrder 500 ''
         if [[ -r "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh" ]]; then
           source "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh"
