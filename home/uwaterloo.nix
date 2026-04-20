@@ -4,6 +4,7 @@
   imports = [
     ./common.nix
     ../hosts/uwaterloo
+    ../modules/claude-code-legacy.nix
   ];
 
   # Student CS machines are interchangeable (ubuntu2404-001, ubuntu2404-002, …)

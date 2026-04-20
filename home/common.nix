@@ -1,4 +1,4 @@
-{ config, lib, pkgs, isRootlessLinux, ... }:
+{ config, lib, pkgs, isDarwin, isRootlessLinux, isCerebras, ... }:
 
 {
   imports = [
@@ -52,7 +52,6 @@
     tree-sitter
     trash-cli
     cpulimit
-    claude-code # from sadjow/claude-code-nix overlay — tracks upstream hourly
     typst
     nodejs
     clang-tools # provides clang-format
@@ -63,6 +62,12 @@
     tree
     unison
     wget
+  ] ++ lib.optionals (isDarwin || isCerebras) [
+    # sadjow/claude-code-nix overlay — tracks upstream hourly (Bun native).
+    # Omitted on UW (nix-portable+proot): the Bun binary's TTY/raw-mode
+    # syscalls deadlock under proot's ptrace interception; UW gets the
+    # pinned pure-JS v2.1.112 via modules/claude-code-legacy.nix instead.
+    pkgs.claude-code
   ];
 
   programs.bat = {
