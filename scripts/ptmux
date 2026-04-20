@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Persistent tmux — starts the server inside user@$UID.service (via systemd-run
+# --scope) so it survives SSH logout. The stock `tmux` daemonizes into the
+# SSH session cgroup, which systemd SIGTERMs when the session ends.
+# Needed for nix-portable hosts; harmless elsewhere. Requires `loginctl
+# enable-linger` (user manager has to outlive the session too).
+set -euo pipefail
+
+if [[ "$(loginctl show-user "$USER" --property=Linger --value 2>/dev/null)" != "yes" ]]; then
+  printf 'ptmux: linger disabled — server would die at logout.\n  run: loginctl enable-linger\n' >&2
+  exit 1
+fi
+
+# Existing server? Just run as client — the cgroup was decided at server start.
+if tmux has-session 2>/dev/null; then
+  exec tmux "$@"
+fi
+
+exec systemd-run --user --scope --quiet --collect -- tmux "$@"
