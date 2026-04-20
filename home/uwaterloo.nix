@@ -1,4 +1,4 @@
-{ ... }:
+{ config, lib, ... }:
 
 {
   imports = [
@@ -18,4 +18,17 @@
   # doesn't handle `cp -p` on setup files correctly). Disable explicitly —
   # UW CS is headless ssh anyway, no GPU to wrap.
   targets.genericLinux.gpu.enable = false;
+
+  # Claude Code TUI input freezes on UW: Ink's mouse-tracking init over SSH
+  # through proot breaks keystroke handling — TUI renders but never accepts
+  # input and burns 90%+ CPU. Disable mouse tracking on this host only.
+  # See anthropics/claude-code#23326, #17787, #22948.
+  # Cerebras works over ssh without this, so keep the default (mouse on)
+  # there — presumably because nix-user-chroot doesn't munge terminal ioctls
+  # the way nix-portable's proot does.
+  home.file.".claude/settings.json".text = lib.mkForce (builtins.toJSON (
+    lib.recursiveUpdate
+      (import ../config/claude/settings.nix { inherit config; })
+      { env.CLAUDE_CODE_DISABLE_MOUSE = "1"; }
+  ));
 }
