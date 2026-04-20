@@ -75,6 +75,7 @@
     casks = [
       "docker-desktop"
       "hammerspoon"
+      "keyboardcleantool"
       "obsidian"
       "orion"
       "spotify"
