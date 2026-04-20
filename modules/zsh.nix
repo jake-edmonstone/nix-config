@@ -28,8 +28,10 @@
     defaultKeymap = "emacs";
 
     history = {
-      size = 100000;
-      save = 100000;
+      # mkDefault so per-host overrides (e.g. Cerebras shrinks to 10k and
+      # relocates $HISTFILE to fast NFS) don't need lib.mkForce.
+      size = lib.mkDefault 100000;
+      save = lib.mkDefault 100000;
       ignoreDups = true;
       ignoreSpace = true;
       findNoDups = true;
