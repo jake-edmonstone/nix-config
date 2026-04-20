@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
   programs.git = {
@@ -10,6 +10,13 @@
       user = {
         name = lib.mkDefault "jake-edmonstone";
         email = lib.mkDefault "jbedmonstone@gmail.com";
+      };
+      # gh credential helper — wired manually because home-manager's programs.gh
+      # module unconditionally symlinks ~/.config/gh/config.yml into the read-only
+      # nix store, which breaks `gh auth login` (cli/cli#4955, home-manager#1654).
+      credential = {
+        "https://github.com".helper = [ "" "${pkgs.gh}/bin/gh auth git-credential" ];
+        "https://gist.github.com".helper = [ "" "${pkgs.gh}/bin/gh auth git-credential" ];
       };
       core = {
         editor = "nvim";
@@ -64,12 +71,9 @@
     };
   };
 
-  # gh manages its own ~/.config/gh/config.yml (needs write access for auth).
-  # Don't use programs.gh.settings — it makes config.yml read-only and
-  # breaks `gh auth login` (cli/cli#4955, home-manager#1654).
-  programs.gh = {
-    enable = true;
-    gitCredentialHelper.enable = true; # wires up git credential helper declaratively
-  };
+  # Install gh imperatively (no programs.gh) so ~/.config/gh/config.yml stays
+  # a real, writable file and `gh auth login` works. Credential helper is
+  # wired into programs.git.settings.credential above.
+  home.packages = [ pkgs.gh ];
 
 }
