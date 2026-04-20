@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   # ~/.bashrc is managed by install.sh as a REAL file (not via programs.bash).
@@ -32,6 +32,13 @@ in
   # which sources the full /cb/user_env/bashrc-latest.
   home.sessionPath = [ "/cb/tools/cerebras/cbrun/v0.3.3" ];
 
+  # Cache on fast NFS (same volume as ~/.nix). p10k's instant-prompt cache is
+  # read on every prompt render, .zcompdump on every shell start — keeping
+  # them off the slow home NFS matters. Set via xdg.cacheHome (HM's canonical
+  # option) so HM's xdg module writes XDG_CACHE_HOME for us — setting it
+  # directly in home.sessionVariables conflicts with HM's own assignment.
+  xdg.cacheHome = "/net/jakee-vm/srv/nfs/jakee-data/.cache";
+
   home.sessionVariables = {
     # Match the host glibc's locale dir name (RHEL/Rocky uses lowercase
     # en_US.utf8, not en_US.UTF-8). With the default uppercase LANG, glibc
@@ -47,12 +54,7 @@ in
     # auto-loading when cd'ing into a monolith repo.
     ENV_UPDATE_DISABLE = "1";
 
-    # Cache + compdump on the fast NFS mount (same volume as ~/.nix, which is
-    # symlinked to /net/jakee-vm/srv/nfs/jakee-data/.nix). p10k's instant-prompt
-    # cache is read on every prompt render, and .zcompdump is stat+read'd on
-    # every shell start — keeping them off the slow home NFS matters.
-    XDG_CACHE_HOME = "/net/jakee-vm/srv/nfs/jakee-data/.cache";
-    ZSH_COMPDUMP = "/net/jakee-vm/srv/nfs/jakee-data/.cache/zsh/zcompdump";
+    ZSH_COMPDUMP = "${config.xdg.cacheHome}/zsh/zcompdump";
   };
 
   # Cache dir creation is handled downstream: modules/zsh.nix zcompileZshFiles
