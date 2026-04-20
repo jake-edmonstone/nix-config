@@ -1,13 +1,15 @@
-{ ... }:
+{ lib, ... }:
 
 {
   programs.git = {
     enable = true;
 
     settings = {
+      # Personal identity is the default; Cerebras/work hosts override in their
+      # host module (mkDefault so those overrides don't need lib.mkForce).
       user = {
-        name = "jake-edmonstone";
-        email = "jbedmonstone@gmail.com";
+        name = lib.mkDefault "jake-edmonstone";
+        email = lib.mkDefault "jbedmonstone@gmail.com";
       };
       core = {
         editor = "nvim";
