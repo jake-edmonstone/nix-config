@@ -73,23 +73,36 @@ install_nix_linux_daemon() {
 write_linux_bootstrap() {
   # Home-manager writes ~/.zshrc, ~/.zshenv, etc. as symlinks into /nix/store,
   # which isn't visible at SSH login before the rootless-Nix sandbox is entered.
-  # We write four small REAL files (not store symlinks) to bootstrap sandbox
+  # We write five small REAL files (not store symlinks) to bootstrap sandbox
   # entry whichever shell the user's login account uses:
-  #   ~/.nix-bootstrap.sh  shared logic: locale fix + sandbox exec (POSIX)
-  #   ~/.bash_profile      stub sourcing ~/.bashrc
-  #   ~/.bashrc            system bashrc + host extras + nix-bootstrap
-  #   ~/.zprofile          nix-bootstrap
+  #   ~/.nix-bootstrap.sh               shared logic: locale fix + sandbox exec
+  #   ~/.bash_profile                   stub sourcing ~/.bashrc
+  #   ~/.bashrc                         system bashrc + host extras + nix-bootstrap
+  #   ~/.zprofile                       nix-bootstrap (fires pre-HM-activation)
+  #   ~/.config/zsh/.zprofile           nix-bootstrap (fires post-activation when
+  #                                     HM's xdg stub .zshenv exports ZDOTDIR on
+  #                                     Debian/Ubuntu — mirrored so either path
+  #                                     zsh picks up the bootstrap)
   # Host-specific pre-sandbox env (e.g. Cerebras corp bashrc for non-interactive
   # ssh cmds) goes in ~/.bashrc.extra, materialized by a per-host HM activation.
-  msg "Writing bootstrap (.nix-bootstrap.sh, .bash_profile, .bashrc, .zprofile)"
+  # Also back up legacy ~/.gitconfig — if present, it overrides HM's
+  # ~/.config/git/config (git's precedence) and forces stale user.name/email.
+  msg "Writing bootstrap (.nix-bootstrap.sh, .bash_profile, .bashrc, .zprofile + .zprofile mirror)"
 
   # One-time backup of any pre-existing non-managed file before we stomp it
-  for f in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.zprofile"; do
+  for f in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.zprofile" "$HOME/.gitconfig"; do
     if [[ -f "$f" && ! -L "$f" && ! -e "$f.before-nix" ]] \
       && ! grep -q 'dotfiles-nix install.sh' "$f" 2>/dev/null; then
       cp "$f" "$f.before-nix"
     fi
   done
+
+  # ~/.gitconfig must be *removed*, not just backed up: with xdg.enable = true,
+  # HM writes identity to ~/.config/git/config, which git's precedence rules
+  # override with ~/.gitconfig if it exists. Unconditionally rm on every run
+  # (even if the user recreates it) so stale identity can't leak back in.
+  # HM never writes ~/.gitconfig, so nothing managed to lose.
+  rm -f "$HOME/.gitconfig"
 
   cat > "$HOME/.nix-bootstrap.sh" <<'EOF'
 # Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
@@ -112,9 +125,13 @@ case $- in *i*) ;; *) return 0 ;; esac
 
 # Prefer nix-portable — installed when AppArmor blocks user namespaces.
 # Proot runtime works without CAP_SYS_ADMIN or userns, at a per-syscall cost.
+# nix-portable's entrypoint ONLY accepts `nix` as the command (it looks up
+# commands in its bundled store), so we can't `exec /usr/bin/env` like we do
+# for nix-user-chroot. Enter the sandbox via `nix run nixpkgs#zsh -- -l`
+# instead — first-run fetches zsh, cached thereafter.
 if [ -x "$HOME/.local/bin/nix-portable" ]; then
   export NP_ENTERED=1 NP_RUNTIME=proot
-  exec "$HOME/.local/bin/nix-portable" /usr/bin/env zsh -l
+  exec "$HOME/.local/bin/nix-portable" nix run 'nixpkgs#zsh' -- -l
 fi
 
 # Fall back to nix-user-chroot (requires user namespaces).
@@ -159,6 +176,15 @@ EOF
 # Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
 [ -r "$HOME/.nix-bootstrap.sh" ] && . "$HOME/.nix-bootstrap.sh"
 EOF
+
+  # Mirror to HM's xdg ZDOTDIR. When HM runs with xdg.enable = true, the stub
+  # .zshenv it writes at $HOME exports ZDOTDIR=$HOME/.config/zsh — but on
+  # Debian/Ubuntu hosts zsh evidently processes that stub partially even when
+  # it dangles (the shell semantics here are fuzzy), so .zprofile lookup
+  # happens under $ZDOTDIR instead of $HOME. Writing the same bootstrap to
+  # both locations makes the lookup path irrelevant.
+  mkdir -p "$HOME/.config/zsh"
+  cp "$HOME/.zprofile" "$HOME/.config/zsh/.zprofile"
 }
 
 install_nix_linux_userns() {
@@ -325,6 +351,13 @@ else
   # specific attr — e.g. `REBUILD_FLAKE_ATTR=jbedmons@uwaterloo ./install.sh`.
   # Subsequent rebuilds pick it up from home.sessionVariables automatically.
   msg "Building home-manager configuration"
+  # Seed the user-profile directory that home-manager looks for. On fresh Nix
+  # installs (especially nix-portable, where the bundled Nix installer doesn't
+  # run per-user /nix/var/nix/profiles/per-user setup), HM's activation aborts
+  # with "Could not find suitable profile directory" before it creates
+  # anything. Idempotent — no-op if the dir already exists.
+  # See: https://github.com/nix-community/home-manager/issues/7801
+  mkdir -p "$HOME/.local/state/nix/profiles"
   flake_target="$DOTFILES${REBUILD_FLAKE_ATTR:+#$REBUILD_FLAKE_ATTR}"
   # -b bak: back up pre-existing ~/.bashrc, ~/.zshrc etc. so home-manager
   # can take ownership without manual cleanup. Only pass on FIRST activation —
@@ -336,9 +369,21 @@ else
   if has_nix_on_path; then
     nix run home-manager/master -- "${hm_args[@]}"
   elif has_nix_portable; then
-    # PRoot-based — nix-portable bind-mounts its internal store onto /nix,
-    # so home-manager's hardcoded /nix/store paths resolve correctly inside.
-    NP_RUNTIME=proot "$NIX_PORTABLE" nix run home-manager/master -- "${hm_args[@]}"
+    # PRoot-based. Two subtleties:
+    # 1. `nix run home-manager/master` doesn't propagate nix to PATH inside
+    #    the target program, so home-manager's internal `nix` calls (line 594
+    #    of its script) fail with "nix: command not found". Wrap via a bash
+    #    shell that prepends the bundled nix to PATH first.
+    # 2. Use `nixpkgs#bashInteractive` as the outer shell — bash itself has
+    #    no `nix` runtime dep, so it avoids the 2.34-era nix-symlink bug we
+    #    hit trying `nix shell nixpkgs#nix` under the bundled 2.20.6.
+    NP_RUNTIME=proot "$NIX_PORTABLE" nix run 'nixpkgs#bashInteractive' -- -c "
+      set -e
+      nix_bin=\$(ls /nix/store/*-nix-[0-9]*/bin/nix 2>/dev/null | head -1)
+      [ -x \"\$nix_bin\" ] || { echo 'bundled nix not found in nix-portable store'; exit 1; }
+      export PATH=\"\$(dirname \"\$nix_bin\"):\$PATH\"
+      nix run home-manager/master -- ${hm_args[*]@Q}
+    "
   else
     # User-namespace chroot — /nix is bind-mounted to $NIX_ROOT inside.
     "$NIX_USER_CHROOT" "$NIX_ROOT" bash -c "

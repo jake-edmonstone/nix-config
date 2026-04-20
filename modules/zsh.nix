@@ -1,4 +1,4 @@
-{ config, pkgs, lib, isCerebras, ... }:
+{ config, pkgs, lib, isRootlessLinux, isCerebras, ... }:
 
 {
   programs.zsh = {
@@ -69,6 +69,22 @@
         typeset -g P9K_SSH=1
       else
         typeset -g P9K_SSH=0
+      fi
+
+    '' + lib.optionalString isRootlessLinux ''
+      # On nix-portable hosts, the sandbox is entered via
+      # `nix-portable nix run nixpkgs#zsh -- -l` which sets PATH to zsh's
+      # runtime deps only — nix itself isn't propagated. Home-manager's
+      # doBuildFlake function runs `nix` internally and fails with
+      # "nix: command not found" when the bundled nix isn't on PATH.
+      # Bake a specific ${pkgs.nix}/bin (from nixpkgs) into PATH at Nix eval
+      # time; NP_ENTERED gates runtime (only nix-portable hosts ever set it;
+      # nix-user-chroot hosts — Cerebras — get nix on PATH another way via
+      # the chroot re-exec's PATH setup). This whole lib.optionalString is
+      # emitted only on isRootlessLinux hosts, so Mac's .zshenv doesn't
+      # reference pkgs.nix at all.
+      if [[ -n "''${NP_ENTERED:-}" ]] && ! (( $+commands[nix] )); then
+        export PATH="${pkgs.nix}/bin:$PATH"
       fi
     '';
 
