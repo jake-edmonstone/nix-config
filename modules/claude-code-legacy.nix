@@ -30,12 +30,20 @@ let
     };
 
     nativeBuildInputs = [ pkgs.makeWrapper ];
+
+    # Skip stdenv's default unpackPhase — it does `chmod -R u+w` on the
+    # unpacked tree which fails under nix-portable's proot runtime
+    # (proot doesn't handle fchmodat2 correctly — DavHau/nix-portable#148).
+    # Same failure class as `non-nixos-gpu`. We unpack manually in
+    # installPhase with --no-same-permissions so tar also skips any
+    # per-file chmod and nothing triggers the proot bug.
+    dontUnpack = true;
     dontBuild = true;
 
     installPhase = ''
       runHook preInstall
       mkdir -p $out/lib/claude-code
-      cp -r . $out/lib/claude-code/
+      tar -xzf $src -C $out/lib/claude-code --strip-components=1 --no-same-permissions
       mkdir -p $out/bin
       makeWrapper ${pkgs.nodejs_20}/bin/node $out/bin/claude \
         --add-flags "$out/lib/claude-code/cli.js" \
