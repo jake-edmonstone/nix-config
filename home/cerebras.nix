@@ -7,7 +7,7 @@
   ];
 
   # Cerebras identity. Personal identity lives in modules/git.nix as the
-  # default; the dotfiles-nix repo still commits under personal email via the
+  # default; the nix-config repo still commits under personal email via the
   # includeIf below.
   programs.git = {
     settings.user = {
@@ -16,7 +16,7 @@
     };
     includes = [
       {
-        condition = "gitdir:${config.home.homeDirectory}/dotfiles-nix/";
+        condition = "gitdir:${config.home.homeDirectory}/nix-config/";
         contents.user = {
           name = "jake-edmonstone";
           email = "jbedmonstone@gmail.com";

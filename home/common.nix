@@ -28,7 +28,7 @@
   targets.genericLinux.enable = isRootlessLinux;
 
   home.sessionVariables = {
-    DOTFILES = "${config.home.homeDirectory}/dotfiles-nix";
+    DOTFILES = "${config.home.homeDirectory}/nix-config";
     TYPST_ROOT = "${config.home.homeDirectory}/typst";
     UNISONLOCALHOSTNAME = "FixedHostname";
   };

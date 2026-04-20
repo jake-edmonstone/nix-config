@@ -1,7 +1,7 @@
 { config, lib, ... }:
 
 let
-  repo = "${config.home.homeDirectory}/dotfiles-nix/scripts";
+  repo = "${config.home.homeDirectory}/nix-config/scripts";
   scripts = builtins.attrNames (builtins.readDir ../scripts);
 in
 {

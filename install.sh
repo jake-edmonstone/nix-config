@@ -89,7 +89,7 @@ write_linux_bootstrap() {
   # One-time backup of any pre-existing non-managed file before we stomp it
   for f in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.gitconfig"; do
     if [[ -f "$f" && ! -L "$f" && ! -e "$f.before-nix" ]] \
-      && ! grep -q 'dotfiles-nix install.sh' "$f" 2>/dev/null; then
+      && ! grep -q 'nix-config install.sh' "$f" 2>/dev/null; then
       cp "$f" "$f.before-nix"
     fi
   done
@@ -102,7 +102,7 @@ write_linux_bootstrap() {
   rm -f "$HOME/.gitconfig"
 
   cat > "$HOME/.nix-bootstrap.sh" <<'EOF'
-# Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
+# Managed by nix-config install.sh. DO NOT EDIT — overwritten on re-install.
 # Sourced by ~/.bashrc on rootless-Nix hosts. Enters the Nix sandbox
 # (nix-portable or nix-user-chroot, whichever is installed) and re-execs as
 # an interactive zsh login shell.
@@ -157,12 +157,12 @@ fi
 EOF
 
   cat > "$HOME/.bash_profile" <<'EOF'
-# Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
+# Managed by nix-config install.sh. DO NOT EDIT — overwritten on re-install.
 [ -r "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 EOF
 
   cat > "$HOME/.bashrc" <<'EOF'
-# Managed by dotfiles-nix install.sh. DO NOT EDIT — overwritten on re-install.
+# Managed by nix-config install.sh. DO NOT EDIT — overwritten on re-install.
 [ -f /etc/bashrc ] && . /etc/bashrc
 [ -r "$HOME/.bashrc.extra" ] && . "$HOME/.bashrc.extra"
 [ -r "$HOME/.nix-bootstrap.sh" ] && . "$HOME/.nix-bootstrap.sh"
