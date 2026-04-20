@@ -25,6 +25,14 @@
     extraConfig = ''
       set -gq allow-passthrough on
 
+      # Refresh HM-managed env vars on every client attach. After a
+      # `home-manager switch` changes a sessionVariable (e.g. FZF_DEFAULT_OPTS),
+      # detach+reattach pulls the new value from the client env into the
+      # session env, so subsequent new-window/split-window inherit it. Without
+      # this, a tmux server started before the rebuild keeps the stale value
+      # forever (shells see __HM_SESS_VARS_SOURCED=1 and skip re-sourcing).
+      set -ag update-environment 'FZF_DEFAULT_OPTS FZF_DEFAULT_COMMAND FZF_CTRL_T_OPTS FZF_CTRL_T_COMMAND FZF_ALT_C_OPTS FZF_ALT_C_COMMAND PATH'
+
       # Terminal settings (Ghostty)
       set -as terminal-overrides ',xterm-ghostty:Tc'
       set -as terminal-overrides ',xterm-256color:Tc'

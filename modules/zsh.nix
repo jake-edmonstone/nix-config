@@ -8,6 +8,11 @@
     # insecure-dir security check AND the dump-rebuild, which is the expensive
     # part. Respects $ZSH_COMPDUMP so Cerebras can point it at local scratch.
     # Background-compile the dump to .zwc so the next shell loads bytecode.
+    # On rootless-linux hosts, pass -u on the slow path: nix's glibc can't
+    # resolve NSS groups via nss_sss (same issue as $USERNAME in envExtra), so
+    # compaudit's `g:$GROUP:` glob qualifier errors with "unknown group". -u
+    # makes compaudit return early (before the glob) — the security check is
+    # meaningless here anyway since $fpath is user-owned nix store paths.
     completionInit = ''
       autoload -Uz compinit
       _zcd=''${ZSH_COMPDUMP:-''${ZDOTDIR:-$HOME}/.zcompdump}
@@ -15,7 +20,7 @@
       if [[ -s $_zcd ]] && (( ! ''${#_stale} )); then
         compinit -C -d $_zcd
       else
-        compinit -d $_zcd
+        compinit ${lib.optionalString isRootlessLinux "-u "}-d $_zcd
       fi
       { [[ -s $_zcd && ( ! -s $_zcd.zwc || $_zcd -nt $_zcd.zwc ) ]] && zcompile $_zcd } &!
       unset _zcd _stale
