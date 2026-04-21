@@ -20,6 +20,12 @@ return {
     "folke/snacks.nvim",
     opts = {
       explorer = { enabled = false },
+      -- Inline image rendering (PDF / LaTeX / Mermaid / raster) via Kitty
+      -- graphics. `needs_setup = true` in Snacks.image, so this opt-in is
+      -- required. Render deps (magick / gs / tectonic / mmdc) are Darwin-only
+      -- in modules/neovim.nix — SSH'd nvim on Linux hosts falls back to
+      -- PNG-only until you install them there too.
+      image = { enabled = true },
       styles = {
         win = { border = "rounded" },
         news = { border = "rounded" },

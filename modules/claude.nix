@@ -1,15 +1,22 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   sharedAgents = import ../config/agents;
 
-  mkClaudeAgent = name: a:
+  mkClaudeAgent =
+    name: a:
     let
       model = a.claude.model or "opus";
-      skills = a.claude.skills or [];
+      skills = a.claude.skills or [ ];
       skillsLines = lib.concatMapStringsSep "\n" (s: "  - ${s}") skills;
-      skillsBlock = if skills == [] then "" else "skills:\n${skillsLines}\n";
-    in pkgs.writeText "${name}.md" ''
+      skillsBlock = if skills == [ ] then "" else "skills:\n${skillsLines}\n";
+    in
+    pkgs.writeText "${name}.md" ''
       ---
       name: ${name}
       description: ${a.description}
@@ -28,22 +35,33 @@ let
 in
 {
   home.file = {
-    ".claude/CLAUDE.md".text = builtins.readFile ../config/claude/CLAUDE.md;
+    # mkDefault on the base .text values so per-host files (e.g. Cerebras)
+    # can override with a plain assignment instead of lib.mkForce.
+    ".claude/CLAUDE.md".text = lib.mkDefault (builtins.readFile ../config/claude/CLAUDE.md);
 
-    ".claude/settings.json".text = builtins.toJSON (
-      import ../config/claude/settings.nix { inherit config; }
+    ".claude/settings.json".text = lib.mkDefault (
+      builtins.toJSON (import ../config/claude/settings.nix { inherit config; })
     );
 
-    ".claude/statusline.sh" = { source = ../config/claude/statusline.sh; executable = true; };
+    ".claude/statusline.sh" = {
+      source = ../config/claude/statusline.sh;
+      executable = true;
+    };
 
     # Agents generated from the shared registry at config/agents/.
     # Add a new agent by dropping the body in config/agents/<name>.md and
     # adding an entry to config/agents/default.nix.
-    ".claude/agents" = { source = agentsDir; recursive = true; };
+    ".claude/agents" = {
+      source = agentsDir;
+      recursive = true;
+    };
 
     # Skills use a cross-tool format (SKILL.md with YAML frontmatter) that is
     # source-compatible between Claude Code, Codex CLI, Cursor, Gemini CLI, and
     # others. Both modules point at the same shared directory.
-    ".claude/skills" = { source = ../config/skills; recursive = true; };
+    ".claude/skills" = {
+      source = ../config/skills;
+      recursive = true;
+    };
   };
 }

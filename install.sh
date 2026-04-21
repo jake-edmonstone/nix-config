@@ -267,8 +267,13 @@ fi
 
 # Source nix into this shell if not already on PATH (daemon installs only —
 # rootless installs aren't reachable outside the chroot so we wrap later).
+# nix-daemon.sh has historically referenced unset vars (NIX_REMOTE, etc.)
+# under some upstream versions; drop set -u around the source so a transient
+# unset-var in the install profile doesn't abort install.sh.
 if ! has_nix_on_path && has_nix_daemon; then
+  set +u
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+  set -u
 fi
 
 # ──────────────────────────────────────────────────────────────────────────────

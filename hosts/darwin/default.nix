@@ -1,8 +1,102 @@
 { config, pkgs, ... }:
 
 {
-  system.primaryUser = "jbedm";
-  system.stateVersion = 6;
+  system = {
+    primaryUser = "jbedm";
+    stateVersion = 6;
+
+    keyboard = {
+      enableKeyMapping = true;
+      remapCapsLockToControl = true;
+      # Right Option → F19, used as Hyper trigger by Hammerspoon (modal).
+      userKeyMapping = [
+        {
+          HIDKeyboardModifierMappingSrc = 30064771302; # 0x7000000E6 right option
+          HIDKeyboardModifierMappingDst = 30064771182; # 0x70000006E F19
+        }
+      ];
+    };
+
+    # macOS defaults
+    defaults = {
+      dock = {
+        autohide = true;
+        mru-spaces = false;
+        show-recents = true;
+        tilesize = 64;
+      };
+
+      finder = {
+        AppleShowAllFiles = true;
+        FXDefaultSearchScope = "SCcf";
+        FXPreferredViewStyle = "clmv";
+        ShowExternalHardDrivesOnDesktop = true;
+        ShowHardDrivesOnDesktop = false;
+        ShowPathbar = true;
+        ShowRemovableMediaOnDesktop = true;
+        ShowStatusBar = true;
+      };
+
+      NSGlobalDomain = {
+        AppleInterfaceStyle = "Dark";
+        AppleShowAllExtensions = true;
+        KeyRepeat = 2;
+        InitialKeyRepeat = 15;
+        ApplePressAndHoldEnabled = false; # disable diacritics popup, allow key repeat
+        AppleIconAppearanceTheme = "RegularDark"; # dark app icons
+        NSAutomaticCapitalizationEnabled = true;
+        NSAutomaticPeriodSubstitutionEnabled = true;
+        NSAutomaticQuoteSubstitutionEnabled = false;
+        NSAutomaticSpellingCorrectionEnabled = false;
+        NSNavPanelExpandedStateForSaveMode = true;
+        NSNavPanelExpandedStateForSaveMode2 = true;
+      };
+
+      screencapture = {
+        disable-shadow = true;
+        location = "~/Desktop";
+        type = "png";
+      };
+
+      WindowManager = {
+        EnableTiledWindowMargins = false;
+        EnableTilingByEdgeDrag = true;
+        EnableTilingOptionAccelerator = false;
+        EnableTopTilingByEdgeDrag = true;
+        HideDesktop = true;
+        StageManagerHideWidgets = false;
+        StandardHideWidgets = false;
+      };
+
+      trackpad.Clicking = true;
+
+      CustomUserPreferences = {
+        "com.apple.finder" = {
+          ShowSidebar = true;
+        };
+      };
+    };
+
+    activationScripts.postActivation.text = ''
+      /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+      killall Finder || true
+      killall SystemUIServer || true
+
+      # macOS Sequoia/Tahoe reads `com.apple.mouse.tapBehavior` at per-host
+      # (ByHost) scope for the "Tap to click" switch, but nix-darwin's
+      # system.defaults.trackpad.Clicking only writes user-global keys
+      # (ByHost not yet supported — nix-darwin issue #1721). Write it here
+      # as the user (activation itself runs as root).
+      _uid=$(id -u ${config.system.primaryUser})
+      if [ -n "$_uid" ]; then
+        launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
+          defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1 || true
+        launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
+          /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
+      fi
+    '';
+  };
+
   nixpkgs.hostPlatform = "aarch64-darwin";
   nixpkgs.config.allowUnfree = true;
 
@@ -15,18 +109,6 @@
   security.pam.services.sudo_local = {
     touchIdAuth = true;
     reattach = true; # Touch ID works inside tmux via pam_reattach
-  };
-
-  system.keyboard = {
-    enableKeyMapping = true;
-    remapCapsLockToControl = true;
-    # Right Option → F19, used as Hyper trigger by Hammerspoon (modal).
-    userKeyMapping = [
-      {
-        HIDKeyboardModifierMappingSrc = 30064771302; # 0x7000000E6 right option
-        HIDKeyboardModifierMappingDst = 30064771182; # 0x70000006E F19
-      }
-    ];
   };
 
   # Trim system /etc/zshrc to the minimum we actually use. The defaults add
@@ -53,7 +135,7 @@
 
   fonts.packages = with pkgs; [
     maple-mono.NF
-    newcomputermodern   # full family (Book weight) for Typst documents
+    newcomputermodern # full family (Book weight) for Typst documents
   ];
 
   # Homebrew (GUI apps only — CLI tools are in nixpkgs)
@@ -83,85 +165,6 @@
     ];
     # masApps requires being signed into the App Store first.
     # Install Goodnotes manually: mas install 1444383602
-    masApps = {};
+    masApps = { };
   };
-
-  # macOS defaults
-  system.defaults = {
-    dock = {
-      autohide = true;
-      mru-spaces = false;
-      show-recents = true;
-      tilesize = 64;
-    };
-
-    finder = {
-      AppleShowAllFiles = true;
-      FXDefaultSearchScope = "SCcf";
-      FXPreferredViewStyle = "clmv";
-      ShowExternalHardDrivesOnDesktop = true;
-      ShowHardDrivesOnDesktop = false;
-      ShowPathbar = true;
-      ShowRemovableMediaOnDesktop = true;
-      ShowStatusBar = true;
-    };
-
-    NSGlobalDomain = {
-      AppleInterfaceStyle = "Dark";
-      AppleShowAllExtensions = true;
-      KeyRepeat = 2;
-      InitialKeyRepeat = 15;
-      ApplePressAndHoldEnabled = false; # disable diacritics popup, allow key repeat
-      AppleIconAppearanceTheme = "RegularDark"; # dark app icons
-      NSAutomaticCapitalizationEnabled = true;
-      NSAutomaticPeriodSubstitutionEnabled = true;
-      NSAutomaticQuoteSubstitutionEnabled = false;
-      NSAutomaticSpellingCorrectionEnabled = false;
-      NSNavPanelExpandedStateForSaveMode = true;
-      NSNavPanelExpandedStateForSaveMode2 = true;
-    };
-
-    screencapture = {
-      disable-shadow = true;
-      location = "~/Desktop";
-      type = "png";
-    };
-
-    WindowManager = {
-      EnableTiledWindowMargins = false;
-      EnableTilingByEdgeDrag = true;
-      EnableTilingOptionAccelerator = false;
-      EnableTopTilingByEdgeDrag = true;
-      HideDesktop = true;
-      StageManagerHideWidgets = false;
-      StandardHideWidgets = false;
-    };
-
-    trackpad.Clicking = true;
-
-    CustomUserPreferences = {
-      "com.apple.finder" = {
-        ShowSidebar = true;
-      };
-    };
-  };
-
-  system.activationScripts.postActivation.text = ''
-    /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
-    killall Finder || true
-    killall SystemUIServer || true
-
-    # macOS Sequoia/Tahoe reads `com.apple.mouse.tapBehavior` at per-host
-    # (ByHost) scope for the "Tap to click" switch, but nix-darwin's
-    # system.defaults.trackpad.Clicking only writes user-global keys
-    # (ByHost not yet supported — nix-darwin issue #1721). Write it here
-    # as the user (activation itself runs as root).
-    _uid=$(id -u ${config.system.primaryUser})
-    if [ -n "$_uid" ]; then
-      launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
-        defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1 || true
-      launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
-        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
-    fi
-  '';
 }

@@ -14,6 +14,7 @@ list_cmd="cur=\$(tmux display-message -p '#S') && {
 new_action="become(tmux new-session -ds {q} && tmux switch-client -t {q})"
 [[ -n "${NP_RUNTIME:-}" ]] && new_action="execute-silent(tmux new-session -ds {q} && tmux switch-client -t {q})+abort"
 
+# fzf cancel (Esc/Ctrl-C) exits 130; don't let set -e kill the script.
 sel=$(eval "$list_cmd" | fzf \
   --reverse \
   --no-sort \
@@ -29,7 +30,7 @@ sel=$(eval "$list_cmd" | fzf \
   --bind 'ctrl-/:change-preview-window(hidden|right:60%)' \
   --bind "ctrl-x:execute-silent(cur=\$(tmux display-message -p '#S') && target={1} && if [ \"\$target\" = \"\$cur\" ]; then [ \"\$(tmux list-sessions | wc -l)\" -gt 1 ] && tmux switch-client -n && tmux kill-session -t \"\$target\"; else tmux kill-session -t \"\$target\"; fi)+reload($list_cmd)" \
   --bind "ctrl-r:execute(tmux-rename-session {1})+reload($list_cmd)" \
-  --bind "ctrl-n:${new_action}")
+  --bind "ctrl-n:${new_action}" || true)
 
 # If empty or current session (marked with tab), nothing to switch to
 [[ -z "$sel" || "$sel" == *$'\t'* ]] && exit 0

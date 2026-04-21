@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Script is invoked from tmux's `bind g run "open-github"`; outside tmux it
+# has no pane to look up, so bail early with a clear error.
+if [[ -z "${TMUX:-}" ]]; then
+  echo "open-github: not running inside a tmux session" >&2
+  exit 1
+fi
+
 pane_path="$(tmux display-message -p '#{pane_current_path}')"
 if [[ -z "$pane_path" || ! -d "$pane_path" ]]; then
   echo "open-github: invalid pane path: $pane_path" >&2
@@ -12,8 +19,26 @@ if [[ -z "$url" ]]; then
   echo "open-github: no origin remote in $pane_path" >&2
   exit 1
 fi
+
+# Convert SSH URLs to HTTPS so `open`/`xdg-open` don't try to launch a mail client.
+case "$url" in
+  git@*:*)
+    host_path="${url#git@}"        # github.com:foo/bar.git
+    url="https://${host_path/://}" # github.com/foo/bar.git
+    ;;
+  ssh://git@*)
+    url="https://${url#ssh://git@}"
+    ;;
+esac
+url="${url%.git}"
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
   open "$url"
-else
+elif command -v xdg-open >/dev/null 2>&1; then
   xdg-open "$url"
+else
+  # Headless / rootless Linux (no desktop env). Emit the URL to stderr with
+  # a prefix so it's discoverable in tmux's run-shell popup alongside the
+  # other error paths (missing TMUX, no origin, etc.).
+  echo "open-github: $url (no xdg-open available; copy manually)" >&2
 fi

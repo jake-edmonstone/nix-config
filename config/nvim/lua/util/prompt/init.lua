@@ -56,10 +56,10 @@ M.contexts = {
     end
     return table.concat(parts, "\n")
   end,
-  ["@diff"] = function()
-    local r = vim.system({ "git", "--no-pager", "diff" }, { text = true }):wait(5000)
-    return r.code == 0 and r.stdout ~= "" and r.stdout or nil
-  end,
+  -- @diff is resolved ASYNCHRONOUSLY in inject() below — git diff can take
+  -- seconds on slow/large repos and a synchronous :wait() blocks the editor.
+  -- Keep a stub here so placeholder_names includes "@diff" for highlighting.
+  ["@diff"] = function() return nil end,
 }
 
 -- Computed once — contexts is static
@@ -79,23 +79,51 @@ api.nvim_set_hl(0, hl_title, { fg = "#282A36", bg = "#BD93F9", bold = true })
 api.nvim_set_hl(0, hl_placeholder, { fg = "#BD93F9", bold = true })
 
 --- Replace @placeholders with actual context, longest-first to avoid partial matches.
-local function inject(prompt, source_win)
+--- Invokes cb(result) when done. Asynchronous because @diff shells out to git,
+--- which can take multiple seconds on large repos; we don't want to freeze the
+--- editor on `:wait()`. All other placeholders resolve synchronously.
+local function inject(prompt, source_win, cb)
   api.nvim_set_current_win(source_win)
   local failed = {}
+
+  -- Snapshot @diff presence on the ORIGINAL prompt so a sync placeholder whose
+  -- resolved value happens to contain the literal "@diff" can't trigger a
+  -- spurious git subprocess.
+  local has_diff = prompt:find("@diff", 1, true) ~= nil
+
+  -- Resolve synchronous placeholders first. @diff is handled below.
   for _, key in ipairs(placeholder_names) do
-    if prompt:find(key, 1, true) then
+    if key ~= "@diff" and prompt:find(key, 1, true) then
       local val = M.contexts[key]()
       if val then
-        prompt = prompt:gsub(vim.pesc(key), val)
+        prompt = prompt:gsub(vim.pesc(key), function() return val end)
       else
         failed[#failed + 1] = key
       end
     end
   end
-  if #failed > 0 then
-    vim.notify("Could not resolve: " .. table.concat(failed, ", "), vim.log.levels.WARN)
+
+  local function finalize()
+    if #failed > 0 then
+      vim.notify("Could not resolve: " .. table.concat(failed, ", "), vim.log.levels.WARN)
+    end
+    cb(prompt)
   end
-  return prompt
+
+  if has_diff then
+    vim.system({ "git", "--no-pager", "diff" }, { text = true }, function(obj)
+      vim.schedule(function()
+        if obj.code == 0 and obj.stdout and obj.stdout ~= "" then
+          prompt = prompt:gsub(vim.pesc("@diff"), function() return obj.stdout end)
+        else
+          failed[#failed + 1] = "@diff"
+        end
+        finalize()
+      end)
+    end)
+  else
+    finalize()
+  end
 end
 
 local prompts = {
@@ -232,9 +260,10 @@ function M.ask(default)
     close()
     if text == "" then return end
     if api.nvim_win_is_valid(source_win) then
-      local result = inject(text, source_win)
-      vim.fn.setreg("+", result)
-      vim.notify("Prompt copied to clipboard", vim.log.levels.INFO)
+      inject(text, source_win, function(result)
+        vim.fn.setreg("+", result)
+        vim.notify("Prompt copied to clipboard", vim.log.levels.INFO)
+      end)
     end
   end
 
@@ -250,9 +279,10 @@ function M.select_prompt(name)
   local source_win = api.nvim_get_current_win()
 
   local function apply(prompt_text)
-    local result = inject(prompt_text, source_win)
-    vim.fn.setreg("+", result)
-    vim.notify("Prompt copied to clipboard", vim.log.levels.INFO)
+    inject(prompt_text, source_win, function(result)
+      vim.fn.setreg("+", result)
+      vim.notify("Prompt copied to clipboard", vim.log.levels.INFO)
+    end)
   end
 
   if name then

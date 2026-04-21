@@ -4,6 +4,13 @@
 
 input=$(cat)
 
+# Fail-open: if jq is unavailable (e.g. very first boot before nix profile is on
+# PATH), print an empty status line rather than crashing Claude Code's TUI.
+if ! command -v jq >/dev/null 2>&1; then
+  printf '\n'
+  exit 0
+fi
+
 cwd=$(jq -r '.workspace.current_dir // .cwd // ""' <<<"$input")
 model=$(jq -r '.model.display_name // ""' <<<"$input")
 used_pct=$(jq -r '.context_window.used_percentage // empty' <<<"$input")
@@ -12,9 +19,9 @@ used_pct=$(jq -r '.context_window.used_percentage // empty' <<<"$input")
 home="$HOME"
 dir="${cwd/#$home/~}"
 
-# Git branch (skip optional lock files)
+# Git branch (skip optional lock files). Skip entirely if git isn't installed.
 git_branch=""
-if [ -n "$cwd" ] && git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
+if [ -n "$cwd" ] && command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
   git_branch=$(git -C "$cwd" -c core.fsmonitor=false symbolic-ref --short HEAD 2>/dev/null \
     || git -C "$cwd" -c core.fsmonitor=false rev-parse --short HEAD 2>/dev/null)
 fi
@@ -34,7 +41,7 @@ if [ -n "$model" ]; then
 fi
 
 # context window usage
-if [ -n "$used_pct" ]; then
+if [ -n "$used_pct" ] && [[ "$used_pct" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
   used_int=$(printf '%.0f' "$used_pct")
   printf ' \033[2m[ctx: %s%%]\033[0m' "$used_int"
 fi

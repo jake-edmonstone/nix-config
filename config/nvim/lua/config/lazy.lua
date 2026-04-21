@@ -41,6 +41,9 @@ require("lazy").setup({
   -- polling are noise here and pull in lazy.view.commands/lazy.manage at startup.
   checker = { enabled = false },
   change_detection = { enabled = false, notify = false },
+  -- No plugins in this config require luarocks; disabling skips the hererocks
+  -- install attempt and silences the ERROR in :checkhealth.
+  rocks = { enabled = false },
   performance = {
     rtp = {
       -- disable some rtp plugins

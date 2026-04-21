@@ -18,40 +18,48 @@ return {
         "cpp",
         "typst",
         "haskell",
+        -- Needed by Snacks.image for inline image rendering inside docs
+        -- written in these languages (checkhealth flags them when missing).
+        -- `norg` omitted: not in nvim-treesitter's registry (maintained by
+        -- the neorg team separately) and you don't use .norg files.
+        "css",
+        "latex",
+        "scss",
+        "svelte",
+        "vue",
       },
     },
   },
 
-  -- Cerebras clangd (only on work machines where /cb exists)
-  (function()
-    if vim.fn.isdirectory("/cb") == 1 then
-      return {
-        "neovim/nvim-lspconfig",
-        opts = {
-          servers = {
-            clangd = {
-              cmd = {
-                "nice", "-n", "15",
-                "prlimit", "--as=4294967296", "--",  -- 4GB memory limit
-                "cpulimit", "-l", "50", "--",
-                vim.fn.expand("~/ws/clangd-18/bin/clangd"),
-                "--background-index=false",
-                "--compile-commands-dir=" .. vim.fn.getcwd(-1, -1) .. "/build-x86_64/buildroot/build-llvm/",
-                "--query-driver=/cb/nightly_builds/builds/master/latest/toolchain/sdk-x86_64/bin/x86_64-linux-g++",
-                "--clang-tidy=false",
-                "--header-insertion=never",
-                "--pch-storage=disk",
-                "--malloc-trim",
-                "-j=1",
-              },
-              root_markers = { ".git" },
-            },
+  -- Cerebras clangd (only on work machines where /cb exists).
+  -- cond = function() ... end is LazyVim idiom: lazy.nvim evaluates it once
+  -- at plugin-load time and skips the spec when false, so we don't pay the
+  -- cost of building the opts table on non-Cerebras hosts.
+  {
+    "neovim/nvim-lspconfig",
+    cond = function() return vim.fn.isdirectory("/cb") == 1 end,
+    opts = {
+      servers = {
+        clangd = {
+          cmd = {
+            "nice", "-n", "15",
+            "prlimit", "--as=4294967296", "--",  -- 4GB memory limit
+            "cpulimit", "-l", "50", "--",
+            vim.fn.expand("~/ws/clangd-18/bin/clangd"),
+            "--background-index=false",
+            "--compile-commands-dir=" .. vim.fn.getcwd(-1, -1) .. "/build-x86_64/buildroot/build-llvm/",
+            "--query-driver=/cb/nightly_builds/builds/master/latest/toolchain/sdk-x86_64/bin/x86_64-linux-g++",
+            "--clang-tidy=false",
+            "--header-insertion=never",
+            "--pch-storage=disk",
+            "--malloc-trim",
+            "-j=1",
           },
+          root_markers = { ".git" },
         },
-      }
-    end
-    return {}
-  end)(),
+      },
+    },
+  },
 
   -- Typst
   {

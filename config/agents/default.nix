@@ -22,7 +22,10 @@
     description = "Implements features and fixes in the LLVM codebase. Use after tests are written to make them pass.";
     body = ./llvm-coder.md;
     claude.tools = "Read, Write, Edit, Bash, Glob, Grep";
-    claude.skills = [ "llvm-lit-test" "llvm-build" ];
+    claude.skills = [
+      "llvm-lit-test"
+      "llvm-build"
+    ];
   };
 
   llvm-planner = {
@@ -42,14 +45,20 @@
     description = "Skeptically reviews LLVM code changes for correctness, style, and completeness. Use after the coder finishes implementation.";
     body = ./llvm-reviewer.md;
     claude.tools = "Read, Grep, Glob, Bash";
-    claude.skills = [ "llvm-lit-test" "llvm-build" ];
+    claude.skills = [
+      "llvm-lit-test"
+      "llvm-build"
+    ];
   };
 
   llvm-test-writer = {
     description = "Writes or updates LLVM lit tests that define expected behavior before implementation. Use after research, before coding.";
     body = ./llvm-test-writer.md;
     claude.tools = "Read, Write, Edit, Glob, Grep, Bash";
-    claude.skills = [ "llvm-lit-test" "llvm-build" ];
+    claude.skills = [
+      "llvm-lit-test"
+      "llvm-build"
+    ];
   };
 
   nvim-lua-perf = {

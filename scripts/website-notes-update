@@ -7,7 +7,7 @@ WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
 COURSES=(pmath347 pmath367 pmath450 pmath352)
 
 tmps=()
-cleanup() { for t in "${tmps[@]}"; do rm -f "$t"; done; }
+cleanup() { [ "${#tmps[@]}" -eq 0 ] || rm -f "${tmps[@]}"; }
 trap cleanup EXIT
 
 # Commit and push typst repo
@@ -30,7 +30,12 @@ for course in "${COURSES[@]}"; do
 
   # Insert 12pt text size for PDF output via temp file (avoids corrupting source on failure).
   # Temp file must be in the same directory so Typst resolves relative imports correctly.
-  tmp="$(mktemp "$(dirname "$main")/.main_website.XXXXXX.typ")"
+  # BSD mktemp (macOS) requires the X's at the end of the template, so rename to add .typ.
+  # Register $tmp_base with cleanup BEFORE mv so a failure between mktemp and mv doesn't leak.
+  tmp_base="$(mktemp "$(dirname "$main")/.main_website.XXXXXX")"
+  tmps+=("$tmp_base")
+  tmp="$tmp_base.typ"
+  mv "$tmp_base" "$tmp"
   tmps+=("$tmp")
   sed -e '/show: preamble/a\
 #set text(12pt)

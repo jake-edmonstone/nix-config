@@ -16,8 +16,10 @@
   # user doesn't use z/zi there; skipping avoids adding another read path on
   # an already-slow-fs host).
   programs.zsh.initContent = lib.mkOrder 680 ''
-    source ${pkgs.runCommand "zoxide-init-zsh" {} ''
-      ${pkgs.zoxide}/bin/zoxide init zsh > $out
-    ''}
+    source ${
+      pkgs.runCommand "zoxide-init-zsh" { } ''
+        ${pkgs.zoxide}/bin/zoxide init zsh > $out
+      ''
+    }
   '';
 }

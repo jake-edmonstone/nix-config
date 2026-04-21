@@ -23,7 +23,7 @@
     ];
 
     extraConfig = ''
-      set -gq allow-passthrough on
+      set -s allow-passthrough on
 
       # Refresh HM-managed env vars on every client attach. After a
       # `home-manager switch` changes a sessionVariable (e.g. FZF_DEFAULT_OPTS),
@@ -33,9 +33,9 @@
       # forever (shells see __HM_SESS_VARS_SOURCED=1 and skip re-sourcing).
       set -ag update-environment 'FZF_DEFAULT_OPTS FZF_DEFAULT_COMMAND FZF_CTRL_T_OPTS FZF_CTRL_T_COMMAND FZF_ALT_C_OPTS FZF_ALT_C_COMMAND PATH'
 
-      # Terminal settings (Ghostty)
-      set -as terminal-overrides ',xterm-ghostty:Tc'
-      set -as terminal-overrides ',xterm-256color:Tc'
+      # Terminal settings (Ghostty). :RGB in terminal-features is the modern
+      # (tmux 3.2+) replacement for the older :Tc terminal-override — one knob
+      # covers truecolor for both xterm-ghostty and xterm-256color.
       set -as terminal-features 'xterm-ghostty:RGB:usstyle:overline:strikethrough:extkeys'
       # Tell tmux every outer terminal supports OSC52 clipboard. Combined with
       # `set-clipboard on` below, copying in copy-mode sends an OSC52 escape so
@@ -59,7 +59,7 @@
       bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
 
       # Sensible binds
-      bind r source-file ~/.config/tmux/tmux.conf \; display "Reloaded!"
+      bind r source-file ${config.xdg.configHome}/tmux/tmux.conf \; display "Reloaded!"
       bind | split-window -h -c "#{pane_current_path}"
       bind - split-window -v -c "#{pane_current_path}"
       bind c new-window -c "#{pane_current_path}"

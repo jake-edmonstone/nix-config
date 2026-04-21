@@ -1,4 +1,11 @@
-{ config, pkgs, lib, isRootlessLinux, isCerebras, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  isRootlessLinux,
+  isCerebras,
+  ...
+}:
 
 {
   programs.zsh = {
@@ -22,7 +29,18 @@
       else
         compinit ${lib.optionalString isRootlessLinux "-u "}-d $_zcd
       fi
-      { [[ -s $_zcd && ( ! -s $_zcd.zwc || $_zcd -nt $_zcd.zwc ) ]] && zcompile $_zcd } &!
+      # Background zcompile guarded by an atomic mkdir lock so parallel shell
+      # spawns (e.g. a burst of tmux panes) can't race each other writing the
+      # same .zwc and produce corrupt bytecode. mkdir is atomic on POSIX. If
+      # zcompile crashes mid-flight, the lock leaks and future shells skip
+      # until it's cleaned — acceptable vs. silent dump corruption.
+      {
+        _lock=$_zcd.compile.lock
+        if mkdir -- $_lock 2>/dev/null; then
+          [[ -s $_zcd && ( ! -s $_zcd.zwc || $_zcd -nt $_zcd.zwc ) ]] && zcompile $_zcd
+          rmdir -- $_lock 2>/dev/null
+        fi
+      } &!
       unset _zcd _stale
     '';
     autosuggestion.enable = true;
@@ -61,24 +79,31 @@
     };
 
     envExtra = ''
-      # Deduplicate PATH, MANPATH, FPATH (zsh-specific; no HM equivalent)
-      typeset -U path manpath fpath
       # NOTE on $USERNAME: on SSS/LDAP hosts where the user isn't in
       # /etc/passwd directly, nix's glibc can't resolve via nss_sss, so zsh's
       # getpwuid-backed $USERNAME getter returns "". No assignment in zshenv
       # can stick because zsh re-reads the getter on every access. The fix
       # lives in ~/.p10k.zsh, which uses $USER (set by PAM) instead of %n.
 
-      # Pre-seed P9K_SSH so p10k skips its internal _p9k_init_ssh probe
-      # (measured ~11 ms, 26% of zsh cold startup). The probe gathers info we
-      # already have via standard SSH env vars.
-      if [[ -n "''${SSH_CONNECTION:-}" || -n "''${SSH_CLIENT:-}" || -n "''${SSH_TTY:-}" ]]; then
-        typeset -g P9K_SSH=1
-      else
-        typeset -g P9K_SSH=0
+      # (typeset -U path manpath fpath dropped — HM emits the equivalent in
+      # .zshrc, and we only do non-interactive env setup here. Non-interactive
+      # shells inherit a nix-deduplicated PATH and don't mutate it further.)
+
+      # p10k-specific env lives only in interactive shells — skip the probes
+      # on ssh-host-cmd / scripts / nix build sandboxes to avoid the exec tax.
+      if [[ -o interactive ]]; then
+        # Pre-seed P9K_SSH so p10k skips its internal _p9k_init_ssh probe
+        # (measured ~11 ms, 26% of zsh cold startup). The probe gathers info
+        # we already have via standard SSH env vars.
+        if [[ -n "''${SSH_CONNECTION:-}" || -n "''${SSH_CLIENT:-}" || -n "''${SSH_TTY:-}" ]]; then
+          typeset -g P9K_SSH=1
+        else
+          typeset -g P9K_SSH=0
+        fi
       fi
 
-    '' + lib.optionalString isRootlessLinux ''
+    ''
+    + lib.optionalString isRootlessLinux ''
       # On nix-portable hosts, the sandbox is entered via
       # `nix-portable nix run nixpkgs#zsh -- -l` which sets PATH to zsh's
       # runtime deps only — nix itself isn't propagated. Home-manager's
@@ -126,11 +151,12 @@
       '')
 
       # zsh-autosuggestions perf knobs — emitted before HM's plugin-source line
-      # so they take effect on first precmd.
+      # (mkOrder 700) so the vars are set before the plugin reads them on first
+      # precmd. mkOrder 690 (not 700) guarantees ordering vs. the plugin source.
       # MANUAL_REBIND avoids the well-known 200 ms precmd rebind (upstream #544).
       # BUFFER_MAX_SIZE skips suggestions on huge pastes.
       # (STRATEGY=(history) is already HM's default via programs.zsh.autosuggestion.strategy.)
-      (lib.mkOrder 700 ''
+      (lib.mkOrder 690 ''
         ZSH_AUTOSUGGEST_MANUAL_REBIND=1
         ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
       '')
@@ -160,11 +186,14 @@
         # — a known Ghostty quirk (ghostty-org/ghostty#9209). Ghostty's
         # `cursor-style-blink = true` only sets the DEFAULT; DECSCUSR state
         # from the last child TUI wins until something overrides it.
-        _cursor_blinking_block() { printf '\e[1 q' }
+        _cursor_blinking_block() { [[ -t 1 ]] && printf '\e[1 q' }
         precmd_functions+=(_cursor_blinking_block)
 
         # Functions
-        mkcd() { mkdir -p "$1" && cd "$1" }
+        mkcd() {
+          [[ -n $1 ]] || { print -u2 "mkcd: missing arg"; return 2; }
+          mkdir -p "$1" && cd "$1"
+        }
         # On hosts where $USER@$(hostname) matches the flake attr, leave
         # REBUILD_FLAKE_ATTR unset and home-manager's auto-resolve picks it up.
         # On hosts where hostname churns (UWaterloo student CS: interchangeable
@@ -181,69 +210,11 @@
 
       # fast-syntax-highlighting — after plugins that bind input widgets
       # (fzf-tab, edit-command-line), before p10k.
+      # Dracula color palette lives in config/zsh/fsh-styles.zsh (store-pinned
+      # via path interpolation; edits require rebuild).
       (lib.mkOrder 1400 ''
         source ${pkgs.zsh-fast-syntax-highlighting}/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
-
-        typeset -gA FAST_HIGHLIGHT_STYLES
-        FAST_HIGHLIGHT_STYLES[default]=none
-        FAST_HIGHLIGHT_STYLES[unknown-token]='fg=#FF5555,bold'
-        FAST_HIGHLIGHT_STYLES[reserved-word]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[alias]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[suffix-alias]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[global-alias]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[builtin]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[function]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[command]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[subcommand]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[precommand]='fg=#50FA7B,italic'
-        FAST_HIGHLIGHT_STYLES[commandseparator]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[hashed-command]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[path]='fg=#F8F8F2,underline'
-        FAST_HIGHLIGHT_STYLES[path-to-dir]='fg=#BD93F9,underline'
-        FAST_HIGHLIGHT_STYLES[path_pathseparator]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[globbing]='fg=#FFB86C'
-        FAST_HIGHLIGHT_STYLES[globbing-ext]='fg=#FF79C6,bold'
-        FAST_HIGHLIGHT_STYLES[history-expansion]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#FFB86C'
-        FAST_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#FFB86C'
-        FAST_HIGHLIGHT_STYLES[back-quoted-argument]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[dollar-quoted-argument]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[back-or-dollar-double-quoted-argument]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[back-dollar-quoted-argument]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[assign]='fg=#8BE9FD'
-        FAST_HIGHLIGHT_STYLES[assign-array-bracket]='fg=#F8F8F2'
-        FAST_HIGHLIGHT_STYLES[redirection]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[comment]='fg=#6272A4,italic'
-        FAST_HIGHLIGHT_STYLES[variable]='fg=#F8F8F2'
-        FAST_HIGHLIGHT_STYLES[mathnum]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[mathvar]='fg=#FFB86C'
-        FAST_HIGHLIGHT_STYLES[matherr]='fg=#FF5555,bold'
-        FAST_HIGHLIGHT_STYLES[for-loop-variable]='fg=#8BE9FD'
-        FAST_HIGHLIGHT_STYLES[for-loop-operator]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[for-loop-number]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[for-loop-separator]='fg=#FF79C6,bold'
-        FAST_HIGHLIGHT_STYLES[exec-descriptor]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[case-input]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[case-parentheses]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[case-condition]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[here-string-tri]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[here-string-text]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[here-string-var]='fg=#8BE9FD'
-        FAST_HIGHLIGHT_STYLES[paired-bracket]='fg=#F8F8F2,bold'
-        FAST_HIGHLIGHT_STYLES[bracket-level-1]='fg=#50FA7B,bold'
-        FAST_HIGHLIGHT_STYLES[bracket-level-2]='fg=#F1FA8C,bold'
-        FAST_HIGHLIGHT_STYLES[bracket-level-3]='fg=#8BE9FD,bold'
-        FAST_HIGHLIGHT_STYLES[single-sq-bracket]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[double-sq-bracket]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[double-paren]='fg=#FF79C6'
-        FAST_HIGHLIGHT_STYLES[optarg-string]='fg=#F1FA8C'
-        FAST_HIGHLIGHT_STYLES[optarg-number]='fg=#BD93F9'
-        FAST_HIGHLIGHT_STYLES[correct-subtle]='fg=#8BE9FD'
-        FAST_HIGHLIGHT_STYLES[incorrect-subtle]='fg=#FF5555'
-        FAST_HIGHLIGHT_STYLES[subtle-separator]='fg=#50FA7B'
-        FAST_HIGHLIGHT_STYLES[subtle-bg]='bg=#44475A'
+        source ${../config/zsh/fsh-styles.zsh}
       '')
 
       # Powerlevel10k — after everything else
@@ -266,36 +237,44 @@
   #
   # On Cerebras, $HOME is slow EFS. Writing .zwc there would negate the win.
   # So we compile to fast NFS and symlink the target location → fast NFS path.
-  home.activation.zcompileZshFiles = let
-    # In current home-manager, programs.zsh.dotDir is an absolute path (e.g.
-    # /Users/jbedm/.config/zsh) — not relative to $HOME. Do NOT prepend home.
-    zshDir = config.programs.zsh.dotDir;
-    files = [
-      "${zshDir}/.zshrc"
-      "${zshDir}/.zshenv"
-      "${config.home.homeDirectory}/.zshenv"
-      "${config.home.homeDirectory}/.p10k.zsh"
-    ];
-  in lib.hm.dag.entryAfter [ "writeBoundary" ] (
-    if isCerebras then ''
-      zwc_dir="/net/jakee-vm/srv/nfs/jakee-data/.cache/zsh/zwc"
-      mkdir -p "$zwc_dir"
-      _idx=0
-      for src in ${lib.concatMapStringsSep " " (f: "\"${f}\"") files}; do
-        _idx=$((_idx+1))
-        out="$zwc_dir/zsh-$_idx.zwc"
-        if [[ -f "$src" ]]; then
-          ${pkgs.zsh}/bin/zsh -c "zcompile -R '$out' '$src'" 2>/dev/null \
-            && ln -sfn "$out" "$src.zwc"
-        fi
-      done
-      unset _idx
-    '' else ''
-      for f in ${lib.concatMapStringsSep " " (f: "\"${f}\"") files}; do
-        if [[ -f "$f" ]]; then
-          ${pkgs.zsh}/bin/zsh -c "zcompile -R '$f'" 2>/dev/null || true
-        fi
-      done
-    ''
-  );
+  home.activation.zcompileZshFiles =
+    let
+      # In current home-manager, programs.zsh.dotDir is an absolute path (e.g.
+      # /Users/jbedm/.config/zsh) — not relative to $HOME. Do NOT prepend home.
+      zshDir = config.programs.zsh.dotDir;
+      files = [
+        "${zshDir}/.zshrc"
+        "${zshDir}/.zshenv"
+        "${config.home.homeDirectory}/.zshenv"
+        "${config.home.homeDirectory}/.p10k.zsh"
+      ];
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" ] (
+      # Batched into a single `zsh -c` invocation — compiling 4 files previously
+      # forked zsh 4 times (~100-150 ms); the inner loop is now in-process.
+      if isCerebras then
+        ''
+          zwc_dir="/net/jakee-vm/srv/nfs/jakee-data/.cache/zsh/zwc"
+          mkdir -p "$zwc_dir"
+          ${pkgs.zsh}/bin/zsh -c '
+            zwc_dir=$1; shift
+            _idx=0
+            for src in "$@"; do
+              _idx=$((_idx+1))
+              out="$zwc_dir/zsh-$_idx.zwc"
+              if [[ -f "$src" ]]; then
+                zcompile -R "$out" "$src" 2>/dev/null && ln -sfn "$out" "$src.zwc"
+              fi
+            done
+          ' zcompile-session "$zwc_dir" ${lib.concatMapStringsSep " " (f: "\"${f}\"") files} || true
+        ''
+      else
+        ''
+          ${pkgs.zsh}/bin/zsh -c '
+            for f in "$@"; do
+              [[ -f "$f" ]] && zcompile -R "$f" 2>/dev/null
+            done
+          ' zcompile-session ${lib.concatMapStringsSep " " (f: "\"${f}\"") files} || true
+        ''
+    );
 }

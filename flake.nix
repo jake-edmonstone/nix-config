@@ -37,72 +37,96 @@
     };
   };
 
-  outputs = { nixpkgs, determinate, nix-darwin, home-manager, nix-homebrew, claude-code, codex-cli, ... }:
+  outputs =
+    {
+      nixpkgs,
+      determinate,
+      nix-darwin,
+      home-manager,
+      nix-homebrew,
+      claude-code,
+      codex-cli,
+      ...
+    }:
     let
-      sharedOverlays = [ claude-code.overlays.default codex-cli.overlays.default ];
-    in {
-
-    # Host-trait flags threaded through every module via extraSpecialArgs.
-    # - isDarwin: macOS (nix-darwin + full nix daemon).
-    # - isRootlessLinux: Linux using nix-user-chroot (no daemon, no root).
-    # - isCerebras: refinement of isRootlessLinux for the Cerebras host
-    #   specifically — implies EFS home, fast NFS at /net/jakee-vm/..., and
-    #   the corporate /cb/user_env/bashrc-latest env.
-    # Exactly one of isDarwin / isRootlessLinux should be true per host.
-    # Future daemon-Linux hosts would set both to false.
-    darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
-      system = "aarch64-darwin";
-      modules = [
-        ./hosts/darwin
-        determinate.darwinModules.default
-        nix-homebrew.darwinModules.nix-homebrew
-        home-manager.darwinModules.home-manager
-        { nixpkgs.overlays = sharedOverlays; }
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.backupFileExtension = "bak";
-          home-manager.extraSpecialArgs = {
-            isDarwin = true;
-            isRootlessLinux = false;
-            isCerebras = false;
-          };
-          home-manager.users.jbedm = import ./home/darwin.nix;
-        }
+      sharedOverlays = [
+        claude-code.overlays.default
+        codex-cli.overlays.default
       ];
-    };
+      # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
+      # without the "passing directories is deprecated" warning current nix emits
+      # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented
+      # zero-setup wrapper for exactly this case.
+      formatterFor = system: (import nixpkgs { inherit system; }).nixfmt-tree;
+    in
+    {
 
-    # Keyed as "<user>@<hostname>" where hostname is stable, so bare
-    # `home-manager switch --flake .` auto-resolves via $USER@$(hostname).
-    # On hosts where hostname churns (UWaterloo student CS), the attr uses a
-    # logical name instead and `rebuild()` reads REBUILD_FLAKE_ATTR from
-    # home.sessionVariables to target it.
-    homeConfigurations."jakee@jakee-vm" = home-manager.lib.homeManagerConfiguration {
-      pkgs = import nixpkgs {
-        system = "x86_64-linux";
-        config.allowUnfree = true;
-        overlays = sharedOverlays;
-      };
-      extraSpecialArgs = {
-        isDarwin = false;
-        isRootlessLinux = true;
-        isCerebras = true;
-      };
-      modules = [ ./home/cerebras.nix ];
-    };
+      formatter.aarch64-darwin = formatterFor "aarch64-darwin";
+      formatter.x86_64-linux = formatterFor "x86_64-linux";
 
-    homeConfigurations."jbedmons@uwaterloo" = home-manager.lib.homeManagerConfiguration {
-      pkgs = import nixpkgs {
-        system = "x86_64-linux";
-        config.allowUnfree = true;
-        overlays = sharedOverlays;
+      # Host-trait flags threaded through every module via extraSpecialArgs.
+      # - isDarwin: macOS (nix-darwin + full nix daemon).
+      # - isRootlessLinux: Linux using nix-user-chroot (no daemon, no root).
+      # - isCerebras: refinement of isRootlessLinux for the Cerebras host
+      #   specifically — implies EFS home, fast NFS at /net/jakee-vm/..., and
+      #   the corporate /cb/user_env/bashrc-latest env.
+      # Exactly one of isDarwin / isRootlessLinux should be true per host.
+      # Future daemon-Linux hosts would set both to false.
+      darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        modules = [
+          ./hosts/darwin
+          determinate.darwinModules.default
+          nix-homebrew.darwinModules.nix-homebrew
+          home-manager.darwinModules.home-manager
+          { nixpkgs.overlays = sharedOverlays; }
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              backupFileExtension = "bak";
+              extraSpecialArgs = {
+                isDarwin = true;
+                isRootlessLinux = false;
+                isCerebras = false;
+              };
+              users.jbedm = import ./home/darwin.nix;
+            };
+          }
+        ];
       };
-      extraSpecialArgs = {
-        isDarwin = false;
-        isRootlessLinux = true;
-        isCerebras = false;
+
+      # Keyed as "<user>@<hostname>" where hostname is stable, so bare
+      # `home-manager switch --flake .` auto-resolves via $USER@$(hostname).
+      # On hosts where hostname churns (UWaterloo student CS), the attr uses a
+      # logical name instead and `rebuild()` reads REBUILD_FLAKE_ATTR from
+      # home.sessionVariables to target it.
+      homeConfigurations."jakee@jakee-vm" = home-manager.lib.homeManagerConfiguration {
+        pkgs = import nixpkgs {
+          system = "x86_64-linux";
+          config.allowUnfree = true;
+          overlays = sharedOverlays;
+        };
+        extraSpecialArgs = {
+          isDarwin = false;
+          isRootlessLinux = true;
+          isCerebras = true;
+        };
+        modules = [ ./hosts/cerebras ];
       };
-      modules = [ ./home/uwaterloo.nix ];
+
+      homeConfigurations."jbedmons@uwaterloo" = home-manager.lib.homeManagerConfiguration {
+        pkgs = import nixpkgs {
+          system = "x86_64-linux";
+          config.allowUnfree = true;
+          overlays = sharedOverlays;
+        };
+        extraSpecialArgs = {
+          isDarwin = false;
+          isRootlessLinux = true;
+          isCerebras = false;
+        };
+        modules = [ ./hosts/uwaterloo ];
+      };
     };
-  };
 }

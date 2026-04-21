@@ -4,6 +4,12 @@
   programs.git = {
     enable = true;
 
+    # Global gitignore. Content lives in config/git/ignore so non-nix readers
+    # can inspect it; the readFile pulls it into the nix-managed list.
+    ignores = lib.splitString "\n" (
+      lib.strings.removeSuffix "\n" (builtins.readFile ../config/git/ignore)
+    );
+
     settings = {
       # Personal identity is the default; Cerebras/work hosts override in their
       # host module (mkDefault so those overrides don't need lib.mkForce).
@@ -15,13 +21,18 @@
       # module unconditionally symlinks ~/.config/gh/config.yml into the read-only
       # nix store, which breaks `gh auth login` (cli/cli#4955, home-manager#1654).
       credential = {
-        "https://github.com".helper = [ "" "${pkgs.gh}/bin/gh auth git-credential" ];
-        "https://gist.github.com".helper = [ "" "${pkgs.gh}/bin/gh auth git-credential" ];
+        "https://github.com".helper = [
+          ""
+          "${pkgs.gh}/bin/gh auth git-credential"
+        ];
+        "https://gist.github.com".helper = [
+          ""
+          "${pkgs.gh}/bin/gh auth git-credential"
+        ];
       };
-      core = {
-        editor = "nvim";
-        fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
-      };
+      # core.editor is unset: programs.neovim.defaultEditor = true already sets
+      # EDITOR=nvim, and git falls back to $EDITOR when core.editor is unset.
+      core.fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
       pull.rebase = true;
       merge.conflictstyle = "zdiff3";
       rebase = {
