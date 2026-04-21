@@ -67,6 +67,12 @@
     claude.tools = "Read, Grep, Glob, WebSearch, WebFetch";
   };
 
+  resume-reviewer = {
+    description = "Reviews, rewrites, or adds entries to a Typst resume. Checks content impact, quantification, verb strength, consistency, ATS compatibility, and length. Preserves the template's function signatures.";
+    body = ./resume-reviewer.md;
+    claude.tools = "Read, Write, Edit, Glob, Grep, Bash, WebSearch, WebFetch";
+  };
+
   typst-proofreader = {
     description = "Proofreads Typst documents for spelling, grammar, and terminology inconsistencies.";
     body = ./typst-proofreader.md;

@@ -31,35 +31,40 @@ return {
     },
   },
 
-  -- Cerebras clangd (only on work machines where /cb exists).
-  -- cond = function() ... end is LazyVim idiom: lazy.nvim evaluates it once
-  -- at plugin-load time and skips the spec when false, so we don't pay the
-  -- cost of building the opts table on non-Cerebras hosts.
-  {
-    "neovim/nvim-lspconfig",
-    cond = function() return vim.fn.isdirectory("/cb") == 1 end,
-    opts = {
-      servers = {
-        clangd = {
-          cmd = {
-            "nice", "-n", "15",
-            "prlimit", "--as=4294967296", "--",  -- 4GB memory limit
-            "cpulimit", "-l", "50", "--",
-            vim.fn.expand("~/ws/clangd-18/bin/clangd"),
-            "--background-index=false",
-            "--compile-commands-dir=" .. vim.fn.getcwd(-1, -1) .. "/build-x86_64/buildroot/build-llvm/",
-            "--query-driver=/cb/nightly_builds/builds/master/latest/toolchain/sdk-x86_64/bin/x86_64-linux-g++",
-            "--clang-tidy=false",
-            "--header-insertion=never",
-            "--pch-storage=disk",
-            "--malloc-trim",
-            "-j=1",
+  -- Cerebras clangd (only on work machines where /cb exists). IIFE returns
+  -- the full spec on Cerebras, empty `{}` elsewhere. lazy.nvim treats an
+  -- empty table as a no-op and doesn't interact with LazyVim's own
+  -- nvim-lspconfig spec. Earlier we tried `cond =` here — it silently broke
+  -- LSP attach for ALL filetypes on non-Cerebras hosts.
+  (function()
+    if vim.fn.isdirectory("/cb") == 1 then
+      return {
+        "neovim/nvim-lspconfig",
+        opts = {
+          servers = {
+            clangd = {
+              cmd = {
+                "nice", "-n", "15",
+                "prlimit", "--as=4294967296", "--", -- 4GB memory limit
+                "cpulimit", "-l", "50", "--",
+                vim.fn.expand("~/ws/clangd-18/bin/clangd"),
+                "--background-index=false",
+                "--compile-commands-dir=" .. vim.fn.getcwd(-1, -1) .. "/build-x86_64/buildroot/build-llvm/",
+                "--query-driver=/cb/nightly_builds/builds/master/latest/toolchain/sdk-x86_64/bin/x86_64-linux-g++",
+                "--clang-tidy=false",
+                "--header-insertion=never",
+                "--pch-storage=disk",
+                "--malloc-trim",
+                "-j=1",
+              },
+              root_markers = { ".git" },
+            },
           },
-          root_markers = { ".git" },
         },
-      },
-    },
-  },
+      }
+    end
+    return {}
+  end)(),
 
   -- Typst
   {

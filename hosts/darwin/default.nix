@@ -21,6 +21,11 @@
     defaults = {
       dock = {
         autohide = true;
+        autohide-delay = 0.0; # instant show on hover
+        autohide-time-modifier = 0.0; # instant slide
+        expose-animation-duration = 0.1; # faster mission control
+        launchanim = false; # no bouncy app-launch animation
+        mineffect = "scale"; # snappier than default "genie"
         mru-spaces = false;
         show-recents = true;
         tilesize = 64;
@@ -29,7 +34,9 @@
       finder = {
         AppleShowAllFiles = true;
         FXDefaultSearchScope = "SCcf";
+        FXEnableExtensionChangeWarning = false; # skip "are you sure?" on rename
         FXPreferredViewStyle = "clmv";
+        NewWindowTarget = "Home"; # new Finder windows open at ~/
         ShowExternalHardDrivesOnDesktop = true;
         ShowHardDrivesOnDesktop = false;
         ShowPathbar = true;
@@ -48,8 +55,10 @@
         NSAutomaticPeriodSubstitutionEnabled = true;
         NSAutomaticQuoteSubstitutionEnabled = false;
         NSAutomaticSpellingCorrectionEnabled = false;
+        NSAutomaticWindowAnimationsEnabled = false; # kill window zoom animation
         NSNavPanelExpandedStateForSaveMode = true;
         NSNavPanelExpandedStateForSaveMode2 = true;
+        NSWindowResizeTime = 0.001; # near-instant window resize (default ~0.2s)
       };
 
       screencapture = {
@@ -68,7 +77,25 @@
         StandardHideWidgets = false;
       };
 
-      trackpad.Clicking = true;
+      trackpad = {
+        Clicking = true;
+        TrackpadThreeFingerDrag = true; # drag windows / select text with 3 fingers
+      };
+
+      controlcenter = {
+        BatteryShowPercentage = true;
+        Sound = true; # pin sound slider to menu bar
+        NowPlaying = true; # pin now-playing to menu bar
+      };
+
+      screensaver = {
+        askForPassword = true;
+        askForPasswordDelay = 0; # lock immediately when screensaver kicks in
+      };
+
+      LaunchServices.LSQuarantine = false; # skip "app downloaded from the internet" nag
+
+      SoftwareUpdate.AutomaticallyInstallMacOSUpdates = false; # no surprise macOS reboots
 
       CustomUserPreferences = {
         "com.apple.finder" = {
