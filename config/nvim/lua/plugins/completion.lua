@@ -52,6 +52,14 @@ return {
           end,
           "fallback",
         },
+        ["<S-Tab>"] = {
+          function(cmp)
+            if cmp.snippet_active({ direction = -1 }) then
+              return cmp.snippet_backward()
+            end
+          end,
+          "fallback",
+        },
       },
     },
   },

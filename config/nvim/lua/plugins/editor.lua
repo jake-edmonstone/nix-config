@@ -65,21 +65,17 @@ return {
 
   {
     "nvim-lualine/lualine.nvim",
-    opts = {
-      options = {
-        component_separators = { left = "", right = "" }, -- pipe separator character: │
-        section_separators = "",
-      },
-      sections = {
-        lualine_c = {
-          { "diagnostics" },
-          { "filetype", icon_only = true, separator = "", padding = { left = 1, right = 0 } },
-          { LazyVim.lualine.pretty_path({ modified_sign = " ●", modified_hl = "LualineModified" }) },
-        },
-        lualine_x = { { "lsp_status" } },
-        lualine_z = {},
-      },
-    },
+    opts = function(_, opts)
+      opts.options.component_separators = { left = "", right = "" } -- pipe separator character: │
+      opts.options.section_separators = ""
+      opts.sections.lualine_c = {
+        { "diagnostics" },
+        { "filetype", icon_only = true, separator = "", padding = { left = 1, right = 0 } },
+        { LazyVim.lualine.pretty_path({ modified_sign = " ●", modified_hl = "LualineModified" }) },
+      }
+      table.insert(opts.sections.lualine_x, { "lsp_status" })
+      opts.sections.lualine_z = {}
+    end,
   },
 
   {
