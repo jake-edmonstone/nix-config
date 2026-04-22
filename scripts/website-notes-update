@@ -10,11 +10,17 @@ tmps=()
 cleanup() { [ "${#tmps[@]}" -eq 0 ] || rm -f "${tmps[@]}"; }
 trap cleanup EXIT
 
-# Commit and push typst repo
+# Commit and push typst repo (only the course notes dirs — unstage anything
+# else the user had queued so the commit is strictly scoped to these courses).
 echo "Committing typst repo..."
-git -C "$TYPST_DIR" add .
+git -C "$TYPST_DIR" reset --quiet
+note_paths=()
+for course in "${COURSES[@]}"; do
+  note_paths+=("$course/notes")
+done
+git -C "$TYPST_DIR" add "${note_paths[@]}"
 if git -C "$TYPST_DIR" diff --cached --quiet; then
-  echo "No changes in typst repo"
+  echo "No note changes in typst repo"
 else
   git -C "$TYPST_DIR" commit -m "update notes $(date +%Y-%m-%d)"
 fi
@@ -47,11 +53,12 @@ for course in "${COURSES[@]}"; do
   pdfs+=("${course}-notes.pdf")
 done
 
-# Commit and push website repo
+# Commit and push website repo (only these course PDFs — unstage anything else first).
 echo "Committing website repo..."
+git -C "$WEBSITE_DIR" reset --quiet
 git -C "$WEBSITE_DIR" add "${pdfs[@]}"
 if git -C "$WEBSITE_DIR" diff --cached --quiet; then
-  echo "No changes in website repo"
+  echo "No note PDF changes in website repo"
 else
   git -C "$WEBSITE_DIR" commit -m "update notes $(date +%Y-%m-%d)"
 fi

@@ -5,11 +5,16 @@ TYPST_DIR="$HOME/typst"
 PROFESSIONAL_DIR="$TYPST_DIR/professional"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
 
-# Commit and push typst repo
+# Commit and push typst repo (only resume/cv sources — unstage anything else
+# the user had queued so the commit is strictly scoped to this script's work).
 echo "Committing typst repo..."
-git -C "$TYPST_DIR" add .
+git -C "$TYPST_DIR" reset --quiet
+git -C "$TYPST_DIR" add \
+  professional/resume.typ \
+  professional/cv.typ \
+  professional/shared.typ
 if git -C "$TYPST_DIR" diff --cached --quiet; then
-  echo "No changes in typst repo"
+  echo "No resume/cv changes in typst repo"
 else
   git -C "$TYPST_DIR" commit -m "update resume $(date +%Y-%m-%d)"
 fi
@@ -20,11 +25,12 @@ echo "Compiling resume and cv..."
 typst compile "$PROFESSIONAL_DIR/resume.typ" "$WEBSITE_DIR/resume.pdf"
 typst compile "$PROFESSIONAL_DIR/cv.typ" "$WEBSITE_DIR/cv.pdf"
 
-# Commit and push website repo
+# Commit and push website repo (only the PDFs — unstage anything else first).
 echo "Committing website repo..."
+git -C "$WEBSITE_DIR" reset --quiet
 git -C "$WEBSITE_DIR" add resume.pdf cv.pdf
 if git -C "$WEBSITE_DIR" diff --cached --quiet; then
-  echo "No changes in website repo"
+  echo "No PDF changes in website repo"
 else
   git -C "$WEBSITE_DIR" commit -m "update resume and cv $(date +%Y-%m-%d)"
 fi
