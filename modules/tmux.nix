@@ -11,7 +11,7 @@
     escapeTime = 0;
     historyLimit = 50000;
     focusEvents = true;
-    aggressiveResize = true;
+    aggressiveResize = false;
     sensibleOnTop = true; # sources tmux-sensible (display-time, status-interval, status-keys emacs, etc.)
 
     plugins = with pkgs.tmuxPlugins; [

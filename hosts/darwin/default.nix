@@ -163,6 +163,7 @@
   fonts.packages = with pkgs; [
     maple-mono.NF
     newcomputermodern # full family (Book weight) for Typst documents
+    font-awesome # FA icons for Typst resume/cv
   ];
 
   # Homebrew (GUI apps only — CLI tools are in nixpkgs)

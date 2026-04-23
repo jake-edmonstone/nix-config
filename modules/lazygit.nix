@@ -6,6 +6,7 @@ _:
 
     settings = {
       disableStartupPopups = true;
+      promptToReturnFromSubprocess = false;
       gui = {
         wrapLinesInStagingView = false;
         theme = {
