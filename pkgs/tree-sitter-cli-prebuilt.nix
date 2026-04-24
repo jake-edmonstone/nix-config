@@ -50,10 +50,12 @@ stdenvNoCC.mkDerivation {
 
   dontUnpack = true;
 
-  # Linux binaries are dynamically linked against upstream-build-env glibc;
-  # patch them to nixpkgs's interpreter. Darwin binaries use stable libSystem
-  # so they don't need touching.
+  # Linux binaries are dynamically linked against upstream-build-env glibc
+  # and libgcc_s; patch them to nixpkgs's interpreter and point auto-patchelf
+  # at stdenv.cc.cc.lib for libgcc_s.so.1. Darwin binaries use stable
+  # libSystem so they don't need touching.
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ (lib.getLib stdenv.cc.cc) ];
 
   installPhase = ''
     runHook preInstall
