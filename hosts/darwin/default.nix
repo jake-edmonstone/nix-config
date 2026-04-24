@@ -130,6 +130,19 @@
 
   users.users.jbedm.home = "/Users/jbedm";
 
+  # Static flake-attr selector. rebuild() (modules/zsh.nix) reads this and
+  # passes --flake "$DOTFILES#$REBUILD_FLAKE_ATTR", decoupling the build from
+  # scutil's LocalHostName so DHCP/MDM renames and System Settings changes
+  # can't silently break activation with "attribute doesn't exist".
+  #
+  # This config is intended to apply to any of my Macs identically, so the
+  # attr is the same everywhere and both Macs activate the same derivation.
+  # Per-Mac identity (LocalHostName, ComputerName) is deliberately NOT set
+  # here — we'd collide on .local resolution and Bonjour if two Macs enforced
+  # the same name. Each Mac's OS hostname is managed out-of-band via System
+  # Settings; nix only controls the package/config set.
+  home-manager.users.jbedm.home.sessionVariables.REBUILD_FLAKE_ATTR = "Jakes-MacBook";
+
   # Determinate Nix handles the daemon; the module also auto-sets
   # nix.enable = false to avoid nix-darwin stepping on Determinate's config.
   determinateNix.enable = true;

@@ -1,6 +1,18 @@
 {
   description = "Jake's system configuration";
 
+  # ---------------------------------------------------------------------------
+  # First-time bootstrap (before REBUILD_FLAKE_ATTR is in the shell env):
+  #
+  #   Darwin:  sudo darwin-rebuild switch --flake ~/nix-config#Jakes-MacBook
+  #   Linux:   home-manager switch --flake ~/nix-config#<attr>
+  #            (attr = "jbedmons@uwaterloo" or "jakee@jakee-vm")
+  #
+  # After the first successful activation, `rebuild` (zsh function in
+  # modules/zsh.nix) works bare — $REBUILD_FLAKE_ATTR is set by HM via
+  # home.sessionVariables in each host module.
+  # ---------------------------------------------------------------------------
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
