@@ -108,6 +108,7 @@
       /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
       killall Finder || true
       killall SystemUIServer || true
+      killall ControlCenter || true
 
       # macOS Sequoia/Tahoe reads `com.apple.mouse.tapBehavior` at per-host
       # (ByHost) scope for the "Tap to click" switch, but nix-darwin's

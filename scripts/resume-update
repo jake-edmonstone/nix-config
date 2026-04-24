@@ -4,6 +4,7 @@ set -euo pipefail
 TYPST_DIR="$HOME/typst"
 PROFESSIONAL_DIR="$TYPST_DIR/professional"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
+DATE=$(date +%Y-%m-%d)
 
 # Commit and push typst repo (only resume/cv sources — unstage anything else
 # the user had queued so the commit is strictly scoped to this script's work).
@@ -16,7 +17,7 @@ git -C "$TYPST_DIR" add \
 if git -C "$TYPST_DIR" diff --cached --quiet; then
   echo "No resume/cv changes in typst repo"
 else
-  git -C "$TYPST_DIR" commit -m "update resume $(date +%Y-%m-%d)"
+  git -C "$TYPST_DIR" commit -m "update resume $DATE"
 fi
 git -C "$TYPST_DIR" push
 
@@ -32,7 +33,7 @@ git -C "$WEBSITE_DIR" add resume.pdf cv.pdf
 if git -C "$WEBSITE_DIR" diff --cached --quiet; then
   echo "No PDF changes in website repo"
 else
-  git -C "$WEBSITE_DIR" commit -m "update resume and cv $(date +%Y-%m-%d)"
+  git -C "$WEBSITE_DIR" commit -m "update resume and cv $DATE"
 fi
 git -C "$WEBSITE_DIR" push
 

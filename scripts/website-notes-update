@@ -3,6 +3,7 @@ set -euo pipefail
 
 TYPST_DIR="$HOME/typst"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
+DATE=$(date +%Y-%m-%d)
 
 COURSES=(pmath347 pmath367 pmath450 pmath352)
 
@@ -22,7 +23,7 @@ git -C "$TYPST_DIR" add "${note_paths[@]}"
 if git -C "$TYPST_DIR" diff --cached --quiet; then
   echo "No note changes in typst repo"
 else
-  git -C "$TYPST_DIR" commit -m "update notes $(date +%Y-%m-%d)"
+  git -C "$TYPST_DIR" commit -m "update notes $DATE"
 fi
 git -C "$TYPST_DIR" push
 
@@ -60,7 +61,7 @@ git -C "$WEBSITE_DIR" add "${pdfs[@]}"
 if git -C "$WEBSITE_DIR" diff --cached --quiet; then
   echo "No note PDF changes in website repo"
 else
-  git -C "$WEBSITE_DIR" commit -m "update notes $(date +%Y-%m-%d)"
+  git -C "$WEBSITE_DIR" commit -m "update notes $DATE"
 fi
 git -C "$WEBSITE_DIR" push
 

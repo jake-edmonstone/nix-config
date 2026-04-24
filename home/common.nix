@@ -33,6 +33,9 @@
       # silently point at nothing AND we'd have disabled the host's system fonts.
       TYPST_IGNORE_SYSTEM_FONTS = "true";
       TYPST_FONT_PATHS = "/Library/Fonts/Nix Fonts";
+      # Suppress Terminal.app per-session state saving (which would recreate
+      # ~/.zsh_sessions/). Read by /etc/zshrc_Apple_Terminal.
+      SHELL_SESSIONS_DISABLE = "1";
     };
 
     sessionPath = [
@@ -75,22 +78,18 @@
     file = {
       ".clang-format".source = ../config/clang/clang-format;
       ".vimrc".source = ../config/vim/vimrc;
-      ".p10k.zsh".source = ../config/p10k/p10k.zsh;
     };
 
-    # ~/.hushlogin must be a REAL empty file (not a /nix/store symlink). On
-    # rootless Nix, /nix/store isn't mounted during the SSH login stage — sshd
-    # and PAM check for .hushlogin BEFORE nix-user-chroot is entered, so a
-    # symlink into the store dangles and hushlogin silently fails to suppress
-    # the MOTD / "Last login" banner.
-    activation.writeHushlogin = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    # - ~/.hushlogin must be a REAL empty file (not a /nix/store symlink). On
+    #   rootless Nix, /nix/store isn't mounted during the SSH login stage — sshd
+    #   and PAM check for .hushlogin BEFORE nix-user-chroot is entered, so a
+    #   symlink into the store dangles and hushlogin silently fails to suppress
+    #   the MOTD / "Last login" banner.
+    # - vim's undodir/backupdir (referenced from config/vim/vimrc) must exist
+    #   before vim can write undo/backup files there. home.file only creates
+    #   files, not empty dirs, so we mkdir here.
+    activation.userHomeSetup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       : > "$HOME/.hushlogin"
-    '';
-
-    # vim's undodir and backupdir (referenced from config/vim/vimrc) must exist
-    # before vim can write undo/backup files there. home.file can only create
-    # files, not empty dirs, so create these via an activation step.
-    activation.mkVimDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       mkdir -p "$HOME/.vim/undodir" "$HOME/.vim/backups"
     '';
   };
@@ -134,4 +133,8 @@
   # ~/Library/Application Support/. Many HM modules check config.xdg.enable
   # to decide the config path on Darwin.
   xdg.enable = true;
+
+  # Place p10k.zsh under $ZDOTDIR alongside HM's managed .zshrc/.zshenv instead
+  # of $HOME/.p10k.zsh. Sourced from modules/zsh.nix via config.xdg.configHome.
+  xdg.configFile."zsh/p10k.zsh".source = ../config/p10k/p10k.zsh;
 }

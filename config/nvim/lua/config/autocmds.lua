@@ -81,14 +81,3 @@ if vim.fn.isdirectory("/cb") == 1 then
   })
 end
 
--- XML uses 4-space indentation
-vim.api.nvim_create_autocmd("FileType", {
-  group = augroup,
-  pattern = "xml",
-  callback = function()
-    vim.bo.shiftwidth = 4
-    vim.bo.tabstop = 4
-    vim.bo.softtabstop = 4
-    vim.bo.expandtab = true
-  end,
-})

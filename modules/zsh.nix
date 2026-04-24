@@ -83,7 +83,7 @@
       # /etc/passwd directly, nix's glibc can't resolve via nss_sss, so zsh's
       # getpwuid-backed $USERNAME getter returns "". No assignment in zshenv
       # can stick because zsh re-reads the getter on every access. The fix
-      # lives in ~/.p10k.zsh, which uses $USER (set by PAM) instead of %n.
+      # lives in $ZDOTDIR/p10k.zsh, which uses $USER (set by PAM) instead of %n.
 
       # (typeset -U path manpath fpath dropped — HM emits the equivalent in
       # .zshrc, and we only do non-interactive env setup here. Non-interactive
@@ -180,13 +180,17 @@
         zle -N edit-command-line
         bindkey '^x^e' edit-command-line
 
-        # Re-assert blinking block cursor on every prompt. A one-shot printf at
-        # shell start gets clobbered when TUI apps (nvim, yazi, lazygit, etc.)
-        # change the cursor shape on entry and fail to fully restore it on exit
-        # — a known Ghostty quirk (ghostty-org/ghostty#9209). Ghostty's
-        # `cursor-style-blink = true` only sets the DEFAULT; DECSCUSR state
-        # from the last child TUI wins until something overrides it.
-        _cursor_blinking_block() { [[ -t 1 ]] && printf '\e[1 q' }
+        # Re-assert cursor visibility + blinking block on every prompt.
+        # - \e[?25h (DECTCEM show) undoes leaked \e[?25l from TUIs that hide the
+        #   cursor and don't restore it on abnormal exit. Claude Code (React Ink)
+        #   is the common culprit — see ghostty-org/ghostty#12385. Without this
+        #   the cursor is invisible (reads as "not blinking") after such a leak.
+        # - \e[1 q (DECSCUSR 1 = blinking block) fixes shape leaks from TUIs
+        #   that last set a non-blinking shape — see ghostty-org/ghostty#9209.
+        # Both needed: visibility and shape are orthogonal state. Ghostty's
+        # `cursor-style-blink = true` only sets the DEFAULT shape; the *current*
+        # DECSCUSR/DECTCEM state from the last child TUI wins until we override.
+        _cursor_blinking_block() { [[ -t 1 ]] && printf '\e[?25h\e[1 q' }
         precmd_functions+=(_cursor_blinking_block)
 
         # Functions
@@ -208,32 +212,48 @@
         }
       '')
 
-      # fast-syntax-highlighting — after plugins that bind input widgets
-      # (fzf-tab, edit-command-line), before p10k.
-      # Dracula color palette lives in config/zsh/fsh-styles.zsh (store-pinned
-      # via path interpolation; edits require rebuild).
+      # fast-syntax-highlighting — deferred to first precmd instead of sourced
+      # at .zshrc read time. _zsh_highlight_bind_widgets is ~2ms / 17% of cold
+      # interactive startup (zprof); moving it out of the init path lands the
+      # cost *after* p10k instant prompt has painted, so perceived latency
+      # drops. Self-unhooks after first fire so steady-state is free.
+      #
+      # Ordering invariant preserved: FSH's README requires it be sourced last
+      # relative to other widget-binding plugins. That's still true here —
+      # fzf-tab (650), autosuggestions (HM default ~700), edit-command-line
+      # (1000) all run at zshrc read time, before the first precmd where FSH
+      # actually binds. Dracula palette lives in config/zsh/fsh-styles.zsh
+      # (store-pinned via path interpolation; edits require rebuild).
       (lib.mkOrder 1400 ''
-        source ${pkgs.zsh-fast-syntax-highlighting}/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
-        source ${../config/zsh/fsh-styles.zsh}
+        _fsh_lazy_load() {
+          source ${pkgs.zsh-fast-syntax-highlighting}/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+          source ${../config/zsh/fsh-styles.zsh}
+          add-zsh-hook -d precmd _fsh_lazy_load
+          unset -f _fsh_lazy_load
+        }
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd _fsh_lazy_load
       '')
 
       # Powerlevel10k — after everything else
       (lib.mkOrder 1500 ''
         source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
-        [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+        [[ ! -f ${config.xdg.configHome}/zsh/p10k.zsh ]] || source ${config.xdg.configHome}/zsh/p10k.zsh
       '')
     ];
   };
 
   # Compile the big zsh source files to .zwc bytecode on every activation so
   # zsh loads them via mmap instead of re-parsing. ~10-25 ms cold-start saving.
-  # With xdg.enable = true, HM places .zshrc and the "real" .zshenv under
-  # $HOME/${programs.zsh.dotDir} (defaults to ".config/zsh" on Mac here), with
-  # a small stub .zshenv at $HOME that sources the real one. We compile all
-  # three plus ~/.p10k.zsh. zcompile reads the symlink target but writes .zwc
-  # next to the symlink (in $HOME/$dotDir, writable). We rebuild unconditionally
-  # because nix-store mtimes are frozen so a -nt check would never trigger;
-  # activations are rare.
+  # With xdg.enable = true, HM places the "real" .zshrc and .zshenv under
+  # $HOME/${programs.zsh.dotDir} (".config/zsh" on this setup), and emits a
+  # tiny stub .zshenv at $HOME that just `source`s the real one. We compile
+  # the real files plus p10k.zsh (also placed under $ZDOTDIR). The stub is
+  # a single-line `source` call — not worth compiling (saves ~1.4 KB of .zwc
+  # and a ~/.zshenv.zwc file from the home dir). zcompile reads the symlink
+  # target but writes .zwc next to the symlink (in $ZDOTDIR, writable). We
+  # rebuild unconditionally because nix-store mtimes are frozen so a -nt check
+  # would never trigger; activations are rare.
   #
   # On Cerebras, $HOME is slow EFS. Writing .zwc there would negate the win.
   # So we compile to fast NFS and symlink the target location → fast NFS path.
@@ -245,8 +265,7 @@
       files = [
         "${zshDir}/.zshrc"
         "${zshDir}/.zshenv"
-        "${config.home.homeDirectory}/.zshenv"
-        "${config.home.homeDirectory}/.p10k.zsh"
+        "${config.xdg.configHome}/zsh/p10k.zsh"
       ];
     in
     lib.hm.dag.entryAfter [ "writeBoundary" ] (

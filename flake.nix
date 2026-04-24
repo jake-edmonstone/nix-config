@@ -58,6 +58,12 @@
       # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented
       # zero-setup wrapper for exactly this case.
       formatterFor = system: (import nixpkgs { inherit system; }).nixfmt-tree;
+      # Shared nixpkgs instance for Linux homeConfigurations (Cerebras + UWaterloo).
+      linuxPkgs = import nixpkgs {
+        system = "x86_64-linux";
+        config.allowUnfree = true;
+        overlays = sharedOverlays;
+      };
     in
     {
 
@@ -102,11 +108,7 @@
       # logical name instead and `rebuild()` reads REBUILD_FLAKE_ATTR from
       # home.sessionVariables to target it.
       homeConfigurations."jakee@jakee-vm" = home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
-          system = "x86_64-linux";
-          config.allowUnfree = true;
-          overlays = sharedOverlays;
-        };
+        pkgs = linuxPkgs;
         extraSpecialArgs = {
           isDarwin = false;
           isRootlessLinux = true;
@@ -116,11 +118,7 @@
       };
 
       homeConfigurations."jbedmons@uwaterloo" = home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
-          system = "x86_64-linux";
-          config.allowUnfree = true;
-          overlays = sharedOverlays;
-        };
+        pkgs = linuxPkgs;
         extraSpecialArgs = {
           isDarwin = false;
           isRootlessLinux = true;
