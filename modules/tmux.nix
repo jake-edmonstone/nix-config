@@ -18,12 +18,17 @@
       resurrect
       {
         plugin = continuum;
-        extraConfig = "set -g @continuum-restore 'on'";
+        extraConfig = ''
+          set -g @continuum-restore 'on'
+          # Set before continuum loads; the plugin appends its autosave hook here.
+          set -g status-right ""
+        '';
       }
     ];
 
     extraConfig = ''
-      set -s allow-passthrough on
+      # Window option, not server option; `-s` errors before a session exists.
+      set -g allow-passthrough on
 
       # Refresh HM-managed env vars on every client attach. After a
       # `home-manager switch` changes a sessionVariable (e.g. FZF_DEFAULT_OPTS),
@@ -103,7 +108,6 @@
 
       set -g status-left-length 60
       set -g status-left '#[fg=colour250]working on #[fg=#{@PURPLE},bold]#S#[default]'
-      set -g status-right ""
 
       set -g window-status-style fg=colour244,bg=default
       set -g window-status-format ' #[fg=colour244]#I #[fg=colour250]#W '
