@@ -79,6 +79,37 @@ return {
   },
 
   {
+    "nvim-mini/mini.diff",
+    event = "LazyFile",
+    opts = {
+      mappings = {
+        apply = "",
+        reset = "",
+        textobject = "",
+        goto_first = "",
+        goto_prev = "",
+        goto_next = "",
+        goto_last = "",
+      },
+      view = {
+        style = "sign",
+        -- Keep mini.diff active for overlay only; let gitsigns own gutter visuals.
+        signs = { add = " ", change = " ", delete = " " },
+        priority = 1,
+      },
+    },
+    keys = {
+      {
+        "<leader>go",
+        function()
+          require("mini.diff").toggle_overlay(0)
+        end,
+        desc = "Toggle mini.diff overlay",
+      },
+    },
+  },
+
+  {
     "christoomey/vim-tmux-navigator",
     cmd = {
       "TmuxNavigateLeft",

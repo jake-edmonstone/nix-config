@@ -31,6 +31,13 @@ return {
         MiniFilesBorder = { bg = "NONE" },
         TreesitterContextBottom = { underline = true, sp = "#6272a4" },
         LualineModified = { fg = yellow, bold = true },
+        -- mini.diff overlay colors (delta-like dark red/green background blocks)
+        MiniDiffOverDelete = { bg = "#3f0001" },
+        MiniDiffOverChange = { bg = "#901011" },
+        MiniDiffOverContext = { bg = "#3f0001" },
+        MiniDiffOverAdd = { bg = "#002800" },
+        MiniDiffOverChangeBuf = { bg = "#006000" },
+        MiniDiffOverContextBuf = { bg = "#002800" },
       },
     },
   },
