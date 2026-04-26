@@ -23,7 +23,8 @@ local apps = {
 	t = "com.mitchellh.ghostty",
 	s = "com.tinyspeck.slackmacgap",
 	b = "com.apple.Safari",
-	e = "com.microsoft.Outlook",
+	-- e = "com.microsoft.Outlook",
+	e = "com.apple.mail",
 	m = "com.apple.MobileSMS",
 	a = "com.openai.chat",
 	p = "info.sioyek.sioyek", -- Sioyek
@@ -31,7 +32,7 @@ local apps = {
 	f = "net.ankiweb.dtop", -- Anki (nixpkgs anki-bin; .dmg-distributed Anki uses net.ankiweb.launcher)
 	c = "com.apple.Safari.WebApp.DDBDA633-CD00-46AB-A16B-1EAB56EA281F", -- Confluence
 	j = "com.apple.Safari.WebApp.89AA9B93-DC53-4A4D-947E-794889FB7A06", -- Jira
-	g = "com.apple.Safari.WebApp.841C2873-A061-48FA-82F5-9C6C29EE33B7", -- GitHub
+	g = "com.apple.Safari.WebApp.84A4B68F-5EF2-4BD8-AE52-65B41EAFC9CA", -- GitHub
 }
 
 -- Split views: key = hotkey letter, value = {left, right, ratio}

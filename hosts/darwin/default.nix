@@ -205,8 +205,5 @@
       "spotify"
       "stats"
     ];
-    # masApps requires being signed into the App Store first.
-    # Install Goodnotes manually: mas install 1444383602
-    masApps = { };
   };
 }

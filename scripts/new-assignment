@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  new-assignment --course <course> --assignment <id> --layout <spec>
+
+Examples:
+  new-assignment --course pmath347 --assignment 11 --layout "1ab,2abc,3,4,5"
+  new-assignment --course pmath367 --assignment 2.5 --layout "1a,2"
+EOF
+}
+
+die() {
+  printf 'new-assignment: %s\n' "$*" >&2
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+course=""
+assignment_raw=""
+layout=""
+force=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --course)
+      [[ $# -ge 2 ]] || die "--course requires a value"
+      course="$2"
+      shift 2
+      ;;
+    --assignment)
+      [[ $# -ge 2 ]] || die "--assignment requires a value"
+      assignment_raw="$2"
+      shift 2
+      ;;
+    --layout)
+      [[ $# -ge 2 ]] || die "--layout requires a value"
+      layout="$2"
+      shift 2
+      ;;
+    --force)
+      die "--force is disabled: this script never overwrites existing assignments"
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "unknown argument: $1"
+      ;;
+  esac
+done
+
+[[ -n "$course" ]] || die "--course is required"
+[[ -n "$assignment_raw" ]] || die "--assignment is required"
+[[ -n "$layout" ]] || die "--layout is required"
+[[ "$course" =~ ^[A-Za-z0-9._-]+$ ]] || die "invalid --course (allowed: letters, numbers, dot, underscore, hyphen)"
+
+require_cmd tmux
+require_cmd nvim
+
+typst_root="$HOME/typst"
+assignments_root="$typst_root/$course/assignments"
+[[ -d "$assignments_root" ]] || die "assignments directory not found: $assignments_root"
+
+if [[ "$assignment_raw" =~ ^[0-9]+$ ]]; then
+  assignment_norm="$((10#$assignment_raw))"
+else
+  assignment_norm="$assignment_raw"
+fi
+
+main_base="a$assignment_norm"
+
+use_padded_single_digit=0
+if find "$assignments_root" -mindepth 1 -maxdepth 1 -type d -name 'a0[0-9]' | grep -q .; then
+  use_padded_single_digit=1
+fi
+
+if [[ "$assignment_raw" == *.* ]]; then
+  folder_name="a$assignment_raw"
+elif [[ "$assignment_raw" =~ ^[0-9]+$ ]]; then
+  assignment_int="$((10#$assignment_raw))"
+  if (( assignment_int < 10 && use_padded_single_digit == 1 )); then
+    folder_name="$(printf 'a%02d' "$assignment_int")"
+  else
+    folder_name="a$assignment_int"
+  fi
+else
+  folder_name="a$assignment_raw"
+fi
+
+target_dir="$assignments_root/$folder_name"
+[[ -d "$target_dir" ]] && die "target already exists: $target_dir (this script never overwrites existing assignments)"
+mkdir -p "$target_dir"
+
+declare -a qnums=()
+declare -a qparts=()
+declare -A seen_q=()
+
+IFS=',' read -r -a raw_tokens <<< "$layout"
+[[ ${#raw_tokens[@]} -gt 0 ]] || die "empty layout"
+
+for raw in "${raw_tokens[@]}"; do
+  token="${raw//[[:space:]]/}"
+  [[ -n "$token" ]] || die "layout contains an empty token"
+  [[ "$token" =~ ^[0-9]+[a-z]*$ ]] || die "invalid layout token: $token"
+
+  qnum_raw="${token%%[a-z]*}"
+  if [[ "$qnum_raw" =~ ^[0-9]+$ ]]; then
+    qnum="$((10#$qnum_raw))"
+  else
+    qnum="$qnum_raw"
+  fi
+  (( qnum > 0 )) || die "question numbers must be >= 1: $token"
+  parts="${token#$qnum_raw}"
+
+  if [[ -n "${seen_q[$qnum]:-}" ]]; then
+    die "duplicate question number in layout: $qnum"
+  fi
+  seen_q["$qnum"]=1
+
+  if [[ -n "$parts" ]]; then
+    declare -A seen_part=()
+    prev=""
+    for ((i=0; i<${#parts}; i++)); do
+      p="${parts:i:1}"
+      if [[ -n "${seen_part[$p]:-}" ]]; then
+        die "duplicate part letter in token: $token"
+      fi
+      seen_part["$p"]=1
+      if [[ -n "$prev" && "$p" < "$prev" ]]; then
+        die "part letters must be increasing in token: $token"
+      fi
+      prev="$p"
+    done
+  fi
+
+  qnums+=("$qnum")
+  qparts+=("$parts")
+done
+
+find_header_line() {
+  local f line
+  while IFS= read -r f; do
+    line="$(grep -m1 '#show: assignment-header(' "$f" || true)"
+    if [[ -n "$line" ]]; then
+      printf '%s\n' "$line"
+      return 0
+    fi
+  done < <(find "$assignments_root" -mindepth 2 -maxdepth 2 -type f -name '*.typ' | sort)
+  return 1
+}
+
+header_line="$(find_header_line || true)"
+title_prefix="Assignment"
+course_term="${course^^}"
+if [[ -n "$header_line" && "$header_line" =~ assignment-header\(\"([^\"]+)\",[[:space:]]*\"([^\"]+)\" ]]; then
+  old_title="${BASH_REMATCH[1]}"
+  course_term="${BASH_REMATCH[2]}"
+  if [[ "$old_title" =~ ^(.+[^0-9[:space:]])[[:space:]]+[0-9.]+$ ]]; then
+    title_prefix="${BASH_REMATCH[1]}"
+  fi
+fi
+
+new_title="$title_prefix $assignment_norm"
+main_file="$target_dir/$main_base.typ"
+
+declare -a written_files=()
+declare -a created_files=()
+declare -a overwritten_files=()
+
+record_file_write() {
+  local path="$1"
+  written_files+=("$path")
+  if [[ -e "$path" ]]; then
+    overwritten_files+=("$path")
+  else
+    created_files+=("$path")
+  fi
+}
+
+record_file_write "$main_file"
+{
+  printf '#import "/preamble.typ": *\n'
+  printf '#show: preamble\n'
+  printf '//#set text(12pt)\n'
+  printf '#show: assignment-header("%s", "%s")\n' "$new_title" "$course_term"
+  printf '#show: setup-counters(1)\n\n'
+
+  for idx in "${!qnums[@]}"; do
+    qnum="${qnums[$idx]}"
+    parts="${qparts[$idx]}"
+
+    if [[ -z "$parts" ]]; then
+      subfile="$main_base-$qnum.typ"
+      printf '#question-box[\n'
+      printf '  TODO\n'
+      printf ']\n'
+      printf '#include "%s"\n\n' "$subfile"
+    else
+      printf '#question-box[\n'
+      printf '  TODO\n'
+      printf ']\n'
+      part_index=1
+      for ((i=0; i<${#parts}; i++)); do
+        part="${parts:i:1}"
+        subfile="$main_base-$qnum$part.typ"
+        printf '#part-box(%d)[\n' "$part_index"
+        printf '  TODO\n'
+        printf ']\n'
+        printf '#include "%s"\n' "$subfile"
+        ((part_index++))
+      done
+      printf '\n'
+    fi
+  done
+} > "$main_file"
+
+for idx in "${!qnums[@]}"; do
+  qnum="${qnums[$idx]}"
+  parts="${qparts[$idx]}"
+  if [[ -z "$parts" ]]; then
+    sub_path="$target_dir/$main_base-$qnum.typ"
+    record_file_write "$sub_path"
+    {
+      printf '#import "/preamble.typ": *\n'
+      printf '#solution\n'
+      printf 'TODO\n'
+    } > "$sub_path"
+  else
+    for ((i=0; i<${#parts}; i++)); do
+      part="${parts:i:1}"
+      sub_path="$target_dir/$main_base-$qnum$part.typ"
+      record_file_write "$sub_path"
+      {
+        printf '#import "/preamble.typ": *\n'
+        printf '#solution\n'
+        printf 'TODO\n'
+      } > "$sub_path"
+    done
+  fi
+done
+
+session_name_raw="typst-${course}-a${assignment_norm}"
+session_name="$(printf '%s' "$session_name_raw" | tr -c '[:alnum:]' '_')"
+
+if tmux has-session -t "$session_name" 2>/dev/null; then
+  tmux send-keys -t "$session_name:1.1" C-c
+  tmux send-keys -t "$session_name:1.1" "cd \"$target_dir\" && nvim \"$main_file\"" C-m
+else
+  tmux new-session -d -s "$session_name" -c "$target_dir"
+  tmux send-keys -t "$session_name:1.1" "nvim \"$main_file\"" C-m
+fi
+
+printf 'new-assignment: target directory: %s\n' "$target_dir"
+if [[ ${#created_files[@]} -gt 0 ]]; then
+  printf 'new-assignment: created files:\n'
+  for f in "${created_files[@]}"; do
+    printf '  %s\n' "$f"
+  done
+fi
+if [[ ${#overwritten_files[@]} -gt 0 ]]; then
+  printf 'new-assignment: overwritten files:\n'
+  for f in "${overwritten_files[@]}"; do
+    printf '  %s\n' "$f"
+  done
+fi
+printf 'new-assignment: tmux session: %s\n' "$session_name"
+printf 'new-assignment: opening main file: %s\n' "$main_file"
+
+if [[ -n "${TMUX:-}" ]]; then
+  tmux switch-client -t "$session_name"
+else
+  tmux attach -t "$session_name"
+fi

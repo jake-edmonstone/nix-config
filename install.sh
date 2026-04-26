@@ -301,35 +301,33 @@ fi
 export NIXPKGS_ALLOW_UNFREE=1
 
 if is_darwin; then
-  hostname=$(scutil --get LocalHostName 2>/dev/null || true)
-  if [[ -z "$hostname" ]]; then
-    err "scutil --get LocalHostName returned empty — set it with: sudo scutil --set LocalHostName 'Jakes-MacBook'"
-    exit 1
-  fi
+  # Darwin target is selected by flake attr, not OS hostname. Keep this
+  # overridable for one-off testing, but default to the shared Mac config.
+  darwin_attr="${REBUILD_FLAKE_ATTR:-Jakes-MacBook}"
 
-  # Validate hostname matches a known flake configuration
-  if ! nix eval "$DOTFILES#darwinConfigurations.\"$hostname\"" --raw --apply 'x: "ok"' 2>/dev/null; then
-    err "No darwinConfigurations.\"$hostname\" found in flake.nix"
+  # Validate selected flake attr exists
+  if ! nix eval "$DOTFILES#darwinConfigurations.\"$darwin_attr\"" --raw --apply 'x: "ok"' 2>/dev/null; then
+    err "No darwinConfigurations.\"$darwin_attr\" found in flake.nix"
     echo ""
-    echo "  Your Mac's hostname is: $hostname"
+    echo "  Requested darwin attr: $darwin_attr"
     echo "  Available configurations:"
     nix eval "$DOTFILES#darwinConfigurations" --apply 'builtins.attrNames' 2>/dev/null || echo "    (could not list)"
     echo ""
     echo "  Either:"
-    echo "    1. Add darwinConfigurations.\"$hostname\" to flake.nix"
-    echo "    2. Or rename this Mac: sudo scutil --set LocalHostName 'Jakes-MacBook'"
+    echo "    1. Add darwinConfigurations.\"$darwin_attr\" to flake.nix"
+    echo "    2. Or set REBUILD_FLAKE_ATTR to an existing attr before install.sh"
     exit 1
   fi
 
-  msg "Building nix-darwin configuration for $hostname"
+  msg "Building nix-darwin configuration for $darwin_attr"
 
   # First run: nix-darwin isn't installed yet, so use nix run to bootstrap
   if ! command -v darwin-rebuild >/dev/null 2>&1; then
     msg "Bootstrapping nix-darwin (first run)"
-    sudo -H nix run nix-darwin/master#darwin-rebuild -- switch --flake "$DOTFILES#$hostname"
+    sudo -H nix run nix-darwin/master#darwin-rebuild -- switch --flake "$DOTFILES#$darwin_attr"
   else
     # Use command -v (shell built-in) to survive sudo PATH reset
-    sudo -H "$(command -v darwin-rebuild)" switch --flake "$DOTFILES#$hostname"
+    sudo -H "$(command -v darwin-rebuild)" switch --flake "$DOTFILES#$darwin_attr"
   fi
 else
   # Linux: home-manager with bare flake auto-resolves via $USER@$(hostname).

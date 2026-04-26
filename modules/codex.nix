@@ -2,22 +2,19 @@
 
 let
   sharedAgents = import ../config/agents;
+  tomlFormat = pkgs.formats.toml { };
 
   mkCodexAgent =
     name: a:
     let
       effort = a.codex.model_reasoning_effort or "high";
-      # Escape quotes and backslashes so a future description containing `"`
-      # doesn't break the TOML parse.
-      desc = lib.escape [ "\"" "\\" ] a.description;
     in
-    pkgs.writeText "${name}.toml" ''
-      name = "${name}"
-      description = "${desc}"
-      model_reasoning_effort = "${effort}"
-      developer_instructions = """
-      ${builtins.readFile a.body}"""
-    '';
+    tomlFormat.generate "${name}.toml" {
+      inherit name;
+      inherit (a) description;
+      model_reasoning_effort = effort;
+      developer_instructions = builtins.readFile a.body;
+    };
 
   agentsDir = pkgs.runCommand "codex-agents" { } ''
     mkdir -p $out
@@ -33,9 +30,7 @@ in
 
   home.file = {
     # Agents generated from the shared registry at config/agents/ (same source
-    # used by modules/claude.nix). ~/.codex/config.toml is left unmanaged:
-    # codex writes project trust levels there as you approve projects (same
-    # reason we don't use programs.gh.settings for gh auth).
+    # used by modules/claude.nix).
     ".codex/agents" = {
       source = agentsDir;
       recursive = true;
@@ -47,5 +42,37 @@ in
       source = ../config/skills;
       recursive = true;
     };
+
+    # Keep Codex config fully declarative. This disables Codex writeback for
+    # mutable preferences/trust state because the file is store-backed.
+    ".codex/config.toml".text = ''
+      model = "gpt-5.3-codex"
+      model_reasoning_effort = "medium"
+      approvals_reviewer = "user"
+      sandbox_mode = "read-only"
+      approval_policy = "untrusted"
+
+      [notice]
+      hide_gpt5_1_migration_prompt = true
+      "hide_gpt-5.1-codex-max_migration_prompt" = true
+
+      [notice.model_migrations]
+      "gpt-5.3-codex" = "gpt-5.4"
+
+      [plugins."github@openai-curated"]
+      enabled = true
+
+      [projects."/Users/jbedm/nix-config"]
+      trust_level = "trusted"
+
+      [projects."/Users/jbedm/typst"]
+      trust_level = "trusted"
+
+      [projects."/Users/jbedm/projects"]
+      trust_level = "trusted"
+
+      [projects."/Users/jbedm"]
+      trust_level = "trusted"
+    '';
   };
 }

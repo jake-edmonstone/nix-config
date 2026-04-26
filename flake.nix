@@ -64,6 +64,7 @@
       sharedOverlays = [
         claude-code.overlays.default
         codex-cli.overlays.default
+        (import ./overlays/copilot-cli.nix)
       ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits

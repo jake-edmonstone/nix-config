@@ -10,6 +10,7 @@
 {
   imports = [
     ../modules/git.nix
+    ../modules/copilot.nix
     ../modules/zsh.nix
     ../modules/tmux.nix
     ../modules/fzf.nix
