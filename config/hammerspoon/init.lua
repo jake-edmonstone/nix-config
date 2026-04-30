@@ -27,6 +27,7 @@ local apps = {
 	e = "com.apple.mail",
 	m = "com.apple.MobileSMS",
 	a = "com.openai.chat",
+	d = "com.hnc.Discord",
 	p = "info.sioyek.sioyek", -- Sioyek
 	v = "com.microsoft.teams2", -- MS Teams
 	f = "net.ankiweb.dtop", -- Anki (nixpkgs anki-bin; .dmg-distributed Anki uses net.ankiweb.launcher)
