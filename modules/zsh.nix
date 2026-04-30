@@ -198,10 +198,9 @@
           [[ -n $1 ]] || { print -u2 "mkcd: missing arg"; return 2; }
           mkdir -p "$1" && cd "$1"
         }
-        # Both branches build from $DOTFILES and select the attr via
-        # $REBUILD_FLAKE_ATTR — each host's module sets it in
-        # home.sessionVariables so the selector is a declarative part of the
-        # config, not a derived function of runtime OS state.
+        # Build from $DOTFILES with nh. First-time bootstrap still uses the
+        # explicit commands documented at the top of flake.nix; after that,
+        # Home Manager puts nh on PATH and sets REBUILD_FLAKE_ATTR per host.
         #
         # Linux fallback: if REBUILD_FLAKE_ATTR is unset, home-manager
         # auto-resolves via $USER@$(hostname) — works on stable-hostname
@@ -209,15 +208,12 @@
         # ubuntu2404-NNN boxes), which is why hosts/uwaterloo sets the attr
         # explicitly.
         #
-        # Darwin fallback: if REBUILD_FLAKE_ATTR is unset, nix-darwin falls
-        # back to `scutil --get LocalHostName`-based lookup. We set the attr
-        # in hosts/darwin/default.nix so corporate MDM, DHCP, or System
-        # Settings renames of LocalHostName don't silently break rebuild
-        # with a cryptic "attribute doesn't exist" error.
+        # Darwin's attr is also explicit so corporate MDM, DHCP, or System
+        # Settings renames of LocalHostName don't silently retarget rebuilds.
         rebuild() {
           case "$(uname -s)" in
-            Darwin) sudo -H "$(command -v darwin-rebuild)" switch --flake "$DOTFILES''${REBUILD_FLAKE_ATTR:+#$REBUILD_FLAKE_ATTR}" "$@" ;;
-            Linux)  home-manager switch --flake "$DOTFILES''${REBUILD_FLAKE_ATTR:+#$REBUILD_FLAKE_ATTR}" "$@" ;;
+            Darwin) nh darwin switch "$DOTFILES" -H "$REBUILD_FLAKE_ATTR" "$@" ;;
+            Linux)  nh home switch "$DOTFILES" -c "$REBUILD_FLAKE_ATTR" "$@" ;;
             *)      echo "rebuild: unsupported OS: $(uname -s)" >&2; return 1 ;;
           esac
         }

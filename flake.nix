@@ -2,15 +2,17 @@
   description = "Jake's system configuration";
 
   # ---------------------------------------------------------------------------
-  # First-time bootstrap (before REBUILD_FLAKE_ATTR is in the shell env):
+  # First-time bootstrap (before nh and REBUILD_FLAKE_ATTR are in the shell env)
+  # is handled by install.sh:
   #
-  #   Darwin:  sudo darwin-rebuild switch --flake ~/nix-config#Jakes-MacBook
-  #   Linux:   home-manager switch --flake ~/nix-config#<attr>
-  #            (attr = "jbedmons@uwaterloo" or "jakee@jakee-vm")
+  #     Darwin: ./install.sh
+  #     Linux:  REBUILD_FLAKE_ATTR=<attr> ./install.sh
+  #             (attr = "jbedmons@uwaterloo" or "jakee@jakee-vm")
   #
   # After the first successful activation, `rebuild` (zsh function in
-  # modules/zsh.nix) works bare — $REBUILD_FLAKE_ATTR is set by HM via
-  # home.sessionVariables in each host module.
+  # modules/zsh.nix) works bare via `nh` — nh is installed by Home Manager and
+  # $REBUILD_FLAKE_ATTR is set by HM via home.sessionVariables in each host
+  # module.
   # ---------------------------------------------------------------------------
 
   inputs = {
