@@ -46,7 +46,7 @@ in
     # Keep Codex config fully declarative. This disables Codex writeback for
     # mutable preferences/trust state because the file is store-backed.
     ".codex/config.toml".text = ''
-      model = "gpt-5.3-codex"
+      model = "gpt-5.5"
       model_reasoning_effort = "medium"
       approvals_reviewer = "user"
       sandbox_mode = "read-only"

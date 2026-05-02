@@ -22,13 +22,56 @@ return {
         -- written in these languages (checkhealth flags them when missing).
         -- `norg` omitted: not in nvim-treesitter's registry (maintained by
         -- the neorg team separately) and you don't use .norg files.
+        "markdown",
+        "markdown_inline",
         "css",
+        "html",
         "latex",
         "scss",
         "svelte",
         "vue",
+        "yaml",
       },
     },
+  },
+
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown" },
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+      "nvim-mini/mini.icons",
+    },
+    opts = {
+      code = {
+        sign = false,
+        width = "block",
+        right_pad = 1,
+      },
+      heading = {
+        sign = false,
+        icons = {},
+      },
+      checkbox = {
+        enabled = false,
+      },
+    },
+  },
+
+  {
+    "gaoDean/autolist.nvim",
+    ft = { "markdown" },
+    config = function()
+      require("autolist").setup()
+
+      vim.keymap.set("i", "<Tab>", "<cmd>AutolistTab<cr>", { buffer = true, desc = "Indent list item" })
+      vim.keymap.set("i", "<S-Tab>", "<cmd>AutolistShiftTab<cr>", { buffer = true, desc = "Dedent list item" })
+      vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>", { buffer = true, desc = "Continue list" })
+      vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>", { buffer = true, desc = "Continue list below" })
+      vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>", { buffer = true, desc = "Continue list above" })
+      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>", { buffer = true, desc = "Toggle checkbox" })
+      vim.keymap.set("n", "<C-r>", "<cmd>AutolistRecalculate<cr>", { buffer = true, desc = "Renumber list" })
+    end,
   },
 
   -- Cerebras clangd (only on work machines where /cb exists). IIFE returns

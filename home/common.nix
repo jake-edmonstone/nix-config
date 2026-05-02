@@ -77,6 +77,8 @@
       tree
       unison
       wget
+      imagemagick
+      ghostscript
       nh
       claude-code
     ];

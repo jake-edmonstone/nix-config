@@ -50,8 +50,6 @@
         # PDFs/LaTeX/Mermaid in nvim only on Mac and (2) mermaid-cli pulls in
         # chromium via puppeteer (~250 MB) which is wasted on UWaterloo's proot
         # environment where it would be unusably slow anyway.
-        imagemagick # magick/convert — raster conversions + PDF rasterization helper
-        ghostscript # gs — renders PDF pages to raster
         tectonic # modern LaTeX engine (~80 MB vs texlive's ~4 GB)
         mermaid-cli # mmdc — Mermaid diagrams
       ];
