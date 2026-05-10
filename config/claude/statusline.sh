@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code status line — mirrors Powerlevel10k p10k.zsh style
+# Claude Code status line - mirrors the shell Dracula prompt style
 # Colors: dir=#bd93f9 (purple), git=#ff79c6 (pink), user=#8be9fd (cyan)
 
 input=$(cat)

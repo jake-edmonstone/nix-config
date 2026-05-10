@@ -9,19 +9,14 @@
   #     Linux:  REBUILD_FLAKE_ATTR=<attr> ./install.sh
   #             (attr = "jbedmons@uwaterloo" or "jakee@jakee-vm")
   #
-  # After the first successful activation, `rebuild` (zsh function in
-  # modules/zsh.nix) works bare via `nh` — nh is installed by Home Manager and
+  # After the first successful activation, `rebuild` (fish function in
+  # modules/fish.nix) works bare via `nh` — nh is installed by Home Manager and
   # $REBUILD_FLAKE_ATTR is set by HM via home.sessionVariables in each host
   # module.
   # ---------------------------------------------------------------------------
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # Current unstable's Darwin zsh build intermittently hangs in external
-    # command substitutions on macOS 26. Keep the rest of the system on
-    # unstable, but use the last tested-good zsh package.
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.05";
-
     # Determinate Nix's nix-darwin module — handles nix-darwin interop,
     # exposes GC tuning + custom nix.conf via determinateNix options.
     # (No nixpkgs.follows — docs explicitly warn against it to keep
@@ -58,7 +53,6 @@
   outputs =
     {
       nixpkgs,
-      nixpkgs-stable,
       determinate,
       nix-darwin,
       home-manager,
@@ -68,22 +62,10 @@
       ...
     }:
     let
-      stablePkgsFor =
-        system:
-        import nixpkgs-stable {
-          inherit system;
-          config.allowUnfree = true;
-        };
       sharedOverlays = [
         claude-code.overlays.default
         codex-cli.overlays.default
         (import ./overlays/copilot-cli.nix)
-        (
-          final: prev:
-          nixpkgs.lib.optionalAttrs prev.stdenv.isDarwin {
-            inherit (stablePkgsFor prev.stdenv.hostPlatform.system) zsh;
-          }
-        )
       ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits

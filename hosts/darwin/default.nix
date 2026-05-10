@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   system = {
@@ -128,9 +133,12 @@
   nixpkgs.hostPlatform = "aarch64-darwin";
   nixpkgs.config.allowUnfree = true;
 
-  users.users.jbedm.home = "/Users/jbedm";
+  users.users.jbedm = {
+    home = "/Users/jbedm";
+    shell = pkgs.fish;
+  };
 
-  # Static flake-attr selector. rebuild() (modules/zsh.nix) reads this and
+  # Static flake-attr selector. rebuild() (modules/fish.nix) reads this and
   # passes --flake "$DOTFILES#$REBUILD_FLAKE_ATTR", decoupling the build from
   # scutil's LocalHostName so DHCP/MDM renames and System Settings changes
   # can't silently break activation with "attribute doesn't exist".
@@ -142,6 +150,10 @@
   # the same name. Each Mac's OS hostname is managed out-of-band via System
   # Settings; nix only controls the package/config set.
   home-manager.users.jbedm.home.sessionVariables.REBUILD_FLAKE_ATTR = "Jakes-MacBook";
+  home-manager.users.jbedm.home.sessionPath = lib.mkBefore [
+    "/opt/homebrew/bin"
+    "/opt/homebrew/sbin"
+  ];
 
   # Determinate Nix handles the daemon; the module also auto-sets
   # nix.enable = false to avoid nix-darwin stepping on Determinate's config.
@@ -152,27 +164,27 @@
     reattach = true; # Touch ID works inside tmux via pam_reattach
   };
 
-  # Trim system /etc/zshrc to the minimum we actually use. The defaults add
-  # ~100-250ms of startup: a duplicate compinit (our user zshrc runs another
-  # one with the right fpath), a `prompt suse` setup we override with p10k,
-  # and bashcompinit which we don't use with Nix tools.
-  programs.zsh = {
-    enable = true;
-    enableGlobalCompInit = false;
-    enableBashCompletion = false;
-    promptInit = "";
-    # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
-    # nix-homebrew.enableZshIntegration is disabled below to prevent duplication.
-    interactiveShellInit = ''
-      export HOMEBREW_PREFIX="/opt/homebrew"
-      export HOMEBREW_CELLAR="/opt/homebrew/Cellar"
-      export HOMEBREW_REPOSITORY="/opt/homebrew"
-      fpath[1,0]="/opt/homebrew/share/zsh/site-functions"
-      export PATH="/opt/homebrew/bin:/opt/homebrew/sbin''${PATH+:$PATH}"
-      [ -z "''${MANPATH-}" ] || export MANPATH=":''${MANPATH#:}"
-      export INFOPATH="/opt/homebrew/share/info:''${INFOPATH:-}"
-    '';
+  environment.shells = [ pkgs.fish ];
+
+  programs = {
+    fish = {
+      enable = true;
+      useBabelfish = true;
+    };
+    # nix-darwin defaults zsh on; disable its system shell setup explicitly.
+    zsh.enable = false;
   };
+
+  # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
+  # nix-homebrew shell integration is disabled below to prevent duplication.
+  home-manager.users.jbedm.programs.fish.shellInit = ''
+    set -gx HOMEBREW_PREFIX /opt/homebrew
+    set -gx HOMEBREW_CELLAR /opt/homebrew/Cellar
+    set -gx HOMEBREW_REPOSITORY /opt/homebrew
+    set -q MANPATH; and set -gx MANPATH "" $MANPATH
+    set -gx INFOPATH /opt/homebrew/share/info $INFOPATH
+    set -gp fish_complete_path /opt/homebrew/share/fish/vendor_completions.d
+  '';
 
   fonts.packages = with pkgs; [
     maple-mono.NF
@@ -184,8 +196,9 @@
   nix-homebrew = {
     enable = true;
     user = "jbedm";
-    # Disabled: we set brew env in programs.zsh.interactiveShellInit directly
-    # (inline instead of eval'ing brew shellenv, saves ~100ms per shell).
+    # Disabled: we set brew env in programs.fish.shellInit directly (inline
+    # instead of eval'ing brew shellenv, saves ~100ms per shell).
+    enableFishIntegration = false;
     enableZshIntegration = false;
   };
 

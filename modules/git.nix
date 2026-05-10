@@ -32,7 +32,7 @@
       };
       # core.editor is unset: programs.neovim.defaultEditor = true already sets
       # EDITOR=nvim, and git falls back to $EDITOR when core.editor is unset.
-      core.fsmonitor = false; # conflicts with gitstatusd (p10k), causes stale prompt
+      core.fsmonitor = false;
       pull.rebase = true;
       merge.conflictstyle = "zdiff3";
       rebase = {

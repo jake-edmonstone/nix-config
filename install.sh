@@ -71,13 +71,13 @@ install_nix_linux_daemon() {
 }
 
 write_linux_bootstrap() {
-  # Home-manager writes ~/.zshrc, ~/.zshenv, etc. as symlinks into /nix/store,
+  # Home-manager writes fish config as symlinks into /nix/store,
   # which isn't visible at SSH login before the rootless-Nix sandbox is entered.
   # Bash is the login shell on every rootless host we support, so we only write
   # bash bootstrap files (real, not store symlinks) — the bash → .nix-bootstrap
-  # → `exec zsh -l` chain lands us inside the sandbox where HM's zsh config is
+  # → `exec fish -l` chain lands us inside the sandbox where HM's fish config is
   # visible, without needing a parallel .zprofile / ZDOTDIR-mirror bootstrap.
-  #   ~/.nix-bootstrap.sh   shared logic: locale fix + sandbox exec → zsh -l
+  #   ~/.nix-bootstrap.sh   shared logic: locale fix + sandbox exec → fish -l
   #   ~/.bash_profile       stub sourcing ~/.bashrc
   #   ~/.bashrc             system bashrc + host extras + nix-bootstrap
   # Host-specific pre-sandbox env (e.g. Cerebras corp bashrc for non-interactive
@@ -105,7 +105,7 @@ write_linux_bootstrap() {
 # Managed by nix-config install.sh. DO NOT EDIT — overwritten on re-install.
 # Sourced by ~/.bashrc on rootless-Nix hosts. Enters the Nix sandbox
 # (nix-portable or nix-user-chroot, whichever is installed) and re-execs as
-# an interactive zsh login shell.
+# an interactive fish login shell.
 
 # Locale fix — RHEL/Rocky ship /usr/lib/locale/en_US.utf8 (lowercase) but not
 # en_US.UTF-8, so a default uppercase LANG causes ~240 wasted glibc probes
@@ -123,11 +123,11 @@ case $- in *i*) ;; *) return 0 ;; esac
 # Proot runtime works without CAP_SYS_ADMIN or userns, at a per-syscall cost.
 # nix-portable's entrypoint ONLY accepts `nix` as the command (it looks up
 # commands in its bundled store), so we can't `exec /usr/bin/env` like we do
-# for nix-user-chroot. Enter the sandbox via `nix run nixpkgs#zsh -- -l`
-# instead — first-run fetches zsh, cached thereafter.
+# for nix-user-chroot. Enter the sandbox via `nix run nixpkgs#fish -- -l`
+# instead — first-run fetches fish, cached thereafter.
 if [ -x "$HOME/.local/bin/nix-portable" ]; then
   export NP_ENTERED=1 NP_RUNTIME=proot
-  exec "$HOME/.local/bin/nix-portable" nix run 'nixpkgs#zsh' -- -l
+  exec "$HOME/.local/bin/nix-portable" nix run 'nixpkgs#fish' -- -l
 fi
 
 # Fall back to nix-user-chroot (requires user namespaces).
@@ -147,12 +147,12 @@ if [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix" ]; then
   done
   unset _live _now _d _mt
 
-  # Prepend nix profile to PATH so /usr/bin/env finds nix's zsh (patchelf'd
-  # against nix's glibc) — the system zsh would fail to load plugin .so files
+  # Prepend nix profile to PATH so /usr/bin/env finds nix's fish (patchelf'd
+  # against nix's glibc) — the system fish would fail to load plugin .so files
   # built against a newer glibc than the host ships.
   export NIX_USER_CHROOT=1
   export PATH="$HOME/.nix-profile/bin:$PATH"
-  exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix" /usr/bin/env zsh -l
+  exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix" /usr/bin/env fish -l
 fi
 EOF
 
@@ -260,7 +260,7 @@ if ! (has_nix_on_path || has_nix_daemon || has_nix_rootless || has_nix_portable)
 fi
 
 # Linux: write real (non-store) bootstrap rcfiles so the user's login shell
-# (bash or zsh) can enter the sandbox at SSH login. Idempotent.
+# (bash or fish) can enter the sandbox at SSH login. Idempotent.
 if ! is_darwin; then
   write_linux_bootstrap
 fi
@@ -344,7 +344,7 @@ else
   # See: https://github.com/nix-community/home-manager/issues/7801
   mkdir -p "$HOME/.local/state/nix/profiles"
   flake_target="$DOTFILES${REBUILD_FLAKE_ATTR:+#$REBUILD_FLAKE_ATTR}"
-  # -b bak: back up pre-existing ~/.bashrc, ~/.zshrc etc. so home-manager
+  # -b bak: back up pre-existing ~/.bashrc, ~/.config/fish/config.fish, etc. so home-manager
   # can take ownership without manual cleanup. Only pass on FIRST activation —
   # on re-runs a .bak already exists and HM would abort rather than overwrite.
   hm_args=( switch --flake "$flake_target" )

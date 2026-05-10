@@ -4,7 +4,7 @@
   programs.ghostty = {
     enable = true;
     package = pkgs.ghostty-bin; # pkgs.ghostty (source build) is broken on darwin
-    enableZshIntegration = false;
+    enableFishIntegration = true;
 
     settings = {
       font-family = "Maple Mono NF";

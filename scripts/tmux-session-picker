@@ -15,7 +15,7 @@ new_action="become(tmux new-session -ds {q} && tmux switch-client -t {q})"
 [[ -n "${NP_RUNTIME:-}" ]] && new_action="execute-silent(tmux new-session -ds {q} && tmux switch-client -t {q})+abort"
 
 # fzf cancel (Esc/Ctrl-C) exits 130; don't let set -e kill the script.
-sel=$(eval "$list_cmd" | fzf \
+sel=$(eval "$list_cmd" | SHELL="${BASH:-/bin/bash}" fzf \
   --reverse \
   --no-sort \
   --ansi \

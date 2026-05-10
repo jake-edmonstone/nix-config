@@ -11,7 +11,7 @@
   imports = [
     ../modules/git.nix
     ../modules/copilot.nix
-    ../modules/zsh.nix
+    ../modules/fish.nix
     ../modules/tmux.nix
     ../modules/fzf.nix
     ../modules/lazygit.nix
@@ -38,9 +38,6 @@
       # silently point at nothing AND we'd have disabled the host's system fonts.
       TYPST_IGNORE_SYSTEM_FONTS = "true";
       TYPST_FONT_PATHS = "/Library/Fonts/Nix Fonts";
-      # Suppress Terminal.app per-session state saving (which would recreate
-      # ~/.zsh_sessions/). Read by /etc/zshrc_Apple_Terminal.
-      SHELL_SESSIONS_DISABLE = "1";
     };
 
     sessionPath = [
@@ -109,6 +106,8 @@
     # explicit opt-in.
     home-manager.enable = true;
 
+    man.generateCaches = false;
+
     bat = {
       enable = true;
       config.theme = "Dracula";
@@ -117,23 +116,23 @@
     eza = {
       enable = true;
       icons = "always";
-      enableZshIntegration = true; # generates ls, ll, la, lt, lla aliases
+      enableFishIntegration = true; # generates ls, ll, la, lt, lla aliases
     };
 
     zoxide = {
       enable = true;
-      # Disabled: HM's implementation emits `eval "$(zoxide init zsh)"` which
+      # Disabled: HM's implementation emits `zoxide init fish | source`, which
       # forks zoxide on every shell startup. On macOS with EDR that's ~6-9 ms.
-      # Mac sources a nix-built static init file in home/darwin.nix mkOrder 680.
+      # Mac sources a nix-built static init file in home/darwin.nix.
       # On Cerebras the integration was already disabled.
-      enableZshIntegration = false;
+      enableFishIntegration = false;
     };
   };
 
   # On standalone rootless Linux, home-manager needs explicit opt-in to set
   # up PATH to include ~/.nix-profile/bin. Without this, tools installed via
   # home.packages (home-manager, nvim, ripgrep, claude-code, …) aren't on PATH
-  # inside the chroot-spawned zsh. nix-darwin and NixOS handle the equivalent
+  # inside the chroot-spawned fish. nix-darwin and NixOS handle the equivalent
   # automatically.
   targets.genericLinux.enable = isRootlessLinux;
 
@@ -142,7 +141,4 @@
   # to decide the config path on Darwin.
   xdg.enable = true;
 
-  # Place p10k.zsh under $ZDOTDIR alongside HM's managed .zshrc/.zshenv instead
-  # of $HOME/.p10k.zsh. Sourced from modules/zsh.nix via config.xdg.configHome.
-  xdg.configFile."zsh/p10k.zsh".source = ../config/p10k/p10k.zsh;
 }

@@ -4,7 +4,7 @@
   programs.tmux = {
     enable = true;
     terminal = "tmux-256color";
-    shell = "${config.programs.zsh.package}/bin/zsh";
+    shell = "${config.programs.fish.package}/bin/fish";
     keyMode = "vi";
     mouse = true;
     baseIndex = 1;
