@@ -66,6 +66,7 @@
       wget
       imagemagick
       ghostscript
+      poppler-utils # provides pdftotext
       nh
       claude-code
       github-copilot-cli

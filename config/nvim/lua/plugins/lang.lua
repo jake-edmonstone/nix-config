@@ -117,6 +117,9 @@ return {
   -- auto-close $$ pairs in typst math mode
   {
     "nvim-mini/mini.pairs",
+    opts = function(_, opts)
+      opts.skip_next = [=[[%w%%%'%[%"%.%`]]=]
+    end,
     init = function()
       local group = vim.api.nvim_create_augroup("MiniPairsTypst", { clear = true })
       vim.api.nvim_create_autocmd("FileType", {

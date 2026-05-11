@@ -2,7 +2,7 @@
 
 ; Math environments: indent body, dedent the closing $.
 (math) @indent.begin
-(math "$" @indent.branch .)
+(math "$" @indent.end @indent.branch .)
 
 ; Parenthesised groups: function args, tuples, arrays, dicts, math parens.
 ; Per-row dedup in the indent engine handles multiple `(` on the same line
