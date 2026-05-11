@@ -14,10 +14,6 @@
         name = "tide";
         inherit (pkgs.fishPlugins.tide) src;
       }
-      {
-        name = "fzf-fish";
-        inherit (pkgs.fishPlugins.fzf-fish) src;
-      }
     ];
 
     shellAliases = {
@@ -71,11 +67,6 @@
         _tide_print_item context $context
       '';
 
-      _fzf_search_directory_depth_1 = ''
-        set -lx fzf_fd_opts --max-depth 1
-        _fzf_search_directory
-      '';
-
       _tide_item_nix_shell = ''
         set -l nix_shell_label
 
@@ -93,7 +84,6 @@
 
     binds = {
       "ctrl-x,ctrl-e".command = "edit_command_buffer";
-      ctrl-f.command = "_fzf_search_directory_depth_1";
     };
 
     shellInit = ''

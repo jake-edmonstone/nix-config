@@ -3,7 +3,7 @@ _:
 {
   programs.fzf = {
     enable = true;
-    enableFishIntegration = false;
+    enableFishIntegration = true;
     defaultCommand = "fd --hidden --strip-cwd-prefix";
     fileWidgetCommand = "fd --hidden --strip-cwd-prefix";
     changeDirWidgetCommand = "fd --type=d --hidden --strip-cwd-prefix";

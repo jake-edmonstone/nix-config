@@ -10,7 +10,6 @@
 {
   imports = [
     ../modules/git.nix
-    ../modules/copilot.nix
     ../modules/fish.nix
     ../modules/tmux.nix
     ../modules/fzf.nix
@@ -69,6 +68,7 @@
       ghostscript
       nh
       claude-code
+      github-copilot-cli
     ];
 
     file = {
