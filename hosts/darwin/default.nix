@@ -149,11 +149,28 @@
   # here — we'd collide on .local resolution and Bonjour if two Macs enforced
   # the same name. Each Mac's OS hostname is managed out-of-band via System
   # Settings; nix only controls the package/config set.
-  home-manager.users.jbedm.home.sessionVariables.REBUILD_FLAKE_ATTR = "Jakes-MacBook";
-  home-manager.users.jbedm.home.sessionPath = lib.mkBefore [
-    "/opt/homebrew/bin"
-    "/opt/homebrew/sbin"
-  ];
+  home-manager = {
+    users.jbedm = {
+      home = {
+        sessionVariables.REBUILD_FLAKE_ATTR = "Jakes-MacBook";
+        sessionPath = lib.mkBefore [
+          "/opt/homebrew/bin"
+          "/opt/homebrew/sbin"
+        ];
+      };
+
+      # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
+      # nix-homebrew shell integration is disabled below to prevent duplication.
+      programs.fish.shellInit = ''
+        set -gx HOMEBREW_PREFIX /opt/homebrew
+        set -gx HOMEBREW_CELLAR /opt/homebrew/Cellar
+        set -gx HOMEBREW_REPOSITORY /opt/homebrew
+        set -q MANPATH; and set -gx MANPATH "" $MANPATH
+        set -gx INFOPATH /opt/homebrew/share/info $INFOPATH
+        set -gp fish_complete_path /opt/homebrew/share/fish/vendor_completions.d
+      '';
+    };
+  };
 
   # Determinate Nix handles the daemon; the module also auto-sets
   # nix.enable = false to avoid nix-darwin stepping on Determinate's config.
@@ -174,17 +191,6 @@
     # nix-darwin defaults zsh on; disable its system shell setup explicitly.
     zsh.enable = false;
   };
-
-  # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
-  # nix-homebrew shell integration is disabled below to prevent duplication.
-  home-manager.users.jbedm.programs.fish.shellInit = ''
-    set -gx HOMEBREW_PREFIX /opt/homebrew
-    set -gx HOMEBREW_CELLAR /opt/homebrew/Cellar
-    set -gx HOMEBREW_REPOSITORY /opt/homebrew
-    set -q MANPATH; and set -gx MANPATH "" $MANPATH
-    set -gx INFOPATH /opt/homebrew/share/info $INFOPATH
-    set -gp fish_complete_path /opt/homebrew/share/fish/vendor_completions.d
-  '';
 
   fonts.packages = with pkgs; [
     maple-mono.NF

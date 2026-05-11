@@ -52,16 +52,7 @@
     packages = with pkgs; [
       ripgrep
       fd
-      # Tree-sitter CLI v0.26.8 from the prebuilt upstream release — replaces
-      # nixpkgs's tree-sitter (still on 0.25.10) in this home-manager profile.
-      # We can't do this via an nixpkgs overlay because neovim-unwrapped's
-      # nixpkgs build calls `tree-sitter.buildGrammar` on its tree-sitter
-      # input to compile the bundled grammar .so files, and our prebuilt
-      # binary doesn't provide that function attribute. The nixpkgs 0.25.10
-      # stays in neovim's build closure (never on user PATH); this 0.26.8 is
-      # what nvim-treesitter's main-branch health check (requires >= 0.26.1)
-      # sees at runtime.
-      (callPackage ../pkgs/tree-sitter-cli-prebuilt.nix { })
+      tree-sitter
       trash-cli
       cpulimit
       typst
