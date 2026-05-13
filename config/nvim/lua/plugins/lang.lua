@@ -118,7 +118,7 @@ return {
   {
     "nvim-mini/mini.pairs",
     opts = function(_, opts)
-      opts.skip_next = [=[[%w%%%'%[%"%.%`]]=]
+      opts.skip_next = nil
     end,
     init = function()
       local group = vim.api.nvim_create_augroup("MiniPairsTypst", { clear = true })

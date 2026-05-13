@@ -28,8 +28,7 @@
       };
       diff = {
         algorithm = "histogram";
-        colorMoved = "default";
-        colorMovedWS = "allow-indentation-change";
+        colorMoved = "no";
         renames = true;
       };
       rerere.enabled = true;
