@@ -49,8 +49,8 @@ in
       model = "gpt-5.5"
       model_reasoning_effort = "medium"
       approvals_reviewer = "user"
-      sandbox_mode = "read-only"
-      approval_policy = "untrusted"
+      sandbox_mode = "danger-full-access"
+      approval_policy = "never"
 
       [notice]
       hide_gpt5_1_migration_prompt = true

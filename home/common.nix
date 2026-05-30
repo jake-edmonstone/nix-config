@@ -48,29 +48,33 @@
       "${config.home.profileDirectory}/bin"
     ];
 
-    packages = with pkgs; [
-      ripgrep
-      fd
-      tree-sitter
-      trash-cli
-      cpulimit
-      typst
-      nodejs
-      clang-tools # provides clang-format
-      cmake
-      docker-client
-      mosh
-      pandoc
-      tree
-      unison
-      wget
-      imagemagick
-      ghostscript
-      poppler-utils # provides pdftotext
-      nh
-      claude-code
-      github-copilot-cli
-    ];
+    packages =
+      (with pkgs; [
+        ripgrep
+        fd
+        tree-sitter
+        trash-cli
+        cpulimit
+        typst
+        python3
+        nodejs
+        cmake
+        docker-client
+        mosh
+        pandoc
+        tree
+        unison
+        wget
+        imagemagick
+        ghostscript
+        poppler-utils # provides pdftotext
+        nh
+        claude-code
+        github-copilot-cli
+      ])
+      ++ lib.optionals (!isDarwin) [
+        pkgs.clang-tools # provides clangd and clang-format
+      ];
 
     file = {
       ".clang-format".source = ../config/clang/clang-format;

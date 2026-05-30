@@ -68,6 +68,16 @@ table.sort(placeholder_names, function(a, b) return #a > #b end)
 
 local placeholder_ns = api.nvim_create_namespace("prompt_placeholders")
 
+local function screen_row(win, lnum)
+  if not api.nvim_win_is_valid(win) or type(lnum) ~= "number" then return nil end
+  local buf = api.nvim_win_get_buf(win)
+  if lnum < 1 or lnum > api.nvim_buf_line_count(buf) then return nil end
+
+  local ok, pos = pcall(vim.fn.screenpos, win, lnum, 1)
+  if not ok or pos.row == 0 then return nil end
+  return pos.row
+end
+
 -- Highlight groups — nvim_set_hl is idempotent, no need for hlexists guard
 local hl = "DraculaPrompt"
 local hl_border = "DraculaPromptBorder"
@@ -143,15 +153,18 @@ function M.ask(default)
   -- figure out where the context lines are on screen so we don't cover them
   local float_height = 3 -- border (1) + content (1) + border (1)
   local editor_h = vim.o.lines - vim.o.cmdheight
-  local cursor_screen = vim.fn.screenpos(source_win, vim.fn.line("."), 1).row
+  local cursor_screen = screen_row(source_win, vim.fn.line(".")) or math.floor(editor_h * 0.5)
   local sel_start, sel_end = cursor_screen, cursor_screen
-  local vstart = vim.fn.getpos("'<")[2]
-  local vend = vim.fn.getpos("'>")[2]
-  if vstart > 0 and vend > 0 then
-    local sp_s = vim.fn.screenpos(source_win, math.min(vstart, vend), 1).row
-    local sp_e = vim.fn.screenpos(source_win, math.max(vstart, vend), 1).row
-    if sp_s > 0 then sel_start = sp_s end
-    if sp_e > 0 then sel_end = sp_e end
+  local uses_selection = default and default:find("@selection", 1, true) ~= nil
+  if uses_selection then
+    local vstart = vim.fn.getpos("'<")[2]
+    local vend = vim.fn.getpos("'>")[2]
+    if vstart > 0 and vend > 0 then
+      local sp_s = screen_row(source_win, math.min(vstart, vend))
+      local sp_e = screen_row(source_win, math.max(vstart, vend))
+      if sp_s then sel_start = sp_s end
+      if sp_e then sel_end = sp_e end
+    end
   end
 
   local gap = 1

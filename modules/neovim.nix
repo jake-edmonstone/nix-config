@@ -10,6 +10,7 @@
   programs.neovim = {
     enable = true;
     defaultEditor = true;
+    withPython3 = true;
     # withPython3/withRuby default to false at home.stateVersion >= 26.05;
     # withNodeJs/withPerl default to false unconditionally.
 
@@ -44,6 +45,7 @@
         nil
         nixfmt
         statix
+        python3Packages.jupytext # CLI used by jupytext.nvim to edit .ipynb as text
       ]
       ++ lib.optionals isDarwin [
         # Snacks.image render deps — Darwin-only because (1) the user views
@@ -52,6 +54,19 @@
         # environment where it would be unusably slow anyway.
         tectonic # modern LaTeX engine (~80 MB vs texlive's ~4 GB)
         mermaid-cli # mmdc — Mermaid diagrams
+      ];
+
+    # Molten is a Python remote plugin. Keep its host dependencies in the
+    # Neovim provider environment instead of relying on project venvs or PATH.
+    extraPython3Packages =
+      ps: with ps; [
+        pynvim
+        jupyter-client
+        nbformat
+        ipykernel
+        pillow
+        cairosvg
+        pnglatex
       ];
   };
 

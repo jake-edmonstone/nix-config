@@ -1,6 +1,16 @@
-{ pkgs, ... }:
+{
+  lib,
+  pkgs,
+  ...
+}:
 
 let
+  ankiConnectSrc = pkgs.fetchgit {
+    url = "https://git.sr.ht/~foosoft/anki-connect";
+    rev = "25.11.9.0";
+    hash = "sha256-cnAH4qIuxSJIM7vmSDU+eppnRi6Out9oSWHBHKCGLZI=";
+  };
+
   # AnkiWeb shared addon 688199788 is AnKing-VIP/AnkiRecolor ("ReColor"), a
   # Python addon that restyles Anki's Qt + card chrome. The addon directory
   # needs the full upstream source plus a meta.json carrying the user's
@@ -27,12 +37,24 @@ in
 {
   home.packages = [ pkgs.anki-bin ];
 
-  home.file = {
-    # AnkiRecolor — full addon body + our Dracula meta.json (one directory symlink)
-    "Library/Application Support/Anki2/addons21/688199788".source = ankiRecolor;
+  # Anki writes meta.json/config into add-on directories, so whole-directory
+  # symlinks into /nix/store fail when Anki checks for updates. Copy pinned code
+  # into writable add-on folders instead.
+  home.activation.installAnkiAddons = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    addons="$HOME/Library/Application Support/Anki2/addons21"
+    install_addon() {
+      id="$1"
+      src="$2"
+      dest="$addons/$id"
+      rm -rf "$dest"
+      mkdir -p "$addons"
+      cp -R "$src" "$dest"
+      chmod -R u+w "$dest"
+    }
 
-    # Custom titlebar addon (tiny in-repo Python addon)
-    "Library/Application Support/Anki2/addons21/dracula_titlebar".source =
-      ../config/anki/addons21/dracula_titlebar;
-  };
+    install_addon 2055492159 ${ankiConnectSrc}/plugin
+    install_addon 688199788 ${ankiRecolor}
+    install_addon dracula_titlebar ${../config/anki/addons21/dracula_titlebar}
+
+  '';
 }

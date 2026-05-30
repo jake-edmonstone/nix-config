@@ -83,7 +83,7 @@ local function unquote(path)
   return table.concat(result)
 end
 
-local function updateMiniWithGit(buf_id, gitStatusMap)
+local function updateMiniWithGit(buf_id, gitStatus)
   vim.schedule(function()
     if not api.nvim_buf_is_valid(buf_id) then return end
     api.nvim_buf_clear_namespace(buf_id, ns, 0, -1)
@@ -99,22 +99,26 @@ local function updateMiniWithGit(buf_id, gitStatusMap)
     if not cwd then return end
     local escapedcwd = vim.pesc(vim.fs.normalize(cwd))
     local lines = api.nvim_buf_get_lines(buf_id, 0, nlines, false)
+    local statusMapByPath = gitStatus.statusMap or {}
+    local untrackedDirs = gitStatus.untrackedDirs or {}
 
     for i = 1, nlines do
       local entry = MiniFiles.get_fs_entry(buf_id, i)
       if not entry then break end
 
       local relativePath = entry.path:gsub("^" .. escapedcwd .. "/", "")
-      local status = gitStatusMap[relativePath]
+      local status = statusMapByPath[relativePath]
 
       -- Inherit status from untracked ancestor directories (git only
-      -- reports "?? dir/" without listing individual children)
+      -- reports "?? dir/" without listing individual children). Do not use
+      -- bubbled parent statuses here, or one untracked child will mark every
+      -- sibling in the directory as untracked.
       if not status then
         local parent = relativePath
         while true do
           parent = parent:match("^(.+)/[^/]+$")
           if not parent then break end
-          if gitStatusMap[parent] == "??" then
+          if untrackedDirs[parent] then
             status = "??"
             break
           end
@@ -149,6 +153,7 @@ end
 
 local function parseGitStatus(content)
   local gitStatusMap = {}
+  local untrackedDirs = {}
   for line in content:gmatch("[^\r\n]+") do
     local status, filePath = string.match(line, "^(..) (.*)")
     if not status or not filePath then goto continue end
@@ -162,8 +167,13 @@ local function parseGitStatus(content)
       filePath = unquote(filePath)
     end
 
+    local isUntrackedDir = status == "??" and filePath:sub(-1) == "/"
+
     -- Strip trailing slash from untracked/ignored directories
     filePath = filePath:gsub("/$", "")
+    if isUntrackedDir then
+      untrackedDirs[filePath] = true
+    end
 
     local parts = {}
     for part in filePath:gmatch("[^/]+") do
@@ -187,7 +197,7 @@ local function parseGitStatus(content)
     end
     ::continue::
   end
-  return gitStatusMap
+  return { statusMap = gitStatusMap, untrackedDirs = untrackedDirs }
 end
 
 local function updateGitStatus(buf_id)

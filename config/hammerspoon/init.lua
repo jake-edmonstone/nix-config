@@ -31,7 +31,8 @@ local apps = {
 	p = "info.sioyek.sioyek", -- Sioyek
 	v = "com.microsoft.teams2", -- MS Teams
 	f = "net.ankiweb.dtop", -- Anki (nixpkgs anki-bin; .dmg-distributed Anki uses net.ankiweb.launcher)
-	c = "com.apple.Safari.WebApp.DDBDA633-CD00-46AB-A16B-1EAB56EA281F", -- Confluence
+	c = "com.apple.iCal", -- Calendar
+	r = "com.apple.reminders", -- Reminders
 	j = "com.apple.Safari.WebApp.89AA9B93-DC53-4A4D-947E-794889FB7A06", -- Jira
 	g = "com.apple.Safari.WebApp.84A4B68F-5EF2-4BD8-AE52-65B41EAFC9CA", -- GitHub
 }

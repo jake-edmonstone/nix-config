@@ -45,14 +45,22 @@ return {
         preset = "enter",
         ["<Tab>"] = {
           function(cmp)
-            if cmp.snippet_active({ direction = 1 }) then
-              return cmp.snippet_forward()
-            end
             return cmp.accept({ index = 1 })
           end,
           "fallback",
         },
         ["<S-Tab>"] = {
+          "fallback",
+        },
+        ["<C-l>"] = {
+          function(cmp)
+            if cmp.snippet_active({ direction = 1 }) then
+              return cmp.snippet_forward()
+            end
+          end,
+          "fallback",
+        },
+        ["<C-h>"] = {
           function(cmp)
             if cmp.snippet_active({ direction = -1 }) then
               return cmp.snippet_backward()

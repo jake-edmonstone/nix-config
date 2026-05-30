@@ -5,7 +5,7 @@ TYPST_DIR="$HOME/typst"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
 DATE=$(date +%Y-%m-%d)
 
-COURSES=(pmath347 pmath367 pmath450 pmath352)
+COURSES=(pmath450 pmath352)
 
 tmps=()
 cleanup() { [ "${#tmps[@]}" -eq 0 ] || rm -f "${tmps[@]}"; }
@@ -46,7 +46,7 @@ for course in "${COURSES[@]}"; do
   tmps+=("$tmp")
   sed -e '/show: preamble/a\
 #set text(12pt)
-' "$main" > "$tmp"
+' "$main" >"$tmp"
 
   typst compile "$tmp" "$output"
   rm -f "$tmp"

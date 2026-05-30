@@ -217,6 +217,7 @@
     };
     casks = [
       "docker-desktop"
+      "google-chrome"
       "hammerspoon"
       "keyboardcleantool"
       "obsidian"
