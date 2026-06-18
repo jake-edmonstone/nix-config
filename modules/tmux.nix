@@ -114,7 +114,7 @@
       set -g status-left-length 60
       set -g status-left '#[fg=colour250]working on #[fg=#{@PURPLE},bold]#S#[default]'
 
-      set -g automatic-rename-format '#{?#{==:#{pane_current_command},.codex-wrapped},codex,#{pane_current_command}}'
+      set -g automatic-rename-format '#{?#{==:#{pane_current_command},codex-raw},codex,#{pane_current_command}}'
       set -g window-status-style fg=colour244,bg=default
       set -g window-status-format ' #[fg=colour244]#I #[fg=colour250]#W '
       set -g window-status-current-format ' #[bg=#{@PURPLE},fg=black,bold] #I:#W #[bg=default,fg=#{@PURPLE}]'

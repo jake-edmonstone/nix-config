@@ -1,4 +1,8 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
+
+let
+  home = config.home.homeDirectory;
+in
 
 {
   programs.mcp = {
@@ -34,12 +38,12 @@
       plugins."github@openai-curated".enabled = true;
 
       projects = {
-        "/Users/jbedm/nix-config".trust_level = "trusted";
-        "/Users/jbedm/typst".trust_level = "trusted";
-        "/Users/jbedm/cs350".trust_level = "trusted";
-        "/Users/jbedm/projects".trust_level = "trusted";
-        "/Users/jbedm/Misc".trust_level = "trusted";
-        "/Users/jbedm".trust_level = "trusted";
+        "${home}/nix-config".trust_level = "trusted";
+        "${home}/typst".trust_level = "trusted";
+        "${home}/cs350".trust_level = "trusted";
+        "${home}/projects".trust_level = "trusted";
+        "${home}/Misc".trust_level = "trusted";
+        "${home}".trust_level = "trusted";
       };
     };
 

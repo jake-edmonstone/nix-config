@@ -16,6 +16,8 @@
     ../modules/lazygit.nix
     ../modules/neovim.nix
     ../modules/claude.nix
+    ../modules/python.nix
+    ../modules/jupyter.nix
     ../modules/scripts.nix
   ];
 
@@ -50,28 +52,14 @@
 
     packages =
       (with pkgs; [
-        ripgrep
-        fd
         tree-sitter
         trash-cli
         cpulimit
         typst
-        (python3.withPackages (
-          ps: with ps; [
-            numpy
-            matplotlib
-            scikit-learn
-            pandas
-            nbclient
-            nbformat
-            jupyter
-          ]
-        ))
         nodejs
         cmake
         docker-client
         mosh
-        pandoc
         tree
         unison
         wget
@@ -118,6 +106,8 @@
       config.theme = "Dracula";
     };
 
+    fd.enable = true;
+
     eza = {
       enable = true;
       icons = "always";
@@ -132,11 +122,15 @@
       # On Cerebras the integration was already disabled.
       enableFishIntegration = false;
     };
+
+    pandoc.enable = true;
+
+    ripgrep.enable = true;
   };
 
   # On standalone rootless Linux, home-manager needs explicit opt-in to set
-  # up PATH to include ~/.nix-profile/bin. Without this, tools installed via
-  # home.packages (home-manager, nvim, ripgrep, …) aren't on PATH
+  # up PATH to include ~/.nix-profile/bin. Without this, tools installed by
+  # Home Manager modules and home.packages aren't on PATH
   # inside the chroot-spawned fish. nix-darwin and NixOS handle the equivalent
   # automatically.
   targets.genericLinux.enable = isRootlessLinux;

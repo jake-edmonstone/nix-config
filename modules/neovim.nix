@@ -45,7 +45,6 @@
         nil
         nixfmt
         statix
-        python3Packages.jupytext # CLI used by jupytext.nvim to edit .ipynb as text
       ]
       ++ lib.optionals isDarwin [
         # Snacks.image render deps — Darwin-only because (1) the user views
@@ -56,21 +55,9 @@
         mermaid-cli # mmdc — Mermaid diagrams
       ];
 
-    # Molten is a Python remote plugin. Keep its host dependencies in the
-    # Neovim provider environment instead of relying on project venvs or PATH.
     extraPython3Packages =
       ps: with ps; [
         pynvim
-        jupyter-client
-        nbformat
-        ipykernel
-        pillow
-        cairosvg
-        pnglatex
-        numpy
-        matplotlib
-        scikit-learn
-        pandas
       ];
   };
 
