@@ -15,6 +15,18 @@
       # Right Option → F19, used as Hyper trigger by Hammerspoon (modal).
       userKeyMapping = [
         {
+          HIDKeyboardModifierMappingSrc = 30064771129; # 0x700000039 caps lock
+          HIDKeyboardModifierMappingDst = 30064771113; # 0x700000029 escape
+        }
+        {
+          HIDKeyboardModifierMappingSrc = 1095216660483; # 0xFF00000003 fn
+          HIDKeyboardModifierMappingDst = 30064771296; # 0x7000000E0 left control
+        }
+        {
+          HIDKeyboardModifierMappingSrc = 30064771303; # 0x7000000E7 right command
+          HIDKeyboardModifierMappingDst = 1095216660483; # 0xFF00000003 fn
+        }
+        {
           HIDKeyboardModifierMappingSrc = 30064771302; # 0x7000000E6 right option
           HIDKeyboardModifierMappingDst = 30064771182; # 0x70000006E F19
         }
@@ -218,7 +230,6 @@
       "docker-desktop"
       "google-chrome"
       "hammerspoon"
-      "karabiner-elements"
       "keyboardcleantool"
       "obsidian"
       "orion"

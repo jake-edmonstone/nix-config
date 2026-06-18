@@ -34,6 +34,11 @@
     };
 
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+
+    codex-cli = {
+      url = "github:sadjow/codex-cli-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -43,9 +48,11 @@
       nix-darwin,
       home-manager,
       nix-homebrew,
+      codex-cli,
       ...
     }:
     let
+      codexOverlay = [ codex-cli.overlays.default ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits
       # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented
@@ -55,6 +62,7 @@
       linuxPkgs = import nixpkgs {
         system = "x86_64-linux";
         config.allowUnfree = true;
+        overlays = codexOverlay;
       };
     in
     {
@@ -77,6 +85,7 @@
           determinate.darwinModules.default
           nix-homebrew.darwinModules.nix-homebrew
           home-manager.darwinModules.home-manager
+          { nixpkgs.overlays = codexOverlay; }
           {
             home-manager = {
               useGlobalPkgs = true;

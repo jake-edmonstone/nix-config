@@ -49,21 +49,6 @@ return {
   },
 
   {
-    "max397574/better-escape.nvim",
-    event = "InsertEnter",
-    opts = {
-      timeout = vim.o.timeoutlen,
-      default_mappings = false,
-      mappings = {
-        i = {
-          j = { k = "<Esc>" },
-          k = { j = "<Esc>" },
-        },
-      },
-    },
-  },
-
-  {
     "nvim-lualine/lualine.nvim",
     opts = function(_, opts)
       opts.options.component_separators = { left = "", right = "" } -- pipe separator character: │

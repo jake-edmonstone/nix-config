@@ -46,8 +46,6 @@ set clipboard=unnamed,unnamedplus
 set ignorecase
 nnoremap == mmgg=G`m:silent delmarks m<CR>:redraw!<CR>
 vnoremap y ygv<Esc>
-inoremap kj <Esc>
-inoremap jk <Esc>
 nnoremap c "_c
 vnoremap c "_c
 nnoremap <space>d "_d

@@ -8,7 +8,6 @@
     ../modules/anki.nix
     ../modules/sioyek.nix
     ../modules/codex.nix
-    ../modules/karabiner.nix
   ];
 
   # zoxide init — sourced from a nix-built static file instead of running
