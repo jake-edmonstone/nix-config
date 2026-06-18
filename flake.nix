@@ -34,20 +34,6 @@
     };
 
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
-
-    # Tracks upstream @anthropic-ai/claude-code within ~30 min via hourly
-    # GitHub Actions. The nixpkgs claude-code trails by 5-10 versions.
-    claude-code = {
-      url = "github:sadjow/claude-code-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # Tracks upstream openai/codex hourly (native Rust binary, no Node dep).
-    # Same maintainer / pattern as claude-code above.
-    codex-cli = {
-      url = "github:sadjow/codex-cli-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -57,15 +43,9 @@
       nix-darwin,
       home-manager,
       nix-homebrew,
-      claude-code,
-      codex-cli,
       ...
     }:
     let
-      sharedOverlays = [
-        claude-code.overlays.default
-        codex-cli.overlays.default
-      ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits
       # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented
@@ -75,7 +55,6 @@
       linuxPkgs = import nixpkgs {
         system = "x86_64-linux";
         config.allowUnfree = true;
-        overlays = sharedOverlays;
       };
     in
     {
@@ -98,7 +77,6 @@
           determinate.darwinModules.default
           nix-homebrew.darwinModules.nix-homebrew
           home-manager.darwinModules.home-manager
-          { nixpkgs.overlays = sharedOverlays; }
           {
             home-manager = {
               useGlobalPkgs = true;

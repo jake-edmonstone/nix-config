@@ -79,7 +79,6 @@
         ghostscript
         poppler-utils # provides pdftotext
         nh
-        claude-code
         github-copilot-cli
       ])
       ++ lib.optionals (!isDarwin) [
@@ -137,7 +136,7 @@
 
   # On standalone rootless Linux, home-manager needs explicit opt-in to set
   # up PATH to include ~/.nix-profile/bin. Without this, tools installed via
-  # home.packages (home-manager, nvim, ripgrep, claude-code, …) aren't on PATH
+  # home.packages (home-manager, nvim, ripgrep, …) aren't on PATH
   # inside the chroot-spawned fish. nix-darwin and NixOS handle the equivalent
   # automatically.
   targets.genericLinux.enable = isRootlessLinux;

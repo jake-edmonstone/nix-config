@@ -61,25 +61,25 @@ in
       mkdir -p "${config.xdg.dataHome}/fish"
     '';
 
-    # Claude Code overrides for Cerebras:
-    # 1. Append Cerebras-specific C++ style rules to CLAUDE.md.
-    # 2. Add claudeMdExcludes so Claude skips the huge /net/* NFS tree when
-    #    auto-discovering CLAUDE.md in parent directories.
-    # No lib.mkForce needed — modules/claude.nix uses lib.mkDefault on the
-    # base values, so an unqualified assignment here wins.
-    file.".claude/CLAUDE.md".text =
+  };
+
+  # Claude Code overrides for Cerebras:
+  # 1. Append Cerebras-specific C++ style rules to CLAUDE.md.
+  # 2. Add claudeMdExcludes so Claude skips the huge /net/* NFS tree when
+  #    auto-discovering CLAUDE.md in parent directories.
+  # No lib.mkForce needed — modules/claude.nix uses lib.mkDefault on the base
+  # values, so an unqualified assignment here wins.
+  programs.claude-code = {
+    context =
       builtins.readFile ../../config/claude/CLAUDE.md
       + builtins.readFile ../../config/claude/CLAUDE.cerebras.md;
 
-    file.".claude/settings.json".text = builtins.toJSON (
-      (import ../../config/claude/settings.nix { inherit config; })
-      // {
-        claudeMdExcludes = [
-          "/net/*"
-          "/net/*/*/"
-        ];
-      }
-    );
+    settings = (import ../../config/claude/settings.nix { inherit config; }) // {
+      claudeMdExcludes = [
+        "/net/*"
+        "/net/*/*/"
+      ];
+    };
   };
 
   # Cache/data on fast NFS (same volume as ~/.nix). Fish history lives under
