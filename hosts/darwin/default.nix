@@ -12,7 +12,6 @@
 
     keyboard = {
       enableKeyMapping = true;
-      remapCapsLockToControl = true;
       # Right Option → F19, used as Hyper trigger by Hammerspoon (modal).
       userKeyMapping = [
         {
@@ -219,6 +218,7 @@
       "docker-desktop"
       "google-chrome"
       "hammerspoon"
+      "karabiner-elements"
       "keyboardcleantool"
       "obsidian"
       "orion"

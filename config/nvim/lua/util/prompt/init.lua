@@ -281,6 +281,7 @@ function M.ask(default)
   end
 
   local kopts = { buf = buf, silent = true }
+  vim.keymap.set("i", "<CR>", submit, kopts)
   vim.keymap.set("n", "<CR>", submit, kopts)
   vim.keymap.set("n", "q", close, kopts)
   vim.keymap.set("n", "<Esc>", close, kopts)

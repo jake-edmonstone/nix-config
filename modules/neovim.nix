@@ -67,6 +67,10 @@
         pillow
         cairosvg
         pnglatex
+        numpy
+        matplotlib
+        scikit-learn
+        pandas
       ];
   };
 

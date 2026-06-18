@@ -4,6 +4,67 @@ local function notebook_ft_opts()
   return { ft = notebook_fts }
 end
 
+local function install_image_nvim_stale_line_guard()
+  local ok, image = pcall(require, "image")
+  if not ok or image.__notebooks_stale_line_guard_installed then
+    return
+  end
+  image.__notebooks_stale_line_guard_installed = true
+
+  local original_from_file = image.from_file
+
+  local function has_valid_buffer_position(img)
+    if not img.buffer or not vim.api.nvim_buf_is_valid(img.buffer) then
+      return true
+    end
+
+    local row = img.geometry and img.geometry.y
+    if type(row) ~= "number" then
+      return true
+    end
+
+    return row >= 0 and row < vim.api.nvim_buf_line_count(img.buffer)
+  end
+
+  image.from_file = function(...)
+    local img = original_from_file(...)
+    if type(img) ~= "table" or img.__notebooks_stale_line_guard_installed then
+      return img
+    end
+    img.__notebooks_stale_line_guard_installed = true
+
+    local original_render = img.render
+    img.render = function(self, geometry)
+      if geometry then
+        self.geometry = vim.tbl_deep_extend("force", self.geometry or {}, geometry)
+      end
+
+      if not has_valid_buffer_position(self) then
+        pcall(function()
+          self:clear(true)
+        end)
+        return false
+      end
+
+      local render_ok, rendered = pcall(original_render, self)
+      if not render_ok then
+        local message = tostring(rendered)
+        if message:match("E966: Invalid line number") then
+          pcall(function()
+            self:clear(true)
+          end)
+          return false
+        end
+        error(rendered)
+      end
+
+      return rendered
+    end
+
+    return img
+  end
+end
+
 local function install_ipynb_diagnostic_filter()
   if vim.g.notebooks_ipynb_diagnostic_filter_installed then
     return
@@ -66,6 +127,12 @@ return {
     opts = {
       backend = "kitty",
       processor = "magick_cli",
+      max_width = 100,
+      max_height = 12,
+      max_width_window_percentage = math.huge,
+      max_height_window_percentage = math.huge,
+      window_overlap_clear_enabled = true,
+      window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
       integrations = {
         markdown = { enabled = false },
         neorg = { enabled = false },
@@ -82,6 +149,7 @@ return {
     init = function()
       vim.g.molten_auto_open_output = false
       vim.g.molten_image_provider = "image.nvim"
+      vim.g.molten_image_location = "virt"
       vim.g.molten_output_win_border = "rounded"
       vim.g.molten_wrap_output = true
       vim.g.molten_virt_text_output = true
@@ -124,6 +192,8 @@ return {
         end)
       end
 
+      install_image_nvim_stale_line_guard()
+
       vim.api.nvim_create_autocmd("BufEnter", {
         pattern = "*.ipynb",
         callback = import_outputs,
@@ -140,7 +210,11 @@ return {
       })
     end,
     keys = {
-      vim.tbl_extend("force", { "<leader>ji", "<cmd>MoltenInit<cr>", desc = "Jupyter init kernel" }, notebook_ft_opts()),
+      vim.tbl_extend(
+        "force",
+        { "<leader>ji", "<cmd>MoltenInit<cr>", desc = "Jupyter init kernel" },
+        notebook_ft_opts()
+      ),
       vim.tbl_extend(
         "force",
         { "<leader>jo", "<cmd>MoltenShowOutput<cr>", desc = "Jupyter show output" },
@@ -171,7 +245,11 @@ return {
         { "<leader>jr", "<cmd>MoltenReevaluateCell<cr>", desc = "Jupyter re-evaluate Molten cell" },
         notebook_ft_opts()
       ),
-      vim.tbl_extend("force", { "<leader>jx", "<cmd>MoltenDelete<cr>", desc = "Jupyter delete Molten cell" }, notebook_ft_opts()),
+      vim.tbl_extend(
+        "force",
+        { "<leader>jx", "<cmd>MoltenDelete<cr>", desc = "Jupyter delete Molten cell" },
+        notebook_ft_opts()
+      ),
       vim.tbl_extend(
         "force",
         { "<leader>jI", "<cmd>MoltenImportOutput<cr>", desc = "Jupyter import notebook output" },

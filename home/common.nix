@@ -56,7 +56,17 @@
         trash-cli
         cpulimit
         typst
-        python3
+        (python3.withPackages (
+          ps: with ps; [
+            numpy
+            matplotlib
+            scikit-learn
+            pandas
+            nbclient
+            nbformat
+            jupyter
+          ]
+        ))
         nodejs
         cmake
         docker-client

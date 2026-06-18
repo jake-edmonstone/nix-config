@@ -52,6 +52,10 @@ in
       sandbox_mode = "danger-full-access"
       approval_policy = "never"
 
+      [tui]
+      vim_mode_default = true
+      theme = "dracula"
+
       [notice]
       hide_gpt5_1_migration_prompt = true
       "hide_gpt-5.1-codex-max_migration_prompt" = true
@@ -62,13 +66,22 @@ in
       [plugins."github@openai-curated"]
       enabled = true
 
+      [mcp_servers.nixos]
+      command = "${pkgs.mcp-nixos}/bin/mcp-nixos"
+
       [projects."/Users/jbedm/nix-config"]
       trust_level = "trusted"
 
       [projects."/Users/jbedm/typst"]
       trust_level = "trusted"
 
+      [projects."/Users/jbedm/cs350"]
+      trust_level = "trusted"
+
       [projects."/Users/jbedm/projects"]
+      trust_level = "trusted"
+
+      [projects."/Users/jbedm/Misc"]
       trust_level = "trusted"
 
       [projects."/Users/jbedm"]

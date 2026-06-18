@@ -38,6 +38,11 @@
       # forever (shells see __HM_SESS_VARS_SOURCED=1 and skip re-sourcing).
       set -ag update-environment 'FZF_DEFAULT_OPTS FZF_DEFAULT_COMMAND FZF_CTRL_T_OPTS FZF_CTRL_T_COMMAND FZF_ALT_C_OPTS FZF_ALT_C_COMMAND PATH'
 
+      # On Darwin, Home Manager's reattach-to-user-namespace default-command
+      # can exit immediately for detached new windows/splits. Keep fish as
+      # default-shell and let tmux start it directly.
+      set -g default-command ""
+
       # Terminal settings (Ghostty). :RGB in terminal-features is the modern
       # (tmux 3.2+) replacement for the older :Tc terminal-override — one knob
       # covers truecolor for both xterm-ghostty and xterm-256color.

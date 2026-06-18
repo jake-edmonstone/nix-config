@@ -248,14 +248,17 @@ done
 
 session_name_raw="typst-${course}-a${assignment_norm}"
 session_name="$(printf '%s' "$session_name_raw" | tr -c '[:alnum:]' '_')"
+session_pane="$session_name:1.1"
 
 if tmux has-session -t "$session_name" 2>/dev/null; then
-  tmux send-keys -t "$session_name:1.1" C-c
-  tmux send-keys -t "$session_name:1.1" "cd \"$target_dir\" && nvim \"$main_file\"" C-m
+  tmux send-keys -t "$session_pane" C-c
+  tmux send-keys -t "$session_pane" "cd \"$target_dir\" && nvim \"$main_file\"" C-m
 else
-  tmux new-session -d -s "$session_name" -c "$target_dir"
-  tmux send-keys -t "$session_name:1.1" "nvim \"$main_file\"" C-m
+  tmux new-session -d -s "$session_name" -c "$target_dir" "${SHELL:-/bin/sh}"
+  tmux send-keys -t "$session_pane" "nvim \"$main_file\"" C-m
 fi
+
+tmux has-session -t "$session_name" 2>/dev/null || die "tmux session was not created: $session_name"
 
 printf 'new-assignment: target directory: %s\n' "$target_dir"
 if [[ ${#created_files[@]} -gt 0 ]]; then
@@ -274,7 +277,7 @@ printf 'new-assignment: tmux session: %s\n' "$session_name"
 printf 'new-assignment: opening main file: %s\n' "$main_file"
 
 if [[ -n "${TMUX:-}" ]]; then
-  tmux switch-client -t "$session_name"
+  tmux switch-client -t "$session_name:1"
 else
   tmux attach -t "$session_name"
 fi

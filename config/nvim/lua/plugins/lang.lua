@@ -64,13 +64,13 @@ return {
     config = function()
       require("autolist").setup()
 
-      vim.keymap.set("i", "<Tab>", "<cmd>AutolistTab<cr>", { buffer = true, desc = "Indent list item" })
-      vim.keymap.set("i", "<S-Tab>", "<cmd>AutolistShiftTab<cr>", { buffer = true, desc = "Dedent list item" })
-      vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>", { buffer = true, desc = "Continue list" })
-      vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>", { buffer = true, desc = "Continue list below" })
-      vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>", { buffer = true, desc = "Continue list above" })
-      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>", { buffer = true, desc = "Toggle checkbox" })
-      vim.keymap.set("n", "<C-r>", "<cmd>AutolistRecalculate<cr>", { buffer = true, desc = "Renumber list" })
+      vim.keymap.set("i", "<Tab>", "<cmd>AutolistTab<cr>", { buf = 0, desc = "Indent list item" })
+      vim.keymap.set("i", "<S-Tab>", "<cmd>AutolistShiftTab<cr>", { buf = 0, desc = "Dedent list item" })
+      vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>", { buf = 0, desc = "Continue list" })
+      vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>", { buf = 0, desc = "Continue list below" })
+      vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>", { buf = 0, desc = "Continue list above" })
+      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>", { buf = 0, desc = "Toggle checkbox" })
+      vim.keymap.set("n", "<C-r>", "<cmd>AutolistRecalculate<cr>", { buf = 0, desc = "Renumber list" })
     end,
   },
 
