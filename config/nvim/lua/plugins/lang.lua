@@ -112,7 +112,15 @@ return {
   -- Typst
   {
     "chomosuke/typst-preview.nvim",
-    opts = { open_cmd = "open -a 'Orion' %s" },
+    opts = {
+      open_cmd = "open -b com.kagi.kagimacOS %s",
+      -- Remove once nixpkgs Tinymist includes Myriad-Dreamin/tinymist#2599
+      -- or typst-preview.nvim includes chomosuke/typst-preview.nvim#135.
+      extra_args = { "--verbose" },
+      dependencies_bin = {
+        websocat = "websocat",
+      },
+    },
   },
   -- auto-close $$ pairs in typst math mode
   {

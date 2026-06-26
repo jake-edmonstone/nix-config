@@ -28,31 +28,31 @@ force=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --course)
-      [[ $# -ge 2 ]] || die "--course requires a value"
-      course="$2"
-      shift 2
-      ;;
-    --assignment)
-      [[ $# -ge 2 ]] || die "--assignment requires a value"
-      assignment_raw="$2"
-      shift 2
-      ;;
-    --layout)
-      [[ $# -ge 2 ]] || die "--layout requires a value"
-      layout="$2"
-      shift 2
-      ;;
-    --force)
-      die "--force is disabled: this script never overwrites existing assignments"
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      die "unknown argument: $1"
-      ;;
+  --course)
+    [[ $# -ge 2 ]] || die "--course requires a value"
+    course="$2"
+    shift 2
+    ;;
+  --assignment)
+    [[ $# -ge 2 ]] || die "--assignment requires a value"
+    assignment_raw="$2"
+    shift 2
+    ;;
+  --layout)
+    [[ $# -ge 2 ]] || die "--layout requires a value"
+    layout="$2"
+    shift 2
+    ;;
+  --force)
+    die "--force is disabled: this script never overwrites existing assignments"
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    die "unknown argument: $1"
+    ;;
   esac
 done
 
@@ -85,7 +85,7 @@ if [[ "$assignment_raw" == *.* ]]; then
   folder_name="a$assignment_raw"
 elif [[ "$assignment_raw" =~ ^[0-9]+$ ]]; then
   assignment_int="$((10#$assignment_raw))"
-  if (( assignment_int < 10 && use_padded_single_digit == 1 )); then
+  if ((assignment_int < 10 && use_padded_single_digit == 1)); then
     folder_name="$(printf 'a%02d' "$assignment_int")"
   else
     folder_name="a$assignment_int"
@@ -102,7 +102,7 @@ declare -a qnums=()
 declare -a qparts=()
 declare -A seen_q=()
 
-IFS=',' read -r -a raw_tokens <<< "$layout"
+IFS=',' read -r -a raw_tokens <<<"$layout"
 [[ ${#raw_tokens[@]} -gt 0 ]] || die "empty layout"
 
 for raw in "${raw_tokens[@]}"; do
@@ -116,7 +116,7 @@ for raw in "${raw_tokens[@]}"; do
   else
     qnum="$qnum_raw"
   fi
-  (( qnum > 0 )) || die "question numbers must be >= 1: $token"
+  ((qnum > 0)) || die "question numbers must be >= 1: $token"
   parts="${token#$qnum_raw}"
 
   if [[ -n "${seen_q[$qnum]:-}" ]]; then
@@ -127,7 +127,7 @@ for raw in "${raw_tokens[@]}"; do
   if [[ -n "$parts" ]]; then
     declare -A seen_part=()
     prev=""
-    for ((i=0; i<${#parts}; i++)); do
+    for ((i = 0; i < ${#parts}; i++)); do
       p="${parts:i:1}"
       if [[ -n "${seen_part[$p]:-}" ]]; then
         die "duplicate part letter in token: $token"
@@ -186,7 +186,7 @@ record_file_write() {
 
 record_file_write "$main_file"
 {
-  printf '#import "/preamble.typ": *\n'
+  printf '#import "../../course-preamble.typ": *\n'
   printf '#show: preamble\n'
   printf '//#set text(12pt)\n'
   printf '#show: assignment-header("%s", "%s")\n' "$new_title" "$course_term"
@@ -207,7 +207,7 @@ record_file_write "$main_file"
       printf '  TODO\n'
       printf ']\n'
       part_index=1
-      for ((i=0; i<${#parts}; i++)); do
+      for ((i = 0; i < ${#parts}; i++)); do
         part="${parts:i:1}"
         subfile="$main_base-$qnum$part.typ"
         printf '#part-box(%d)[\n' "$part_index"
@@ -219,7 +219,7 @@ record_file_write "$main_file"
       printf '\n'
     fi
   done
-} > "$main_file"
+} >"$main_file"
 
 for idx in "${!qnums[@]}"; do
   qnum="${qnums[$idx]}"
@@ -231,9 +231,9 @@ for idx in "${!qnums[@]}"; do
       printf '#import "/preamble.typ": *\n'
       printf '#solution\n'
       printf 'TODO\n'
-    } > "$sub_path"
+    } >"$sub_path"
   else
-    for ((i=0; i<${#parts}; i++)); do
+    for ((i = 0; i < ${#parts}; i++)); do
       part="${parts:i:1}"
       sub_path="$target_dir/$main_base-$qnum$part.typ"
       record_file_write "$sub_path"
@@ -241,7 +241,7 @@ for idx in "${!qnums[@]}"; do
         printf '#import "/preamble.typ": *\n'
         printf '#solution\n'
         printf 'TODO\n'
-      } > "$sub_path"
+      } >"$sub_path"
     done
   fi
 done

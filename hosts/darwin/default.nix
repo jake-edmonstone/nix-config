@@ -8,7 +8,7 @@
 {
   system = {
     primaryUser = "jbedm";
-    stateVersion = 6;
+    stateVersion = 7;
 
     keyboard = {
       enableKeyMapping = true;
@@ -234,7 +234,6 @@
       "obsidian"
       "orion"
       "spotify"
-      "stats"
     ];
   };
 }

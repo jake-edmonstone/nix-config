@@ -37,6 +37,7 @@
         ruff
         shfmt
         tinymist
+        websocat
         typstyle # conform.nvim formatter for typst (LazyVim typst extra)
         vscode-langservers-extracted # json/html/css/eslint LSPs (unrelated to VSCode at runtime)
         # LazyVim lang.nix extra expects all three: nil_ls (LSP), nixfmt (formatter
