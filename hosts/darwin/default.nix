@@ -185,7 +185,10 @@
 
   # Determinate Nix handles the daemon; the module also auto-sets
   # nix.enable = false to avoid nix-darwin stepping on Determinate's config.
-  determinateNix.enable = true;
+  determinateNix = {
+    enable = true;
+    determinateNixd.telemetry.sentry.endpoint = null;
+  };
 
   security.pam.services.sudo_local = {
     touchIdAuth = true;
@@ -227,6 +230,7 @@
       cleanup = "uninstall";
     };
     casks = [
+      "codex-app"
       "docker-desktop"
       "google-chrome"
       "hammerspoon"

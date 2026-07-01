@@ -10,9 +10,6 @@
   programs.neovim = {
     enable = true;
     defaultEditor = true;
-    withPython3 = true;
-    # withPython3/withRuby default to false at home.stateVersion >= 26.05;
-    # withNodeJs/withPerl default to false unconditionally.
 
     # Keep ~/.config/nvim fully owned by our own repo. Without this,
     # programs.neovim writes an init.lua (provider disables) into
@@ -56,10 +53,6 @@
         mermaid-cli # mmdc — Mermaid diagrams
       ];
 
-    extraPython3Packages =
-      ps: with ps; [
-        pynvim
-      ];
   };
 
   # Deploy entire nvim config as a mutable symlink (instant edits, lazy.nvim can write lockfile)
