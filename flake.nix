@@ -33,6 +33,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Temporary: use Neovim nightly for watcher-backed 'autoread'
+    # (neovim/neovim#37971). Remove this input and the Darwin HM package
+    # override once nixpkgs neovim includes that commit.
+    neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
+
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
 
     codex-cli = {
@@ -47,6 +52,7 @@
       determinate,
       nix-darwin,
       home-manager,
+      neovim-nightly-overlay,
       nix-homebrew,
       codex-cli,
       ...
@@ -96,7 +102,14 @@
                 isRootlessLinux = false;
                 isCerebras = false;
               };
-              users.jbedm = import ./home/darwin.nix;
+              users.jbedm = {
+                imports = [ ./home/darwin.nix ];
+
+                # Temporary: use Neovim nightly for watcher-backed 'autoread'
+                # (neovim/neovim#37971). Revert to nixpkgs neovim once that
+                # package includes the commit.
+                programs.neovim.package = neovim-nightly-overlay.packages.aarch64-darwin.default;
+              };
             };
           }
         ];

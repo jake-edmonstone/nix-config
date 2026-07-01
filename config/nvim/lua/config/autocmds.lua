@@ -1,11 +1,5 @@
 local augroup = vim.api.nvim_create_augroup("UserConfig", { clear = true })
 
-local function checktime_file_buffer()
-  if vim.bo.buftype == "" and vim.api.nvim_get_mode().mode ~= "c" then
-    vim.cmd("checktime " .. vim.api.nvim_get_current_buf())
-  end
-end
-
 -- Don't auto-insert comment leaders on Enter or o/O
 vim.api.nvim_create_autocmd("FileType", {
   group = augroup,
@@ -14,18 +8,18 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Extend LazyVim's built-in checktime autocmd (which listens on
--- FocusGained/TermClose/TermLeave) so external edits are noticed on ordinary
--- interaction with the current file, not only after switching buffers.
--- Guard: skip in command-line mode (don't redraw while you're typing :), and
--- skip non-file buffers (terminals, quickfix, help, oil/mini-files, etc.).
--- Neovim merged real-time autoread file watchers in neovim/neovim#37971.
--- Once nixpkgs carries that change without watcher issues like neovim/neovim#40238,
--- this event-based fallback can probably be removed.
-vim.api.nvim_create_autocmd({ "BufEnter", "CursorMoved", "CursorMovedI" }, {
-  group = augroup,
-  callback = checktime_file_buffer,
-})
+-- Fallback for pre-watchers 'autoread'. Safe to delete this commented block
+-- once we are off nightly and nixpkgs neovim includes neovim/neovim#37971.
+-- local function checktime_file_buffer()
+--   if vim.bo.buftype == "" and vim.api.nvim_get_mode().mode ~= "c" then
+--     vim.cmd("checktime " .. vim.api.nvim_get_current_buf())
+--   end
+-- end
+--
+-- vim.api.nvim_create_autocmd({ "BufEnter", "CursorMoved", "CursorMovedI" }, {
+--   group = augroup,
+--   callback = checktime_file_buffer,
+-- })
 
 -- Clean up [No Name] buffer after a file is opened via --remote (e.g. lazygit)
 vim.api.nvim_create_autocmd("BufReadPost", {

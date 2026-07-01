@@ -1,6 +1,7 @@
 vim.g.snacks_animate = false
 
--- reload files changed outside nvim
+-- Reload files changed outside nvim. On Neovim nightly this is backed by OS
+-- file watchers from neovim/neovim#37971.
 vim.o.autoread = true
 vim.o.winborder = "rounded"
 vim.o.pumborder = "rounded"
