@@ -228,7 +228,7 @@ for idx in "${!qnums[@]}"; do
     sub_path="$target_dir/$main_base-$qnum.typ"
     record_file_write "$sub_path"
     {
-      printf '#import "/preamble.typ": *\n'
+      printf '#import "../../course-preamble.typ": *\n'
       printf '#solution\n'
       printf 'TODO\n'
     } >"$sub_path"
@@ -238,7 +238,7 @@ for idx in "${!qnums[@]}"; do
       sub_path="$target_dir/$main_base-$qnum$part.typ"
       record_file_write "$sub_path"
       {
-        printf '#import "/preamble.typ": *\n'
+        printf '#import "../../course-preamble.typ": *\n'
         printf '#solution\n'
         printf 'TODO\n'
       } >"$sub_path"

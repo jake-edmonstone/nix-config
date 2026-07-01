@@ -8,8 +8,9 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Fallback for pre-watchers 'autoread'. Safe to delete this commented block
--- once we are off nightly and nixpkgs neovim includes neovim/neovim#37971.
+-- TODO: delete this fallback once we are off nightly and nixpkgs Neovim
+-- includes neovim/neovim#37971. It documents the pre-watchers workaround but
+-- should remain disabled while official watcher-backed 'autoread' is in use.
 -- local function checktime_file_buffer()
 --   if vim.bo.buftype == "" and vim.api.nvim_get_mode().mode ~= "c" then
 --     vim.cmd("checktime " .. vim.api.nvim_get_current_buf())

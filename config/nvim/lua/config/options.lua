@@ -1,7 +1,8 @@
 vim.g.snacks_animate = false
 
--- Reload files changed outside nvim. On Neovim nightly this is backed by OS
--- file watchers from neovim/neovim#37971.
+-- TODO: remove the nightly dependency once nixpkgs Neovim includes
+-- neovim/neovim#37971. Until then, 'autoread' is backed by OS file watchers
+-- only on the pinned nightly build.
 vim.o.autoread = true
 vim.o.winborder = "rounded"
 vim.o.pumborder = "rounded"

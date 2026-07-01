@@ -33,7 +33,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Temporary: use Neovim nightly for watcher-backed 'autoread'
+    # TODO: temporary Neovim nightly pin for watcher-backed 'autoread'
     # (neovim/neovim#37971). Remove this input and the Darwin HM package
     # override once nixpkgs neovim includes that commit.
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
@@ -58,7 +58,24 @@
       ...
     }:
     let
+      # TODO: temporary tmux 3.7 redraw regression workaround.
+      # tmux 3.7/3.7a causes Codex output to corrupt tmux popup rendering on
+      # this setup, especially flickering/cutting off the popup title border
+      # while Codex is streaming. Remove this overlay once nixpkgs ships a fixed
+      # tmux newer than 3.7a.
+      tmuxOverlay = final: prev: {
+        tmux = prev.tmux.overrideAttrs (_old: {
+          version = "3.6a";
+          src = prev.fetchFromGitHub {
+            owner = "tmux";
+            repo = "tmux";
+            rev = "refs/tags/3.6a";
+            hash = "sha256-VwOyR9YYhA/uyVRJbspNrKkJWJGYFFktwPnnwnIJ97s=";
+          };
+        });
+      };
       codexOverlay = [ codex-cli.overlays.default ];
+      overlays = codexOverlay ++ [ tmuxOverlay ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits
       # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented
@@ -68,7 +85,7 @@
       linuxPkgs = import nixpkgs {
         system = "x86_64-linux";
         config.allowUnfree = true;
-        overlays = codexOverlay;
+        inherit overlays;
       };
     in
     {
@@ -91,7 +108,7 @@
           determinate.darwinModules.default
           nix-homebrew.darwinModules.nix-homebrew
           home-manager.darwinModules.home-manager
-          { nixpkgs.overlays = codexOverlay; }
+          { nixpkgs.overlays = overlays; }
           {
             home-manager = {
               useGlobalPkgs = true;
@@ -105,9 +122,9 @@
               users.jbedm = {
                 imports = [ ./home/darwin.nix ];
 
-                # Temporary: use Neovim nightly for watcher-backed 'autoread'
-                # (neovim/neovim#37971). Revert to nixpkgs neovim once that
-                # package includes the commit.
+                # TODO: temporary Neovim nightly pin for watcher-backed
+                # 'autoread' (neovim/neovim#37971). Revert to nixpkgs neovim
+                # once that package includes the commit.
                 programs.neovim.package = neovim-nightly-overlay.packages.aarch64-darwin.default;
               };
             };
