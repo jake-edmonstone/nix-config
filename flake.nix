@@ -59,10 +59,10 @@
     }:
     let
       # TODO: temporary tmux 3.7 redraw regression workaround.
-      # tmux 3.7/3.7a causes Codex output to corrupt tmux popup rendering on
-      # this setup, especially flickering/cutting off the popup title border
-      # while Codex is streaming. Remove this overlay once nixpkgs ships a fixed
-      # tmux newer than 3.7a.
+      # tmux 3.7 through 3.7b causes Codex output to corrupt tmux popup
+      # rendering on this setup, especially flickering/cutting off the popup
+      # title border while Codex is streaming. Remove this overlay once nixpkgs
+      # ships a fixed tmux newer than 3.7b.
       tmuxOverlay = final: prev: {
         tmux = prev.tmux.overrideAttrs (_old: {
           version = "3.6a";
