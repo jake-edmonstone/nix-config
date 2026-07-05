@@ -21,7 +21,7 @@
         extraConfig = ''
           set -g @continuum-restore 'on'
           # Set before continuum loads; the plugin appends its autosave hook here.
-          set -g status-right ""
+          set -g status-right "#(${config.home.homeDirectory}/.local/bin/tmux-timewarrior-status)"
         '';
       }
     ];
@@ -112,7 +112,8 @@
       set -g @PURPLE "#BD93F9"
 
       set -g status-left-length 60
-      set -g status-left '#[fg=colour250]working on #[fg=#{@PURPLE},bold]#S#[default]'
+      set -g status-left '#[fg=#{@PURPLE},bold]#S#[default]'
+      set -g status-right-length 80
 
       set -g automatic-rename-format '#{?#{==:#{pane_current_command},codex-raw},codex,#{pane_current_command}}'
       set -g window-status-style fg=colour244,bg=default

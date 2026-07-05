@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v timew >/dev/null 2>&1; then
+  exit 0
+fi
+
+active="$(timew get dom.active 2>/dev/null || true)"
+if [[ "$active" != "1" ]]; then
+  exit 0
+fi
+
+details="$(timew get dom.active.tags dom.active.duration 2>/dev/null || true)"
+duration="${details##* }"
+tags="${details%" $duration"}"
+
+format_duration() {
+  local raw="$1"
+  local h m s
+
+  if [[ "$raw" =~ ^P(T)?([0-9]+H)?([0-9]+M)?([0-9]+S)?$ ]]; then
+    h="${BASH_REMATCH[2]%H}"
+    m="${BASH_REMATCH[3]%M}"
+    s="${BASH_REMATCH[4]%S}"
+    h="${h:-0}"
+    m="${m:-0}"
+    s="${s:-0}"
+
+    if (( h > 0 )); then
+      printf '%dh%02dm' "$h" "$m"
+    elif (( m > 0 )); then
+      printf '%dm' "$m"
+    else
+      printf '%ds' "$s"
+    fi
+    return 0
+  fi
+
+  printf '%s' "$raw"
+}
+
+elapsed="$(format_duration "$duration")"
+
+if (( ${#tags} > 28 )); then
+  tags="${tags:0:25}..."
+fi
+
+if [[ -n "$tags" ]]; then
+  printf '#[fg=#bd93f9]time #[fg=colour250]%s #[fg=#6272a4]%s#[default]' "$tags" "$elapsed"
+else
+  printf '#[fg=#bd93f9]time #[fg=#6272a4]%s#[default]' "$elapsed"
+fi

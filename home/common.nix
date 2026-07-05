@@ -66,6 +66,8 @@
         imagemagick
         ghostscript
         poppler-utils # provides pdftotext
+        gnused # GNU sed; fixes fish completions that assume GNU sed on macOS
+        timewarrior
         nh
         github-copilot-cli
       ])
