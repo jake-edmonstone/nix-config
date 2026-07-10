@@ -18,7 +18,7 @@ in
     enableMcpIntegration = true;
 
     settings = {
-      model = "gpt-5.5";
+      model = "gpt-5.6-sol";
       model_reasoning_effort = "medium";
       approvals_reviewer = "user";
       sandbox_mode = "danger-full-access";
