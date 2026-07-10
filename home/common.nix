@@ -30,7 +30,7 @@
       NH_HOME_FLAKE = "${config.home.homeDirectory}/nix-config";
       NH_DARWIN_FLAKE = "${config.home.homeDirectory}/nix-config";
       NH_OS_FLAKE = "${config.home.homeDirectory}/nix-config";
-      TYPST_ROOT = "${config.home.homeDirectory}/typst";
+      TYPST_ROOT = "${config.home.homeDirectory}/work";
       UNISONLOCALHOSTNAME = "FixedHostname";
     }
     // lib.optionalAttrs isDarwin {

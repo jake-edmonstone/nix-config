@@ -64,8 +64,28 @@ done
 require_cmd tmux
 require_cmd nvim
 
-typst_root="$HOME/typst"
-assignments_root="$typst_root/$course/assignments"
+work_root="${TYPST_ROOT:-$HOME/work}"
+undergrad_root="$work_root/academic/undergrad"
+
+course_dirs=()
+while IFS= read -r course_dir; do
+  course_dirs+=("$course_dir")
+done < <(find "$undergrad_root" -mindepth 2 -maxdepth 2 -type d -name "$course" -print | sort)
+
+case "${#course_dirs[@]}" in
+0)
+  die "course not found under $undergrad_root: $course"
+  ;;
+1)
+  assignments_root="${course_dirs[0]}/assignments"
+  ;;
+*)
+  printf 'new-assignment: course is ambiguous: %s\n' "$course" >&2
+  printf '  %s\n' "${course_dirs[@]}" >&2
+  exit 1
+  ;;
+esac
+
 [[ -d "$assignments_root" ]] || die "assignments directory not found: $assignments_root"
 
 if [[ "$assignment_raw" =~ ^[0-9]+$ ]]; then
@@ -100,7 +120,7 @@ mkdir -p "$target_dir"
 
 declare -a qnums=()
 declare -a qparts=()
-declare -A seen_q=()
+seen_q="|"
 
 IFS=',' read -r -a raw_tokens <<<"$layout"
 [[ ${#raw_tokens[@]} -gt 0 ]] || die "empty layout"
@@ -119,20 +139,20 @@ for raw in "${raw_tokens[@]}"; do
   ((qnum > 0)) || die "question numbers must be >= 1: $token"
   parts="${token#$qnum_raw}"
 
-  if [[ -n "${seen_q[$qnum]:-}" ]]; then
+  if [[ "$seen_q" == *"|$qnum|"* ]]; then
     die "duplicate question number in layout: $qnum"
   fi
-  seen_q["$qnum"]=1
+  seen_q+="$qnum|"
 
   if [[ -n "$parts" ]]; then
-    declare -A seen_part=()
+    seen_part="|"
     prev=""
     for ((i = 0; i < ${#parts}; i++)); do
       p="${parts:i:1}"
-      if [[ -n "${seen_part[$p]:-}" ]]; then
+      if [[ "$seen_part" == *"|$p|"* ]]; then
         die "duplicate part letter in token: $token"
       fi
-      seen_part["$p"]=1
+      seen_part+="$p|"
       if [[ -n "$prev" && "$p" < "$prev" ]]; then
         die "part letters must be increasing in token: $token"
       fi
@@ -158,7 +178,7 @@ find_header_line() {
 
 header_line="$(find_header_line || true)"
 title_prefix="Assignment"
-course_term="${course^^}"
+course_term="$(printf '%s' "$course" | tr '[:lower:]' '[:upper:]')"
 if [[ -n "$header_line" && "$header_line" =~ assignment-header\(\"([^\"]+)\",[[:space:]]*\"([^\"]+)\" ]]; then
   old_title="${BASH_REMATCH[1]}"
   course_term="${BASH_REMATCH[2]}"

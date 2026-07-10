@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TYPST_DIR="$HOME/typst"
-PROFESSIONAL_DIR="$TYPST_DIR/professional"
+WORK_DIR="${TYPST_ROOT:-$HOME/work}"
+PROFESSIONAL_DIR="$WORK_DIR/professional"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
 DATE=$(date +%Y-%m-%d)
 
-# Commit and push typst repo (only resume/cv sources — unstage anything else
+# Commit and push work repo (only resume/cv sources — unstage anything else
 # the user had queued so the commit is strictly scoped to this script's work).
-echo "Committing typst repo..."
-git -C "$TYPST_DIR" reset --quiet
-git -C "$TYPST_DIR" add \
+echo "Committing work repo..."
+git -C "$WORK_DIR" reset --quiet
+git -C "$WORK_DIR" add \
   professional/resume.typ \
   professional/cv.typ \
   professional/shared.typ
-if git -C "$TYPST_DIR" diff --cached --quiet; then
-  echo "No resume/cv changes in typst repo"
+if git -C "$WORK_DIR" diff --cached --quiet; then
+  echo "No resume/cv changes in work repo"
 else
-  git -C "$TYPST_DIR" commit -m "update resume $DATE"
+  git -C "$WORK_DIR" commit -m "update resume $DATE"
 fi
-git -C "$TYPST_DIR" push
+git -C "$WORK_DIR" push
 
 # Compile resume and cv
 echo "Compiling resume and cv..."
-typst compile "$PROFESSIONAL_DIR/resume.typ" "$WEBSITE_DIR/resume.pdf"
-typst compile "$PROFESSIONAL_DIR/cv.typ" "$WEBSITE_DIR/cv.pdf"
+typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/resume.typ" "$WEBSITE_DIR/resume.pdf"
+typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/cv.typ" "$WEBSITE_DIR/cv.pdf"
 
 # Commit and push website repo (only the PDFs — unstage anything else first).
 echo "Committing website repo..."

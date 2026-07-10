@@ -1,36 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TYPST_DIR="$HOME/typst"
+WORK_DIR="${TYPST_ROOT:-$HOME/work}"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
 DATE=$(date +%Y-%m-%d)
 
-COURSES=(pmath450 pmath352)
+COURSE_PATHS=(
+  academic/undergrad/4A/pmath450
+  academic/undergrad/4A/pmath352
+)
 
 tmps=()
 cleanup() { [ "${#tmps[@]}" -eq 0 ] || rm -f "${tmps[@]}"; }
 trap cleanup EXIT
 
-# Commit and push typst repo (only the course notes dirs — unstage anything
+# Commit and push work repo (only the course notes dirs — unstage anything
 # else the user had queued so the commit is strictly scoped to these courses).
-echo "Committing typst repo..."
-git -C "$TYPST_DIR" reset --quiet
+echo "Committing work repo..."
+git -C "$WORK_DIR" reset --quiet
 note_paths=()
-for course in "${COURSES[@]}"; do
-  note_paths+=("$course/notes")
+for course_path in "${COURSE_PATHS[@]}"; do
+  note_paths+=("$course_path/notes")
 done
-git -C "$TYPST_DIR" add "${note_paths[@]}"
-if git -C "$TYPST_DIR" diff --cached --quiet; then
-  echo "No note changes in typst repo"
+git -C "$WORK_DIR" add "${note_paths[@]}"
+if git -C "$WORK_DIR" diff --cached --quiet; then
+  echo "No note changes in work repo"
 else
-  git -C "$TYPST_DIR" commit -m "update notes $DATE"
+  git -C "$WORK_DIR" commit -m "update notes $DATE"
 fi
-git -C "$TYPST_DIR" push
+git -C "$WORK_DIR" push
 
 # Compile notes
 pdfs=()
-for course in "${COURSES[@]}"; do
-  main="$TYPST_DIR/$course/notes/main.typ"
+for course_path in "${COURSE_PATHS[@]}"; do
+  course="${course_path##*/}"
+  main="$WORK_DIR/$course_path/notes/main.typ"
   output="$WEBSITE_DIR/${course}-notes.pdf"
 
   echo "Compiling $course..."
@@ -48,7 +52,7 @@ for course in "${COURSES[@]}"; do
 #set text(12pt)
 ' "$main" >"$tmp"
 
-  typst compile "$tmp" "$output"
+  typst compile --root "$WORK_DIR" "$tmp" "$output"
   rm -f "$tmp"
 
   pdfs+=("${course}-notes.pdf")

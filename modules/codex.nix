@@ -39,7 +39,7 @@ in
 
       projects = {
         "${home}/nix-config".trust_level = "trusted";
-        "${home}/typst".trust_level = "trusted";
+        "${home}/work".trust_level = "trusted";
         "${home}/cs350".trust_level = "trusted";
         "${home}/projects".trust_level = "trusted";
         "${home}/Misc".trust_level = "trusted";
