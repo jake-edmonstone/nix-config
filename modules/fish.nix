@@ -146,11 +146,11 @@
       set -g tide_right_prompt_suffix ""
       set -g tide_prompt_icon_connection " "
 
-      set -l tide_bold_lambda (printf '\e[1mλ\e[22m')
-      set -g tide_character_icon $tide_bold_lambda
-      set -g tide_character_vi_icon_default $tide_bold_lambda
-      set -g tide_character_vi_icon_replace $tide_bold_lambda
-      set -g tide_character_vi_icon_visual $tide_bold_lambda
+      set -l prompt_character (printf '\e[1mλ\e[22m')
+      set -g tide_character_icon $prompt_character
+      set -g tide_character_vi_icon_default $prompt_character
+      set -g tide_character_vi_icon_replace $prompt_character
+      set -g tide_character_vi_icon_visual $prompt_character
       set -g tide_character_color 50FA7B
       set -g tide_character_color_failure FF5555
       set -g tide_status_icon "✔"

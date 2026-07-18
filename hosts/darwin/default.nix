@@ -230,7 +230,7 @@
       cleanup = "uninstall";
     };
     casks = [
-      "codex-app"
+      "chatgpt"
       "docker-desktop"
       "google-chrome"
       "hammerspoon"

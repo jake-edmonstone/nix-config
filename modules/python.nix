@@ -6,6 +6,8 @@ let
       numpy
       matplotlib
       scikit-learn
+      torch
+      torchvision
       pandas
       nbclient
       nbformat
