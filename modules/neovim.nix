@@ -34,6 +34,7 @@
         ruff
         shfmt
         tinymist
+        haskell-language-server
         websocat
         typstyle # conform.nvim formatter for typst (LazyVim typst extra)
         vscode-langservers-extracted # json/html/css/eslint LSPs (unrelated to VSCode at runtime)

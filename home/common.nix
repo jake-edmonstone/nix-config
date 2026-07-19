@@ -57,6 +57,7 @@
         cpulimit
         typst
         nodejs
+        ghc
         cmake
         docker-client
         mosh
