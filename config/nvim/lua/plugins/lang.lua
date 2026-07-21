@@ -113,8 +113,7 @@ return {
   {
     "chomosuke/typst-preview.nvim",
     opts = {
-      open_cmd = "open -b com.kagi.kagimacOS %s",
-      partial_rendering = false,
+      open_cmd = "open -b net.imput.helium %s",
       dependencies_bin = {
         websocat = "websocat",
       },

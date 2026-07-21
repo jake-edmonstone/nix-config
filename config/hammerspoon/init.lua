@@ -39,7 +39,7 @@ local apps = {
 
 -- Split views: key = hotkey letter, value = {left, right, ratio}
 local splits = {
-	n = { left = "com.mitchellh.ghostty", right = "com.kagi.kagimacOS", ratio = 0.6 },
+	n = { left = "com.mitchellh.ghostty", right = "net.imput.helium", ratio = 0.6 },
 }
 
 local function getUsableWindow(app)

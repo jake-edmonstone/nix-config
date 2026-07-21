@@ -234,9 +234,9 @@
       "docker-desktop"
       "google-chrome"
       "hammerspoon"
+      "helium-browser"
       "keyboardcleantool"
       "obsidian"
-      "orion"
       "spotify"
     ];
   };
