@@ -52,14 +52,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Restore blinking block cursor on exit
-vim.api.nvim_create_autocmd("VimLeave", {
-  group = augroup,
-  callback = function()
-    io.write("\027[1 q")
-  end,
-})
-
 -- Disable LSP logging (deferred to avoid loading vim.lsp at startup)
 vim.api.nvim_create_autocmd("LspAttach", {
   group = augroup,

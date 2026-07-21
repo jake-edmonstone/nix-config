@@ -48,14 +48,6 @@
         end
       '';
 
-      _cursor_blinking_block = {
-        onEvent = "fish_prompt";
-        body = ''
-          isatty stdout
-          and printf '\e[?25h\e[1 q'
-        '';
-      };
-
       _tide_item_context = ''
         set -q SSH_TTY; or return
         test "$PWD" = "$HOME"; or return
@@ -83,7 +75,16 @@
     };
 
     binds = {
-      "ctrl-x,ctrl-e".command = "edit_command_buffer";
+      edit-command-buffer-default = {
+        name = "ctrl-x,ctrl-e";
+        mode = "default";
+        command = "edit_command_buffer";
+      };
+      edit-command-buffer-insert = {
+        name = "ctrl-x,ctrl-e";
+        mode = "insert";
+        command = "edit_command_buffer";
+      };
     };
 
     shellInit = ''
@@ -211,6 +212,12 @@
     '';
 
     interactiveShellInit = ''
+      set -g fish_cursor_default block blink
+      set -g fish_cursor_insert line blink
+      set -g fish_cursor_replace_one underscore blink
+      set -g fish_cursor_visual block blink
+
+      fish_vi_key_bindings
       fish_user_key_bindings
     '';
   };
