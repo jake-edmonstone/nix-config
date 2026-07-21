@@ -114,6 +114,7 @@ return {
     "chomosuke/typst-preview.nvim",
     opts = {
       open_cmd = "open -b com.kagi.kagimacOS %s",
+      partial_rendering = false,
       dependencies_bin = {
         websocat = "websocat",
       },
