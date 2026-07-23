@@ -29,6 +29,27 @@ in
         theme = "dracula";
       };
 
+      desktop = {
+        appearanceTheme = "dark";
+        appearanceDarkCodeThemeId = "dracula";
+        appearanceDarkChromeTheme = {
+          accent = "#ff79c6";
+          contrast = 60;
+          fonts = {
+            code = "Maple Mono NF";
+            ui = "SF Pro Text";
+          };
+          ink = "#f8f8f2";
+          opaqueWindows = false;
+          semanticColors = {
+            diffAdded = "#50fa7b";
+            diffRemoved = "#ff5555";
+            skill = "#ff79c6";
+          };
+          surface = "#282a36";
+        };
+      };
+
       notice = {
         hide_gpt5_1_migration_prompt = true;
         "hide_gpt-5.1-codex-max_migration_prompt" = true;
