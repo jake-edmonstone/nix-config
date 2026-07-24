@@ -5,10 +5,14 @@ _:
     enable = true;
     enableFishIntegration = true;
     defaultCommand = "fd --hidden --strip-cwd-prefix";
-    fileWidgetCommand = "fd --hidden --strip-cwd-prefix";
-    changeDirWidgetCommand = "fd --type=d --hidden --strip-cwd-prefix";
-    fileWidgetOptions = [ "--preview 'bat -n --color=always --line-range :500 {}'" ];
-    changeDirWidgetOptions = [ "--preview 'eza --tree --color=always {} | head -200'" ];
+    fileWidget = {
+      command = "fd --hidden --strip-cwd-prefix";
+      options = [ "--preview 'bat -n --color=always --line-range :500 {}'" ];
+    };
+    changeDirWidget = {
+      command = "fd --type=d --hidden --strip-cwd-prefix";
+      options = [ "--preview 'eza --tree --color=always {} | head -200'" ];
+    };
     colors = {
       fg = "#f8f8f2";
       hl = "#bd93f9";

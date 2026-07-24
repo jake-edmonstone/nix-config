@@ -3,27 +3,27 @@
 Temporary workarounds and blocked updates in this configuration. Keep the
 corresponding `TODO` comments in the code until each item is resolved.
 
-## Nixpkgs Darwin linker regression
+## mcp-nixos flaky Darwin test
 
-**Status:** Waiting for the fix to reach `nixpkgs-unstable`.
+**Status:** Waiting for nixpkgs to apply the correct upstream fix.
 
-The July 2026 nixpkgs staging cycle enabled libc++ hardening in `ld64`. On
-`aarch64-darwin`, the linker can crash with `Trace/BPT trap: 5`. This currently
-prevents packages such as Sioyek and Qt Speech from building. The upstream fix
-disables that hardening again and has been merged into `staging-next`, but the
-maintainer estimated one to two weeks before it reaches the channels.
+`mcp-nixos` 2.4.3 has a test that rejects successful file reads whenever the
+file contents happen to contain the word `Error`. Nixpkgs attempted to fix this,
+but its patch points to an unrelated upstream `.envrc` commit and re-enables the
+flaky test on Darwin.
 
-- Fix: [NixOS/nixpkgs#536365](https://github.com/NixOS/nixpkgs/pull/536365)
-- Current action: keep the last working `flake.lock`; do not update nixpkgs yet.
-- Before updating, test the channel without changing the lock:
+- Upstream fix:
+  [utensils/mcp-nixos@d7ebc7b](https://github.com/utensils/mcp-nixos/commit/d7ebc7bfae70eaf20d54e87cf42764a1d57c35ef)
+- Incorrect nixpkgs fix:
+  [NixOS/nixpkgs#539664](https://github.com/NixOS/nixpkgs/pull/539664)
+- Temporary code: `mcpNixosOverlay` in `flake.nix` applies the actual upstream
+  patch.
+- Once nixpkgs packages the correct patch, remove `mcpNixosOverlay` from
+  `flake.nix` and build `mcp-nixos` directly before rebuilding:
 
   ```sh
-  nix build github:NixOS/nixpkgs/nixpkgs-unstable#sioyek --no-link
+  nix build .#darwinConfigurations.Jakes-MacBook.pkgs.mcp-nixos --no-link
   ```
-
-- Once that succeeds, run `nix flake update nixpkgs` and `rebuild`.
-- The update should also move `nh` from 4.3.2 to 4.4.1, whose subprocess-output
-  fix should restore the garbage-collection space summary from `nh clean`.
 
 ## Neovim nightly for watcher-backed autoread
 
