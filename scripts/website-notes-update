@@ -3,6 +3,8 @@ set -euo pipefail
 
 WORK_DIR="${TYPST_ROOT:-$HOME/work}"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
+WEBSITE_NOTES_REL="documents/course-notes"
+WEBSITE_NOTES_DIR="$WEBSITE_DIR/$WEBSITE_NOTES_REL"
 DATE=$(date +%Y-%m-%d)
 
 COURSE_PATHS=(
@@ -35,7 +37,7 @@ pdfs=()
 for course_path in "${COURSE_PATHS[@]}"; do
   course="${course_path##*/}"
   main="$WORK_DIR/$course_path/notes/main.typ"
-  output="$WEBSITE_DIR/${course}-notes.pdf"
+  output="$WEBSITE_NOTES_DIR/${course}-notes.pdf"
 
   echo "Compiling $course..."
 
@@ -55,7 +57,7 @@ for course_path in "${COURSE_PATHS[@]}"; do
   typst compile --root "$WORK_DIR" "$tmp" "$output"
   rm -f "$tmp"
 
-  pdfs+=("${course}-notes.pdf")
+  pdfs+=("$WEBSITE_NOTES_REL/${course}-notes.pdf")
 done
 
 # Commit and push website repo (only these course PDFs — unstage anything else first).

@@ -62,6 +62,8 @@ in
         "${home}/nix-config".trust_level = "trusted";
         "${home}/work".trust_level = "trusted";
         "${home}/cs350".trust_level = "trusted";
+        "${home}/work/research/drp-presentation".trust_level = "trusted";
+        "${home}/Projects/jake-edmonstone.github.io".trust_level = "trusted";
         "${home}/projects".trust_level = "trusted";
         "${home}/Misc".trust_level = "trusted";
         "${home}".trust_level = "trusted";

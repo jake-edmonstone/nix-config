@@ -4,6 +4,7 @@ set -euo pipefail
 WORK_DIR="${TYPST_ROOT:-$HOME/work}"
 PROFESSIONAL_DIR="$WORK_DIR/professional"
 WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
+WEBSITE_DOCUMENTS_DIR="$WEBSITE_DIR/documents"
 DATE=$(date +%Y-%m-%d)
 
 # Commit and push work repo (only resume/cv sources — unstage anything else
@@ -23,13 +24,13 @@ git -C "$WORK_DIR" push
 
 # Compile resume and cv
 echo "Compiling resume and cv..."
-typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/resume.typ" "$WEBSITE_DIR/resume.pdf"
-typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/cv.typ" "$WEBSITE_DIR/cv.pdf"
+typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/resume.typ" "$WEBSITE_DOCUMENTS_DIR/resume.pdf"
+typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/cv.typ" "$WEBSITE_DOCUMENTS_DIR/cv.pdf"
 
 # Commit and push website repo (only the PDFs — unstage anything else first).
 echo "Committing website repo..."
 git -C "$WEBSITE_DIR" reset --quiet
-git -C "$WEBSITE_DIR" add resume.pdf cv.pdf
+git -C "$WEBSITE_DIR" add documents/resume.pdf documents/cv.pdf
 if git -C "$WEBSITE_DIR" diff --cached --quiet; then
   echo "No PDF changes in website repo"
 else
