@@ -64,6 +64,7 @@
         tree
         unison
         wget
+        ffmpeg
         imagemagick
         ghostscript
         poppler-utils # provides pdftotext

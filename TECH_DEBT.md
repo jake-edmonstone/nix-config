@@ -44,14 +44,20 @@ watchers without custom polling autocommands.
 
 ## tmux 3.7 popup redraw regression
 
-**Status:** Waiting for a tmux release newer than 3.7b that renders correctly.
+**Status:** Fixed on tmux `master`; waiting for tmux 3.8 to reach nixpkgs.
 
 tmux 3.7 through 3.7b corrupts or repeatedly redraws the title border of tmux
 popups while Codex is streaming output. The configuration therefore pins tmux
-3.6a.
+3.6a. This matches
+[tmux#5336](https://github.com/tmux/tmux/issues/5336): scrolling or full-region
+redraws in a pane behind `display-popup` unnecessarily repaint the popup.
 
 - Temporary code: `tmuxOverlay` in `flake.nix`.
-- There is no confirmed upstream issue linked for this setup yet.
-- When nixpkgs ships a newer tmux, remove the overlay, rebuild, restart the tmux
+- Upstream fix:
+  [tmux@824a072](https://github.com/tmux/tmux/commit/824a07290f853a97219ee2624a46c0aada246efb),
+  accepted from [tmux#5398](https://github.com/tmux/tmux/pull/5398).
+- The fix is part of the changes from 3.7b to 3.8, but tmux 3.8 has no announced
+  release date. Current nixpkgs still packages 3.7b.
+- When nixpkgs ships tmux 3.8, remove the overlay, rebuild, restart the tmux
   server, and test the session picker while Codex is actively generating text.
   Keep the pin if the popup title still flickers or is cut off.
