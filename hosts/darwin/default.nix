@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }:
@@ -147,28 +146,6 @@
   users.users.jbedm = {
     home = "/Users/jbedm";
     shell = pkgs.fish;
-  };
-
-  home-manager = {
-    users.jbedm = {
-      home = {
-        sessionPath = lib.mkBefore [
-          "/opt/homebrew/bin"
-          "/opt/homebrew/sbin"
-        ];
-      };
-
-      # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
-      # nix-homebrew shell integration is disabled below to prevent duplication.
-      programs.fish.shellInit = ''
-        set -gx HOMEBREW_PREFIX /opt/homebrew
-        set -gx HOMEBREW_CELLAR /opt/homebrew/Cellar
-        set -gx HOMEBREW_REPOSITORY /opt/homebrew
-        set -q MANPATH; and set -gx MANPATH "" $MANPATH
-        set -gx INFOPATH /opt/homebrew/share/info $INFOPATH
-        set -gp fish_complete_path /opt/homebrew/share/fish/vendor_completions.d
-      '';
-    };
   };
 
   # Determinate Nix handles the daemon; the module also auto-sets

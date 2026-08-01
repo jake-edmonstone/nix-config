@@ -14,9 +14,12 @@
     ../modules/lazygit.nix
     ../modules/neovim.nix
     ../modules/claude.nix
+    ../modules/codex.nix
     ../modules/python.nix
     ../modules/jupyter.nix
     ../modules/scripts.nix
+    ../modules/vim.nix
+    ../modules/zoxide.nix
   ];
 
   home = {
@@ -30,7 +33,6 @@
     sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
 
     packages = with pkgs; [
-      tree-sitter
       typst
       nodejs
       ghc
@@ -49,19 +51,12 @@
       github-copilot-cli
     ];
 
-    file = {
-      ".clang-format".source = ../config/clang/clang-format;
-      ".vimrc".source = ../config/vim/vimrc;
-    };
+    file.".clang-format".source = ../config/clang/clang-format;
 
     # ~/.hushlogin must be a real empty file rather than a store symlink so
     # login services can read it directly.
-    # - vim's undodir/backupdir (referenced from config/vim/vimrc) must exist
-    #   before vim can write undo/backup files there. home.file only creates
-    #   files, not empty dirs, so we mkdir here.
-    activation.userHomeSetup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    activation.writeHushlogin = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       : > "$HOME/.hushlogin"
-      mkdir -p "$HOME/.vim/undodir" "$HOME/.vim/backups"
     '';
   };
 
@@ -81,22 +76,13 @@
       enableFishIntegration = true; # generates ls, ll, la, lt, lla aliases
     };
 
-    zoxide = {
-      enable = true;
-      # Disabled: HM's implementation emits `zoxide init fish | source`, which
-      # forks zoxide on every shell startup. On macOS with EDR that's ~6-9 ms.
-      # home/darwin.nix sources a nix-built static init file instead.
-      enableFishIntegration = false;
-    };
-
     pandoc.enable = true;
 
     ripgrep.enable = true;
   };
 
-  # Enable XDG on macOS so programs (lazygit, etc.) use ~/.config/ instead of
-  # ~/Library/Application Support/. Many HM modules check config.xdg.enable
-  # to decide the config path on Darwin.
+  # Use standard XDG paths for tools such as lazygit. On Darwin, this also
+  # avoids their fallback to ~/Library/Application Support.
   xdg.enable = true;
 
 }

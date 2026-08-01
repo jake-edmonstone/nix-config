@@ -22,9 +22,8 @@ return {
       explorer = { enabled = false },
       -- Inline image rendering (PDF / LaTeX / Mermaid / raster) via Kitty
       -- graphics. `needs_setup = true` in Snacks.image, so this opt-in is
-      -- required. Render deps (magick / gs / tectonic / mmdc) are Darwin-only
-      -- in modules/neovim.nix — SSH'd nvim on Linux hosts falls back to
-      -- PNG-only until you install them there too.
+      -- required. Render dependencies are managed by Nix; magick and gs remain
+      -- global CLIs, while tectonic and mmdc are on Neovim's wrapper PATH.
       image = { enabled = true },
       styles = {
         win = { border = "rounded" },

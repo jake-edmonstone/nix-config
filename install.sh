@@ -66,7 +66,6 @@ if ! nix eval "$DOTFILES#darwinConfigurations.\"$darwin_attr\"" \
   exit 1
 fi
 
-export NIXPKGS_ALLOW_UNFREE=1
 msg "Building nix-darwin configuration for $darwin_attr"
 
 if ! command -v darwin-rebuild >/dev/null 2>&1; then

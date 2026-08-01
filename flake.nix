@@ -92,7 +92,6 @@
       formatter.aarch64-darwin = formatterFor "aarch64-darwin";
 
       darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
         modules = [
           ./hosts/darwin
           determinate.darwinModules.default

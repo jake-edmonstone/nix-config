@@ -7,8 +7,8 @@ let
   scripts = lib.attrNames (lib.filterAttrs (_: t: t == "regular") (builtins.readDir ../scripts));
 in
 {
-  # Mutable symlinks — scripts can be edited without rebuilding, and new ones
-  # dropped in ../scripts auto-deploy to ~/.local/bin/
+  # Mutable symlinks — tracked scripts can be edited without rebuilding. New
+  # scripts appear in the flake and deploy after they are added to Git's index.
   home.file = lib.listToAttrs (
     map (
       name:
