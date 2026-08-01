@@ -70,6 +70,5 @@ in
       };
     };
 
-    skills = ../config/skills;
   };
 }

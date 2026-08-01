@@ -1,8 +1,6 @@
 {
   config,
-  lib,
   pkgs,
-  isDarwin,
   ...
 }:
 
@@ -23,36 +21,24 @@
     # hooks lspconfig on BufReadPre (~15-22 ms), and creates a supplementary
     # PATH. Managing them via nix puts them on nvim's wrapper PATH directly
     # and lets the mason plugins be disabled (see config/nvim/lua/plugins/lang.lua).
-    # clangd is provided by clang-tools in home/common.nix; on Cerebras the user
-    # has an explicit clangd path override in config/nvim/lua/plugins/lang.lua.
-    extraPackages =
-      with pkgs;
-      [
-        lua-language-server
-        stylua
-        pyright
-        ruff
-        shfmt
-        tinymist
-        haskell-language-server
-        websocat
-        typstyle # conform.nvim formatter for typst (LazyVim typst extra)
-        vscode-langservers-extracted # json/html/css/eslint LSPs (unrelated to VSCode at runtime)
-        # LazyVim lang.nix extra expects all three: nil_ls (LSP), nixfmt (formatter
-        # via conform.nvim), statix (linter via nvim-lint). flake's `nix fmt` uses
-        # nixfmt-tree which wraps the same nixfmt binary, so output is identical.
-        nil
-        nixfmt
-        statix
-      ]
-      ++ lib.optionals isDarwin [
-        # Snacks.image render deps — Darwin-only because (1) the user views
-        # PDFs/LaTeX/Mermaid in nvim only on Mac and (2) mermaid-cli pulls in
-        # chromium via puppeteer (~250 MB) which is wasted on UWaterloo's proot
-        # environment where it would be unusably slow anyway.
-        tectonic # modern LaTeX engine (~80 MB vs texlive's ~4 GB)
-        mermaid-cli # mmdc — Mermaid diagrams
-      ];
+    extraPackages = with pkgs; [
+      lua-language-server
+      stylua
+      pyright
+      ruff
+      shfmt
+      tinymist
+      haskell-language-server
+      websocat
+      typstyle # conform.nvim formatter for typst (LazyVim typst extra)
+      vscode-langservers-extracted # json/html/css/eslint LSPs (unrelated to VSCode at runtime)
+      # LazyVim lang.nix extra expects all three: nil_ls (LSP), nixfmt (formatter
+      # via conform.nvim), statix (linter via nvim-lint). flake's `nix fmt` uses
+      # nixfmt-tree which wraps the same nixfmt binary, so output is identical.
+      nil
+      nixfmt
+      statix
+    ];
 
   };
 

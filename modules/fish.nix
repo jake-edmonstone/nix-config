@@ -1,7 +1,5 @@
 {
   pkgs,
-  lib,
-  isRootlessLinux,
   ...
 }:
 
@@ -35,18 +33,6 @@
           return 2
         end
         mkdir -p -- $argv[1]; and cd -- $argv[1]
-      '';
-
-      rebuild = ''
-        switch (uname -s)
-          case Darwin
-            nh darwin switch "$DOTFILES" -H "$REBUILD_FLAKE_ATTR" $argv
-          case Linux
-            nh home switch "$DOTFILES" -c "$REBUILD_FLAKE_ATTR" $argv
-          case '*'
-            echo "rebuild: unsupported OS: "(uname -s) >&2
-            return 1
-        end
       '';
 
       _tide_item_context = ''
@@ -90,12 +76,6 @@
 
     shellInit = ''
       set -g fish_greeting
-
-      ${lib.optionalString isRootlessLinux ''
-        if set -q NP_ENTERED; and not command -q nix
-          fish_add_path --global ${pkgs.nix}/bin
-        end
-      ''}
 
       set -g fish_color_normal F8F8F2
       set -g fish_color_command 50FA7B

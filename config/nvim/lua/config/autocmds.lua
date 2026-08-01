@@ -60,14 +60,3 @@ vim.api.nvim_create_autocmd("LspAttach", {
     vim.lsp.log.set_level("off")
   end,
 })
-
--- Disable autoformat for C++ on Cerebras machines (manual format with <leader>cf still works)
-if vim.fn.isdirectory("/cb") == 1 then
-  vim.api.nvim_create_autocmd("FileType", {
-    group = augroup,
-    pattern = "cpp",
-    callback = function()
-      vim.b.autoformat = false
-    end,
-  })
-end

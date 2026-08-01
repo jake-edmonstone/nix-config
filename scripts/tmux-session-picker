@@ -8,11 +8,7 @@ list_cmd="cur=\$(tmux display-message -p '#S') && {
   printf '%s\t*\n' \"\$cur\"
 }"
 
-# nix-portable's proot ptrace-traps execve; fzf's `become` calls execve from a
-# Go worker thread, which crashes the successor process with SIGSEGV at NULL
-# before it can run. `execute-silent`+`abort` forks first, sidestepping it.
 new_action="become(tmux new-session -ds {q} && tmux switch-client -t {q})"
-[[ -n "${NP_RUNTIME:-}" ]] && new_action="execute-silent(tmux new-session -ds {q} && tmux switch-client -t {q})+abort"
 
 # fzf cancel (Esc/Ctrl-C) exits 130; don't let set -e kill the script.
 sel=$(eval "$list_cmd" | SHELL="${BASH:-/bin/bash}" fzf \

@@ -1,8 +1,8 @@
 -- Symlink indicators for mini.files (async, batched)
 --
 -- Previously we fired one uv.fs_lstat per directory entry, which on network-
--- backed homes (Cerebras EFS, UWaterloo CephFS) produces a burst of syscalls
--- on every buffer update. readdir(2) already returns d_type on most modern
+-- backed homes produces a burst of syscalls on every buffer update. readdir(2)
+-- already returns d_type on most modern
 -- filesystems, so uv.fs_scandir gives us the full set of links in one syscall.
 -- We still fall back to fs_lstat for filesystems that report d_type = nil
 -- (older NFS setups, some tmpfs configs).

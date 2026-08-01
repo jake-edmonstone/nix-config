@@ -11,8 +11,7 @@
     );
 
     settings = {
-      # Personal identity is the default; Cerebras/work hosts override in their
-      # host module (mkDefault so those overrides don't need lib.mkForce).
+      # Host modules can override the default personal identity.
       user = {
         name = lib.mkDefault "jake-edmonstone";
         email = lib.mkDefault "jbedmonstone@gmail.com";
@@ -48,13 +47,6 @@
       # feature.manyFiles implies pack.threads=0, index.version=4, core.untrackedCache=true
       # — so we don't set those explicitly. https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
       feature.manyFiles = true;
-      # Modern git (2.40+) also sets index.skipHash=true via feature.manyFiles,
-      # which breaks older libgit2 consumers with "invalid data in index —
-      # calculated checksum does not match expected". nix-portable bundles
-      # nix 2.20.6 (old libgit2), which fails on skipHash'd index files when
-      # evaluating flakes. See: https://github.com/libgit2/libgit2/issues/6531
-      # Force-disable skipHash so flake evaluation works on nix-portable hosts.
-      index.skipHash = false;
     };
   };
 
