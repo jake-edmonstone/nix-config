@@ -21,6 +21,7 @@
     };
 
     shellAbbrs = {
+      lg = "lazygit";
       ta = "tmux attach -t";
       tn = "tmux new -s";
       tls = "tmux ls";

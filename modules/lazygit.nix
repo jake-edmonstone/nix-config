@@ -3,6 +3,7 @@ _:
 {
   programs.lazygit = {
     enable = true;
+    enableFishIntegration = false;
 
     settings = {
       disableStartupPopups = true;
