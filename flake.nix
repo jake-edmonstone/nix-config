@@ -63,7 +63,7 @@
       # rendering on this setup, especially flickering/cutting off the popup
       # title border while Codex is streaming. Remove this overlay once nixpkgs
       # ships a fixed tmux newer than 3.7b.
-      tmuxOverlay = final: prev: {
+      tmuxOverlay = _: prev: {
         tmux = prev.tmux.overrideAttrs (_old: {
           version = "3.6a";
           src = prev.fetchFromGitHub {

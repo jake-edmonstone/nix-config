@@ -53,7 +53,6 @@
     packages =
       (with pkgs; [
         tree-sitter
-        trash-cli
         cpulimit
         typst
         nodejs
@@ -75,6 +74,7 @@
       ])
       ++ lib.optionals (!isDarwin) [
         pkgs.clang-tools # provides clangd and clang-format
+        pkgs.trash-cli
       ];
 
     file = {
