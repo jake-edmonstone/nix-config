@@ -70,7 +70,6 @@ return {
       vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>", { buf = 0, desc = "Continue list below" })
       vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>", { buf = 0, desc = "Continue list above" })
       vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>", { buf = 0, desc = "Toggle checkbox" })
-      vim.keymap.set("n", "<C-r>", "<cmd>AutolistRecalculate<cr>", { buf = 0, desc = "Renumber list" })
     end,
   },
 

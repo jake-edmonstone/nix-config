@@ -11,7 +11,7 @@
 
   home = {
     sessionVariables = {
-      NH_SHOW_ACTIVATION_LOGS = "true";
+      NH_SHOW_ACTIVATION_LOGS = "1";
       # Restrict Typst to nix-darwin's managed fonts. Unrestricted macOS font
       # discovery selects different New Computer Modern faces and changes PDFs.
       TYPST_IGNORE_SYSTEM_FONTS = "true";
