@@ -61,3 +61,24 @@ redraws in a pane behind `display-popup` unnecessarily repaint the popup.
 - When nixpkgs ships tmux 3.8, remove the overlay, rebuild, restart the tmux
   server, and test the session picker while Codex is actively generating text.
   Keep the pin if the popup title still flickers or is cut off.
+
+## nix-homebrew auto-update breaks MAS activation
+
+**Status:** Waiting for nix-homebrew to preserve `HOMEBREW_PATH` across
+Homebrew's auto-update re-exec.
+
+With activation auto-update enabled, the nix-homebrew wrapper re-executes Brew
+with its filtered `PATH`. `brew bundle` then cannot find `mas`, even when it is
+already installed, and every declarative Mac App Store entry fails. Cask and
+MAS app upgrades still run because `homebrew.onActivation.upgrade` remains
+enabled; the Homebrew executable is updated through the `nix-homebrew` flake
+input.
+
+- Upstream reports:
+  [nix-homebrew#131](https://github.com/zhaofengli/nix-homebrew/issues/131) and
+  [nix-homebrew#149](https://github.com/zhaofengli/nix-homebrew/issues/149).
+- Temporary code: `homebrew.onActivation.autoUpdate = false` in
+  `hosts/darwin/default.nix`.
+- Once the wrapper preserves the original path across re-exec, set
+  `autoUpdate` back to `true` and verify a rebuild recognizes the existing MAS
+  apps.
