@@ -2,6 +2,8 @@
 
 hs.window.animationDuration = 0
 
+local log = hs.logger.new("hyper")
+
 -- Right Option is remapped to F19 by nix-darwin's system.keyboard.userKeyMapping.
 -- Press-and-hold F19 to enter the modal; release exits it. Keys bound via
 -- hyper:bind() below fire while F19 is held.
@@ -13,15 +15,13 @@ end, function()
 end)
 
 local pendingTimer = nil
-local pendingPoll = nil
 
-local POLL_INTERVAL = 0.1 -- 100ms between readiness checks
+local POLL_INTERVAL = 0.05 -- only used while an app is launching or reopening
 local POLL_TIMEOUT = 10 -- give up after 10 seconds
 
 -- App registry: key = hotkey letter, value = bundle ID
 local apps = {
 	t = "com.mitchellh.ghostty",
-	s = "com.tinyspeck.slackmacgap",
 	b = "com.apple.Safari",
 	-- e = "com.microsoft.Outlook",
 	e = "com.apple.mail",
@@ -33,7 +33,6 @@ local apps = {
 	f = "net.ankiweb.dtop", -- Anki (nixpkgs anki-bin; .dmg-distributed Anki uses net.ankiweb.launcher)
 	c = "com.apple.iCal", -- Calendar
 	r = "com.apple.reminders", -- Reminders
-	j = "com.apple.Safari.WebApp.89AA9B93-DC53-4A4D-947E-794889FB7A06", -- Jira
 	g = "com.apple.Safari.WebApp.84A4B68F-5EF2-4BD8-AE52-65B41EAFC9CA", -- GitHub
 }
 
@@ -44,7 +43,7 @@ local splits = {
 
 local function getUsableWindow(app)
 	local win = app:mainWindow()
-	if win then
+	if win and win:isStandard() then
 		return win
 	end
 	for _, w in ipairs(app:allWindows()) do
@@ -74,39 +73,66 @@ local function cancelPending()
 		pendingTimer:stop()
 		pendingTimer = nil
 	end
-	if pendingPoll then
-		pendingPoll:stop()
-		pendingPoll = nil
-	end
 end
 
--- Ensure an app is running; launch it if not. Returns true if already windowed.
-local function ensureRunning(bundleID)
+local function resolveTarget(bundleID)
 	local app = hs.application.get(bundleID)
 	-- isRunning() is needed: get() can return stale objects for dead processes
-	if app and app:isRunning() then
-		return true
+	if not app or not app:isRunning() then
+		return nil
 	end
-	if not hs.application.launchOrFocusByBundleID(bundleID) then
-		hs.printf("no app found for bundle ID %s", bundleID)
+
+	local win = getUsableWindow(app)
+	if not win then
+		return nil
 	end
-	return false
+
+	return { app = app, win = win }
 end
 
--- Poll until a bundle ID has a usable window, then return the app via callback.
--- Returns the timer so the caller can cancel it.
-local function waitForWindow(bundleID, callback)
-	local start = hs.timer.secondsSinceEpoch()
-	return hs.timer.waitUntil(function()
-		if hs.timer.secondsSinceEpoch() - start > POLL_TIMEOUT then
-			return true
+local function resolveTargets(bundleIDs)
+	local targets = {}
+	for _, bundleID in ipairs(bundleIDs) do
+		local target = resolveTarget(bundleID)
+		if not target then
+			return nil
 		end
-		local app = hs.application.get(bundleID)
-		return app and app:isRunning() and getUsableWindow(app) ~= nil
+		targets[bundleID] = target
+	end
+	return targets
+end
+
+local function runWhenReady(bundleIDs, callback)
+	local targets = resolveTargets(bundleIDs)
+	if targets then
+		callback(targets)
+		return
+	end
+
+	for _, bundleID in ipairs(bundleIDs) do
+		if not resolveTarget(bundleID) and not hs.application.launchOrFocusByBundleID(bundleID) then
+			log.ef("no app found for bundle ID %s", bundleID)
+			return
+		end
+	end
+
+	-- A running windowless app may create a window synchronously when reopened.
+	targets = resolveTargets(bundleIDs)
+	if targets then
+		callback(targets)
+		return
+	end
+
+	local deadline = hs.timer.absoluteTime() + POLL_TIMEOUT * 1000000000
+	pendingTimer = hs.timer.waitUntil(function()
+		targets = resolveTargets(bundleIDs)
+		return targets ~= nil or hs.timer.absoluteTime() >= deadline
 	end, function()
-		local app = hs.application.get(bundleID)
-		if app and app:isRunning() and getUsableWindow(app) then
-			callback(app)
+		pendingTimer = nil
+		if targets then
+			callback(targets)
+		else
+			log.ef("timed out waiting for %s", table.concat(bundleIDs, ", "))
 		end
 	end, POLL_INTERVAL)
 end
@@ -115,101 +141,55 @@ end
 local function switchTo(bundleID)
 	cancelPending()
 
-	local function apply(app)
-		app:activate(true)
-		local win = getUsableWindow(app)
-		if win then
-			win:maximize()
+	runWhenReady({ bundleID }, function(targets)
+		local target = targets[bundleID]
+		if target.win:isMinimized() then
+			target.win:unminimize()
 		end
+		if not target.app:activate(true) then
+			log.ef("failed to activate %s", bundleID)
+			return
+		end
+		target.win:maximize()
 		hideOthersExcept(bundleID)
-	end
-
-	if ensureRunning(bundleID) then
-		local app = hs.application.get(bundleID)
-		apply(app)
-	else
-		hideOthersExcept(bundleID)
-		pendingPoll = waitForWindow(bundleID, apply)
-	end
+	end)
 end
 
 -- Show two apps side by side, hide everything else
 local function splitView(leftID, rightID, ratio)
 	cancelPending()
 	ratio = ratio or 0.5
-
-	local leftReady = ensureRunning(leftID)
-	local rightReady = ensureRunning(rightID)
+	local targetScreen = hs.screen.mainScreen()
+	if not targetScreen then
+		log.e("no screen available for split view")
+		return
+	end
 
 	-- Pre-compute geometry outside polling loops
 	local leftUnit = hs.geometry.rect(0, 0, ratio, 1)
 	local rightUnit = hs.geometry.rect(ratio, 0, 1 - ratio, 1)
 
-	local function layout()
-		local leftApp = hs.application.get(leftID)
-		local rightApp = hs.application.get(rightID)
-		if not leftApp or not rightApp then
+	runWhenReady({ leftID, rightID }, function(targets)
+		local left = targets[leftID]
+		local right = targets[rightID]
+
+		left.app:unhide()
+		right.app:unhide()
+		if left.win:isMinimized() then
+			left.win:unminimize()
+		end
+		if right.win:isMinimized() then
+			right.win:unminimize()
+		end
+		if not left.app:activate(true) then
+			log.ef("failed to activate %s", leftID)
 			return
 		end
 
-		leftApp:unhide()
-		rightApp:unhide()
-		leftApp:activate(true)
-		rightApp:activate(true)
+		left.win:move(leftUnit, targetScreen)
+		right.win:move(rightUnit, targetScreen)
 		hideOthersExcept(leftID, rightID)
-
-		-- Poll until both windows are visible, then position them.
-		-- moveToUnit uses each window's own screen and respects dock/menu bar.
-		local layoutStart = hs.timer.secondsSinceEpoch()
-		pendingTimer = hs.timer.waitUntil(function()
-			if hs.timer.secondsSinceEpoch() - layoutStart > POLL_TIMEOUT then
-				return true
-			end
-			if not leftApp:isRunning() or not rightApp:isRunning() then
-				return true
-			end
-			local lwin = getUsableWindow(leftApp)
-			local rwin = getUsableWindow(rightApp)
-			return lwin and rwin and lwin:isVisible() and rwin:isVisible()
-		end, function()
-			pendingTimer = nil
-			if not leftApp:isRunning() or not rightApp:isRunning() then
-				return
-			end
-			local lwin = getUsableWindow(leftApp)
-			local rwin = getUsableWindow(rightApp)
-			if lwin then
-				lwin:moveToUnit(leftUnit)
-			end
-			if rwin then
-				rwin:moveToUnit(rightUnit)
-			end
-			leftApp:activate()
-		end, 0.05)
-	end
-
-	if leftReady and rightReady then
-		layout()
-	else
-		-- Poll until both apps have usable windows, then lay them out
-		local start = hs.timer.secondsSinceEpoch()
-		pendingPoll = hs.timer.waitUntil(function()
-			if hs.timer.secondsSinceEpoch() - start > POLL_TIMEOUT then
-				return true
-			end
-			local l = hs.application.get(leftID)
-			local r = hs.application.get(rightID)
-			return l
-				and l:isRunning()
-				and getUsableWindow(l) ~= nil
-				and r
-				and r:isRunning()
-				and getUsableWindow(r) ~= nil
-		end, function()
-			pendingPoll = nil
-			layout()
-		end, POLL_INTERVAL)
-	end
+	end)
 end
 
 -- Bind single-app hotkeys
