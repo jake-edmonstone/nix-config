@@ -5,6 +5,6 @@
 
   # vimrc enables persistent undo and backups in these directories.
   home.activation.createVimDirectories = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "$HOME/.vim/undodir" "$HOME/.vim/backups"
+    run mkdir -p "$HOME/.vim/undodir" "$HOME/.vim/backups"
   '';
 }

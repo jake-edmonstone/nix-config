@@ -9,6 +9,8 @@
     settings = {
       font-family = "Maple Mono NF";
       font-size = 18;
+      adjust-cell-height = "8%";
+      window-padding-y = "2,3";
       font-feature = [ "cv01" ];
       theme = "Dracula";
       cursor-style-blink = true;

@@ -23,21 +23,21 @@ vim.api.nvim_create_autocmd("FileType", {
 -- })
 
 -- Clean up [No Name] buffer after a file is opened via --remote (e.g. lazygit)
+local initial_buffer = vim.api.nvim_get_current_buf()
 vim.api.nvim_create_autocmd("BufReadPost", {
   group = augroup,
   once = true,
   callback = function()
     vim.schedule(function()
-      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-        if
-          vim.api.nvim_buf_is_loaded(buf)
-          and vim.api.nvim_buf_get_name(buf) == ""
-          and vim.bo[buf].buftype == ""
-          and not vim.bo[buf].modified
-          and buf ~= vim.api.nvim_get_current_buf()
-        then
-          vim.api.nvim_buf_delete(buf, {})
-        end
+      if
+        vim.api.nvim_buf_is_valid(initial_buffer)
+        and vim.api.nvim_buf_is_loaded(initial_buffer)
+        and vim.api.nvim_buf_get_name(initial_buffer) == ""
+        and vim.bo[initial_buffer].buftype == ""
+        and not vim.bo[initial_buffer].modified
+        and initial_buffer ~= vim.api.nvim_get_current_buf()
+      then
+        vim.api.nvim_buf_delete(initial_buffer, {})
       end
     end)
   end,

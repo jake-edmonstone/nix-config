@@ -17,7 +17,6 @@
 
       # File/dir inspection
       "Bash(ls *)"
-      "Bash(find *)"
       "Bash(tree *)"
       "Bash(stat *)"
       "Bash(file *)"
@@ -78,8 +77,14 @@
       "Bash(git status *)"
       "Bash(git log *)"
       "Bash(git diff *)"
-      "Bash(git branch *)"
-      "Bash(git remote *)"
+      "Bash(git branch)"
+      "Bash(git branch --list *)"
+      "Bash(git branch -l *)"
+      "Bash(git branch --show-current)"
+      "Bash(git remote)"
+      "Bash(git remote -v)"
+      "Bash(git remote get-url *)"
+      "Bash(git remote show *)"
       "Bash(git rev-parse *)"
       "Bash(git show *)"
       "Bash(git blame *)"
@@ -97,10 +102,8 @@
       "Bash(git tag -l *)"
 
       # Nix (read-only)
-      "Bash(nix eval *)"
       "Bash(nix flake show *)"
       "Bash(nix flake metadata *)"
-      "Bash(nix flake check *)"
       "Bash(nix derivation show *)"
       "Bash(nix show-derivation *)"
       "Bash(nix search *)"

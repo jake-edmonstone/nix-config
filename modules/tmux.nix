@@ -12,7 +12,6 @@
     historyLimit = 50000;
     focusEvents = true;
     aggressiveResize = false;
-    sensibleOnTop = true; # sources tmux-sensible (display-time, status-interval, status-keys emacs, etc.)
 
     plugins = with pkgs.tmuxPlugins; [
       resurrect
@@ -38,14 +37,8 @@
       # forever (shells see __HM_SESS_VARS_SOURCED=1 and skip re-sourcing).
       set -ag update-environment 'FZF_DEFAULT_OPTS FZF_DEFAULT_COMMAND FZF_CTRL_T_OPTS FZF_CTRL_T_COMMAND FZF_ALT_C_OPTS FZF_ALT_C_COMMAND PATH'
 
-      # On Darwin, Home Manager's reattach-to-user-namespace default-command
-      # can exit immediately for detached new windows/splits. Keep fish as
-      # default-shell and let tmux start it directly.
-      set -g default-command ""
-
       # Terminal settings (Ghostty). :RGB in terminal-features is the modern
-      # (tmux 3.2+) replacement for the older :Tc terminal-override — one knob
-      # covers truecolor for both xterm-ghostty and xterm-256color.
+      # (tmux 3.2+) replacement for the older :Tc terminal-override.
       set -as terminal-features 'xterm-ghostty:RGB:usstyle:overline:strikethrough:extkeys'
       # Tell tmux every outer terminal supports OSC52 clipboard. Combined with
       # `set-clipboard on` below, copying in copy-mode sends an OSC52 escape so
@@ -68,27 +61,29 @@
       bind P paste-buffer
       bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-selection-and-cancel
 
-      # Sensible binds
+      # Explicitly retain the useful tmux-sensible behavior without loading a
+      # plugin that otherwise duplicates Home Manager's tmux options.
+      set -g status-interval 5
+      set -g display-time 4000
       bind r source-file ${config.xdg.configHome}/tmux/tmux.conf \; display "Reloaded!"
       bind | split-window -h -c "#{pane_current_path}"
       bind - split-window -v -c "#{pane_current_path}"
       bind c new-window -c "#{pane_current_path}"
 
       # Smart pane switching with awareness of Vim splits, SSH, and fzf
-      is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-          | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf|ssh|mosh?)(diff)?$'"
-      bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
-      bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
-      bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
-      bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
-      bind-key -n C-\\ if-shell "$is_vim" 'send-keys C-\\' 'select-pane -l'
+      is_vim='#{m/r:^(g?(view|vim|vimdiff|nvim|nvimdiff|lvim)|fzf|ssh|mosh)$,#{pane_current_command}}'
+      bind-key -n 'C-h' if-shell -F "$is_vim" 'send-keys C-h'  'select-pane -L'
+      bind-key -n 'C-j' if-shell -F "$is_vim" 'send-keys C-j'  'select-pane -D'
+      bind-key -n 'C-k' if-shell -F "$is_vim" 'send-keys C-k'  'select-pane -U'
+      bind-key -n 'C-l' if-shell -F "$is_vim" 'send-keys C-l'  'select-pane -R'
+      bind-key -n C-\\ if-shell -F "$is_vim" 'send-keys C-\\' 'select-pane -l'
       bind-key -T prefix l send-keys -R C-l \; clear-history
 
       # Pop-ups
       bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=#bd93f9' -b rounded tmux-session-picker
       bind w display-popup -w 80% -h 80% -d "#{pane_current_path}"
       unbind k
-      bind g run "open-github"
+      bind g run-shell -b -c "#{pane_current_path}" "gh browse"
 
       bind N switch-client -l
 

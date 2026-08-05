@@ -19,7 +19,8 @@ if ! xcode-select -p >/dev/null 2>&1; then
   exit 0
 fi
 
-if [[ "$(uname -m)" == "arm64" ]] && ! /usr/bin/pgrep oahd >/dev/null 2>&1; then
+if [[ "$(uname -m)" == "arm64" ]] \
+  && ! /usr/sbin/pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1; then
   msg "Installing Rosetta 2"
   softwareupdate --install-rosetta --agree-to-license
 fi

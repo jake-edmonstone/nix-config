@@ -24,7 +24,6 @@ require_cmd() {
 course=""
 assignment_raw=""
 layout=""
-force=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -60,6 +59,7 @@ done
 [[ -n "$assignment_raw" ]] || die "--assignment is required"
 [[ -n "$layout" ]] || die "--layout is required"
 [[ "$course" =~ ^[A-Za-z0-9._-]+$ ]] || die "invalid --course (allowed: letters, numbers, dot, underscore, hyphen)"
+[[ "$assignment_raw" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "invalid --assignment (expected an integer or decimal identifier)"
 
 require_cmd tmux
 require_cmd nvim
@@ -103,20 +103,26 @@ fi
 
 if [[ "$assignment_raw" == *.* ]]; then
   folder_name="a$assignment_raw"
-elif [[ "$assignment_raw" =~ ^[0-9]+$ ]]; then
+else
   assignment_int="$((10#$assignment_raw))"
   if ((assignment_int < 10 && use_padded_single_digit == 1)); then
     folder_name="$(printf 'a%02d' "$assignment_int")"
   else
     folder_name="a$assignment_int"
   fi
-else
-  folder_name="a$assignment_raw"
 fi
 
 target_dir="$assignments_root/$folder_name"
-[[ -d "$target_dir" ]] && die "target already exists: $target_dir (this script never overwrites existing assignments)"
-mkdir -p "$target_dir"
+if ! mkdir "$target_dir"; then
+  die "target already exists or could not be created: $target_dir"
+fi
+
+cleanup_partial_assignment() {
+  local status=$?
+  rm -rf -- "$target_dir"
+  exit "$status"
+}
+trap cleanup_partial_assignment EXIT
 
 declare -a qnums=()
 declare -a qparts=()
@@ -137,7 +143,7 @@ for raw in "${raw_tokens[@]}"; do
     qnum="$qnum_raw"
   fi
   ((qnum > 0)) || die "question numbers must be >= 1: $token"
-  parts="${token#$qnum_raw}"
+  parts="${token#"$qnum_raw"}"
 
   if [[ "$seen_q" == *"|$qnum|"* ]]; then
     die "duplicate question number in layout: $qnum"
@@ -190,18 +196,11 @@ fi
 new_title="$title_prefix $assignment_norm"
 main_file="$target_dir/$main_base.typ"
 
-declare -a written_files=()
 declare -a created_files=()
-declare -a overwritten_files=()
 
 record_file_write() {
   local path="$1"
-  written_files+=("$path")
-  if [[ -e "$path" ]]; then
-    overwritten_files+=("$path")
-  else
-    created_files+=("$path")
-  fi
+  created_files+=("$path")
 }
 
 record_file_write "$main_file"
@@ -266,16 +265,22 @@ for idx in "${!qnums[@]}"; do
   fi
 done
 
+# File generation is complete. Preserve the assignment if tmux or Neovim
+# cannot be started; those launch failures should not destroy valid work.
+trap - EXIT
+
 session_name_raw="typst-${course}-a${assignment_norm}"
 session_name="$(printf '%s' "$session_name_raw" | tr -c '[:alnum:]' '_')"
 session_pane="$session_name:1.1"
+printf -v open_command 'cd %q && nvim %q' "$target_dir" "$main_file"
+printf -v nvim_command 'nvim %q' "$main_file"
 
 if tmux has-session -t "$session_name" 2>/dev/null; then
   tmux send-keys -t "$session_pane" C-c
-  tmux send-keys -t "$session_pane" "cd \"$target_dir\" && nvim \"$main_file\"" C-m
+  tmux send-keys -t "$session_pane" "$open_command" C-m
 else
   tmux new-session -d -s "$session_name" -c "$target_dir" "${SHELL:-/bin/sh}"
-  tmux send-keys -t "$session_pane" "nvim \"$main_file\"" C-m
+  tmux send-keys -t "$session_pane" "$nvim_command" C-m
 fi
 
 tmux has-session -t "$session_name" 2>/dev/null || die "tmux session was not created: $session_name"
@@ -284,12 +289,6 @@ printf 'new-assignment: target directory: %s\n' "$target_dir"
 if [[ ${#created_files[@]} -gt 0 ]]; then
   printf 'new-assignment: created files:\n'
   for f in "${created_files[@]}"; do
-    printf '  %s\n' "$f"
-  done
-fi
-if [[ ${#overwritten_files[@]} -gt 0 ]]; then
-  printf 'new-assignment: overwritten files:\n'
-  for f in "${overwritten_files[@]}"; do
     printf '  %s\n' "$f"
   done
 fi

@@ -5,14 +5,15 @@ if ! command -v timew >/dev/null 2>&1; then
   exit 0
 fi
 
-active="$(timew get dom.active 2>/dev/null || true)"
+details="$(timew get dom.active dom.active.tags dom.active.duration 2>/dev/null || true)"
+active="${details%% *}"
 if [[ "$active" != "1" ]]; then
   exit 0
 fi
 
-details="$(timew get dom.active.tags dom.active.duration 2>/dev/null || true)"
-duration="${details##* }"
-tags="${details%" $duration"}"
+status="${details#* }"
+duration="${status##* }"
+tags="${status%" $duration"}"
 
 format_duration() {
   local raw="$1"

@@ -20,7 +20,6 @@ in
     settings = {
       model = "gpt-5.6-sol";
       model_reasoning_effort = "medium";
-      approvals_reviewer = "user";
       sandbox_mode = "danger-full-access";
       approval_policy = "never";
 

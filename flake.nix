@@ -54,33 +54,17 @@
       # ships a fixed tmux newer than 3.7b.
       tmuxOverlay = _: prev: {
         tmux = prev.tmux.overrideAttrs (_old: {
-          version = "3.6a";
+          version = "3.6b";
           src = prev.fetchFromGitHub {
             owner = "tmux";
             repo = "tmux";
-            rev = "refs/tags/3.6a";
-            hash = "sha256-VwOyR9YYhA/uyVRJbspNrKkJWJGYFFktwPnnwnIJ97s=";
+            rev = "refs/tags/3.6b";
+            hash = "sha256-iW4K/OxSVpxVkyI5Dy6lzwVf/8nXyjcHtL76Ezmxavc=";
           };
         });
       };
-      # TODO: nixpkgs#539664 applies the wrong upstream patch, leaving
-      # mcp-nixos' test_read_text_file flaky on Darwin. Remove this overlay
-      # once nixpkgs applies utensils/mcp-nixos@d7ebc7b itself.
-      mcpNixosOverlay = final: prev: {
-        mcp-nixos = prev.mcp-nixos.overridePythonAttrs (old: {
-          patches = (old.patches or [ ]) ++ [
-            (final.fetchpatch {
-              url = "https://github.com/utensils/mcp-nixos/commit/d7ebc7bfae70eaf20d54e87cf42764a1d57c35ef.patch";
-              hash = "sha256-2kLVknbL3BqxgDmIU4oaiQquij2slnoSiWD6JWRTW1c=";
-            })
-          ];
-        });
-      };
       codexOverlay = [ codex-cli.overlays.default ];
-      overlays = codexOverlay ++ [
-        tmuxOverlay
-        mcpNixosOverlay
-      ];
+      overlays = codexOverlay ++ [ tmuxOverlay ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits
       # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented

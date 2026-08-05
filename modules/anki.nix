@@ -25,8 +25,8 @@ let
   };
 
   # Merge upstream's src/addon/ with our Dracula-palette meta.json into one
-  # deploy-ready directory. Read-only at runtime (store path); Anki doesn't
-  # write to addon dirs — user state goes to Anki2/<profile>/collection.*.
+  # deploy-ready directory. Activation copies it into Anki's writable addon
+  # directory because Anki stores addon configuration beside the code.
   ankiRecolor = pkgs.runCommandLocal "anki-addon-recolor-688199788" { } ''
     cp -r ${ankiRecolorSrc}/src/addon $out
     chmod -R +w $out
@@ -45,16 +45,34 @@ in
     install_addon() {
       id="$1"
       src="$2"
+      meta_policy="$3"
       dest="$addons/$id"
-      rm -rf "$dest"
-      mkdir -p "$addons"
-      cp -R "$src" "$dest"
-      chmod -R u+w "$dest"
+
+      args=(
+        --archive
+        --delete
+        --exclude config.json
+        --exclude user_files/
+      )
+      if [ "$meta_policy" = preserve ]; then
+        args+=(--exclude meta.json)
+      fi
+
+      run mkdir -p "$dest"
+      run ${pkgs.rsync}/bin/rsync "''${args[@]}" "$src/" "$dest/"
+      run chmod -R u+w "$dest"
+
+      # Seed an addon's default config on first install, then leave Anki's
+      # writable copy untouched on subsequent activations.
+      if [ ! -e "$dest/config.json" ] && [ -e "$src/config.json" ]; then
+        run cp "$src/config.json" "$dest/config.json"
+      fi
+      run chmod -R u+w "$dest"
     }
 
-    install_addon 2055492159 ${ankiConnectSrc}/plugin
-    install_addon 688199788 ${ankiRecolor}
-    install_addon dracula_titlebar ${../config/anki/addons21/dracula_titlebar}
+    install_addon 2055492159 ${ankiConnectSrc}/plugin preserve
+    install_addon 688199788 ${ankiRecolor} replace
+    install_addon dracula_titlebar ${../config/anki/addons21/dracula_titlebar} preserve
 
   '';
 }

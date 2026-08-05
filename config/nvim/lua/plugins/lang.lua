@@ -61,16 +61,15 @@ return {
   {
     "gaoDean/autolist.nvim",
     ft = { "markdown" },
-    config = function()
-      require("autolist").setup()
-
-      vim.keymap.set("i", "<Tab>", "<cmd>AutolistTab<cr>", { buf = 0, desc = "Indent list item" })
-      vim.keymap.set("i", "<S-Tab>", "<cmd>AutolistShiftTab<cr>", { buf = 0, desc = "Dedent list item" })
-      vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>", { buf = 0, desc = "Continue list" })
-      vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>", { buf = 0, desc = "Continue list below" })
-      vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>", { buf = 0, desc = "Continue list above" })
-      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>", { buf = 0, desc = "Toggle checkbox" })
-    end,
+    opts = {},
+    keys = {
+      { "<Tab>", "<cmd>AutolistTab<cr>", mode = "i", ft = "markdown", desc = "Indent list item" },
+      { "<S-Tab>", "<cmd>AutolistShiftTab<cr>", mode = "i", ft = "markdown", desc = "Dedent list item" },
+      { "<CR>", "<CR><cmd>AutolistNewBullet<cr>", mode = "i", ft = "markdown", desc = "Continue list" },
+      { "o", "o<cmd>AutolistNewBullet<cr>", ft = "markdown", desc = "Continue list below" },
+      { "O", "O<cmd>AutolistNewBulletBefore<cr>", ft = "markdown", desc = "Continue list above" },
+      { "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>", ft = "markdown", desc = "Toggle checkbox" },
+    },
   },
 
   -- Typst

@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-unison ~/uwcs ssh://jbedmons@linux.student.cs.uwaterloo.ca//u0/jbedmonstone/uwcs -perms 0 -times=false -owner=false -group=false

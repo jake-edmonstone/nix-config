@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-umount -f "$HOME/sshfsuwcs" 2>/dev/null || true
-sshfs -o auto_cache,reconnect -o cache=yes -o cache_timeout=115200 -o Ciphers=aes128-ctr -o Compression=no uwcs:/u0/jbedmonstone/ "$HOME/sshfsuwcs/"

@@ -44,9 +44,11 @@ local function markSymlinks(buf_id)
       if next(links) == nil then return end
       vim.schedule(function()
         if not api.nvim_buf_is_valid(buf_id) then return end
-        -- Re-read line count inside schedule: the buffer may have been
-        -- replaced if the user navigated to a sibling dir between scandir
-        -- dispatch and this callback firing.
+        local current = MiniFiles.get_fs_entry(buf_id, 1)
+        if not current or vim.fs.normalize(vim.fn.fnamemodify(current.path, ":h")) ~= vim.fs.normalize(parent) then
+          return
+        end
+
         local nlines = api.nvim_buf_line_count(buf_id)
         for i = 1, nlines do
           local entry = MiniFiles.get_fs_entry(buf_id, i)

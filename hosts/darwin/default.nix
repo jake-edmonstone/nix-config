@@ -7,6 +7,7 @@
 {
   system = {
     primaryUser = "jbedm";
+    # Compatibility pin for nix-darwin migrations, not the package release.
     stateVersion = 7;
 
     keyboard = {
@@ -120,11 +121,6 @@
     };
 
     activationScripts.postActivation.text = ''
-      /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
-      killall Finder || true
-      killall SystemUIServer || true
-      killall ControlCenter || true
-
       # macOS Sequoia/Tahoe reads `com.apple.mouse.tapBehavior` at per-host
       # (ByHost) scope for the "Tap to click" switch, but nix-darwin's
       # system.defaults.trackpad.Clicking only writes user-global keys
@@ -139,6 +135,10 @@
       fi
     '';
   };
+
+  # Configuration reference docs are available online and otherwise add
+  # evaluation/build work to every system generation.
+  documentation.enable = false;
 
   nixpkgs.hostPlatform = "aarch64-darwin";
   nixpkgs.config.allowUnfree = true;

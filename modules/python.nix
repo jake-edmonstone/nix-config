@@ -23,6 +23,4 @@ let
 in
 {
   home.packages = [ globalPython ];
-
-  home.sessionVariables.JUPYTER_PATH = "${globalPython}/share/jupyter";
 }

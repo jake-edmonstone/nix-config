@@ -75,6 +75,12 @@
     };
 
     shellInit = ''
+      # Neovim's LSP clients and watcher-backed autoread need more than macOS's
+      # default 256 descriptors. Only raise the soft limit inherited by tools.
+      ulimit -Sn 8192
+    '';
+
+    interactiveShellInit = ''
       set -g fish_greeting
 
       set -g fish_color_normal F8F8F2
@@ -109,90 +115,90 @@
       set -g fish_pager_color_selected_completion F8F8F2
       set -g fish_pager_color_selected_description F1FA8C
 
-      set -g tide_left_prompt_items context pwd git jobs python nix_shell cmd_duration status newline character
-      set -g tide_right_prompt_items
-      set -g tide_prompt_add_newline_before true
-      set -g tide_prompt_transient_enabled false
-      set -g tide_prompt_pad_items false
-      set -g tide_prompt_min_cols 40
+      # Tide renders in a separate `fish -c` process, so its configuration
+      # must use Tide's intended universal scope to be visible there.
+      set -U tide_left_prompt_items context pwd git jobs python nix_shell cmd_duration status newline character
+      set -U tide_right_prompt_items
+      set -U tide_prompt_add_newline_before true
+      set -U tide_prompt_transient_enabled false
+      set -U tide_prompt_pad_items false
+      set -U tide_prompt_min_cols 40
 
-      set -g tide_left_prompt_frame_enabled false
-      set -g tide_left_prompt_prefix ""
-      set -g tide_left_prompt_separator_diff_color " "
-      set -g tide_left_prompt_separator_same_color " "
-      set -g tide_left_prompt_suffix " "
-      set -g tide_right_prompt_frame_enabled false
-      set -g tide_right_prompt_prefix " "
-      set -g tide_right_prompt_separator_diff_color " "
-      set -g tide_right_prompt_separator_same_color " "
-      set -g tide_right_prompt_suffix ""
-      set -g tide_prompt_icon_connection " "
+      set -U tide_left_prompt_frame_enabled false
+      set -U tide_left_prompt_prefix ""
+      set -U tide_left_prompt_separator_diff_color " "
+      set -U tide_left_prompt_separator_same_color " "
+      set -U tide_left_prompt_suffix " "
+      set -U tide_right_prompt_frame_enabled false
+      set -U tide_right_prompt_prefix " "
+      set -U tide_right_prompt_separator_diff_color " "
+      set -U tide_right_prompt_separator_same_color " "
+      set -U tide_right_prompt_suffix ""
+      set -U tide_prompt_icon_connection " "
 
       set -l prompt_character (printf '\e[1mλ\e[22m')
-      set -g tide_character_icon $prompt_character
-      set -g tide_character_vi_icon_default $prompt_character
-      set -g tide_character_vi_icon_replace $prompt_character
-      set -g tide_character_vi_icon_visual $prompt_character
-      set -g tide_character_color 50FA7B
-      set -g tide_character_color_failure FF5555
-      set -g tide_status_icon "✔"
-      set -g tide_status_icon_failure "✘"
-      set -g tide_status_color 50FA7B
-      set -g tide_status_color_failure FF5555
-      set -g tide_status_bg_color normal
-      set -g tide_status_bg_color_failure normal
+      set -U tide_character_icon $prompt_character
+      set -U tide_character_vi_icon_default $prompt_character
+      set -U tide_character_vi_icon_replace $prompt_character
+      set -U tide_character_vi_icon_visual $prompt_character
+      set -U tide_character_color 50FA7B
+      set -U tide_character_color_failure FF5555
+      set -U tide_status_icon "✔"
+      set -U tide_status_icon_failure "✘"
+      set -U tide_status_color 50FA7B
+      set -U tide_status_color_failure FF5555
+      set -U tide_status_bg_color normal
+      set -U tide_status_bg_color_failure normal
 
-      set -g tide_pwd_icon
-      set -g tide_pwd_icon_home
-      set -g tide_pwd_icon_unwritable ""
-      set -g tide_pwd_bg_color normal
-      set -g tide_pwd_color_dirs BD93F9
-      set -g tide_pwd_color_anchors BD93F9
-      set -g tide_pwd_color_truncated_dirs BD93F9
-      set -g tide_pwd_markers .bzr .citc .git .hg .node-version .python-version .ruby-version .shorten_folder_marker .svn .terraform bun.lockb Cargo.toml composer.json CVS go.mod package.json build.zig
+      set -U tide_pwd_icon
+      set -U tide_pwd_icon_home
+      set -U tide_pwd_icon_unwritable ""
+      set -U tide_pwd_bg_color normal
+      set -U tide_pwd_color_dirs BD93F9
+      set -U tide_pwd_color_anchors BD93F9
+      set -U tide_pwd_color_truncated_dirs BD93F9
+      set -U tide_pwd_markers .bzr .citc .git .hg .node-version .python-version .ruby-version .shorten_folder_marker .svn .terraform bun.lockb Cargo.toml composer.json CVS go.mod package.json build.zig
 
-      set -g tide_git_icon (set_color white)on(set_color FF79C6)
-      set -g tide_git_bg_color normal
-      set -g tide_git_bg_color_unstable normal
-      set -g tide_git_bg_color_urgent normal
-      set -g tide_git_color_branch FF79C6
-      set -g tide_git_color_conflicted FF5555
-      set -g tide_git_color_dirty FFB86C
-      set -g tide_git_color_operation FF5555
-      set -g tide_git_color_staged FFB86C
-      set -g tide_git_color_stash 50FA7B
-      set -g tide_git_color_untracked 50FA7B
-      set -g tide_git_color_upstream 50FA7B
-      set -g tide_git_truncation_length 64
-      set -g tide_git_truncation_strategy
+      set -U tide_git_icon (set_color white)on(set_color FF79C6)
+      set -U tide_git_bg_color normal
+      set -U tide_git_bg_color_unstable normal
+      set -U tide_git_bg_color_urgent normal
+      set -U tide_git_color_branch FF79C6
+      set -U tide_git_color_conflicted FF5555
+      set -U tide_git_color_dirty FFB86C
+      set -U tide_git_color_operation FF5555
+      set -U tide_git_color_staged FFB86C
+      set -U tide_git_color_stash 50FA7B
+      set -U tide_git_color_untracked 50FA7B
+      set -U tide_git_color_upstream 50FA7B
+      set -U tide_git_truncation_length 64
+      set -U tide_git_truncation_strategy
 
-      set -g tide_jobs_icon ""
-      set -g tide_jobs_color 50FA7B
-      set -g tide_jobs_bg_color normal
-      set -g tide_jobs_number_threshold 1
+      set -U tide_jobs_icon ""
+      set -U tide_jobs_color 50FA7B
+      set -U tide_jobs_bg_color normal
+      set -U tide_jobs_number_threshold 1
 
-      set -g tide_python_icon
-      set -g tide_python_color 8BE9FD
-      set -g tide_python_bg_color normal
-      set -g tide_nix_shell_icon ""
-      set -g tide_nix_shell_color 8BE9FD
-      set -g tide_nix_shell_bg_color normal
+      set -U tide_python_icon
+      set -U tide_python_color 8BE9FD
+      set -U tide_python_bg_color normal
+      set -U tide_nix_shell_icon ""
+      set -U tide_nix_shell_color 8BE9FD
+      set -U tide_nix_shell_bg_color normal
 
-      set -g tide_cmd_duration_icon
-      set -g tide_cmd_duration_color F1FA8C
-      set -g tide_cmd_duration_bg_color normal
-      set -g tide_cmd_duration_decimals 0
-      set -g tide_cmd_duration_threshold 3000
+      set -U tide_cmd_duration_icon
+      set -U tide_cmd_duration_color F1FA8C
+      set -U tide_cmd_duration_bg_color normal
+      set -U tide_cmd_duration_decimals 0
+      set -U tide_cmd_duration_threshold 3000
 
-      set -g tide_context_always_display false
-      set -g tide_context_bg_color normal
-      set -g tide_context_color_default 8BE9FD
-      set -g tide_context_color_root FF5555
-      set -g tide_context_color_ssh 8BE9FD
-      set -g tide_context_hostname_parts 1
-    '';
+      set -U tide_context_always_display false
+      set -U tide_context_bg_color normal
+      set -U tide_context_color_default 8BE9FD
+      set -U tide_context_color_root FF5555
+      set -U tide_context_color_ssh 8BE9FD
+      set -U tide_context_hostname_parts 1
 
-    interactiveShellInit = ''
       set -g fish_cursor_default block blink
       set -g fish_cursor_insert line blink
       set -g fish_cursor_replace_one underscore blink

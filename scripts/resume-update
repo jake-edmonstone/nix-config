@@ -3,39 +3,43 @@ set -euo pipefail
 
 WORK_DIR="${TYPST_ROOT:-$HOME/work}"
 PROFESSIONAL_DIR="$WORK_DIR/professional"
-WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
+WEBSITE_DIR="$HOME/projects/jake-edmonstone.github.io"
 WEBSITE_DOCUMENTS_DIR="$WEBSITE_DIR/documents"
 DATE=$(date +%Y-%m-%d)
 
-# Commit and push work repo (only resume/cv sources — unstage anything else
-# the user had queued so the commit is strictly scoped to this script's work).
-echo "Committing work repo..."
-git -C "$WORK_DIR" reset --quiet
-git -C "$WORK_DIR" add \
-  professional/resume.typ \
-  professional/cv.typ \
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+echo "Compiling resume and cv..."
+typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/resume.typ" "$tmpdir/resume.pdf"
+typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/cv.typ" "$tmpdir/cv.pdf"
+
+cp "$tmpdir/resume.pdf" "$WEBSITE_DOCUMENTS_DIR/resume.pdf"
+cp "$tmpdir/cv.pdf" "$WEBSITE_DOCUMENTS_DIR/cv.pdf"
+
+work_paths=(
+  professional/resume.typ
+  professional/cv.typ
   professional/shared.typ
-if git -C "$WORK_DIR" diff --cached --quiet; then
+)
+echo "Committing work repo..."
+git -C "$WORK_DIR" add -- "${work_paths[@]}"
+if git -C "$WORK_DIR" diff --cached --quiet -- "${work_paths[@]}"; then
   echo "No resume/cv changes in work repo"
 else
-  git -C "$WORK_DIR" commit -m "update resume $DATE"
+  git -C "$WORK_DIR" commit --only -m "update resume $DATE" -- "${work_paths[@]}"
 fi
-git -C "$WORK_DIR" push
 
-# Compile resume and cv
-echo "Compiling resume and cv..."
-typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/resume.typ" "$WEBSITE_DOCUMENTS_DIR/resume.pdf"
-typst compile --root "$WORK_DIR" "$PROFESSIONAL_DIR/cv.typ" "$WEBSITE_DOCUMENTS_DIR/cv.pdf"
-
-# Commit and push website repo (only the PDFs — unstage anything else first).
+website_paths=(documents/resume.pdf documents/cv.pdf)
 echo "Committing website repo..."
-git -C "$WEBSITE_DIR" reset --quiet
-git -C "$WEBSITE_DIR" add documents/resume.pdf documents/cv.pdf
-if git -C "$WEBSITE_DIR" diff --cached --quiet; then
+git -C "$WEBSITE_DIR" add -- "${website_paths[@]}"
+if git -C "$WEBSITE_DIR" diff --cached --quiet -- "${website_paths[@]}"; then
   echo "No PDF changes in website repo"
 else
-  git -C "$WEBSITE_DIR" commit -m "update resume and cv $DATE"
+  git -C "$WEBSITE_DIR" commit --only -m "update resume and cv $DATE" -- "${website_paths[@]}"
 fi
+
+git -C "$WORK_DIR" push
 git -C "$WEBSITE_DIR" push
 
 echo "Done!"

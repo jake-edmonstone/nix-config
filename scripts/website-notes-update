@@ -2,9 +2,8 @@
 set -euo pipefail
 
 WORK_DIR="${TYPST_ROOT:-$HOME/work}"
-WEBSITE_DIR="$HOME/Projects/jake-edmonstone.github.io"
+WEBSITE_DIR="$HOME/projects/jake-edmonstone.github.io"
 WEBSITE_NOTES_REL="documents/course-notes"
-WEBSITE_NOTES_DIR="$WEBSITE_DIR/$WEBSITE_NOTES_REL"
 DATE=$(date +%Y-%m-%d)
 
 COURSE_PATHS=(
@@ -12,63 +11,65 @@ COURSE_PATHS=(
   academic/undergrad/4A/pmath352
 )
 
-tmps=()
-cleanup() { [ "${#tmps[@]}" -eq 0 ] || rm -f "${tmps[@]}"; }
+tmpdir="$(mktemp -d)"
+source_tmps=()
+cleanup() {
+  rm -rf "$tmpdir"
+  if [[ ${#source_tmps[@]} -gt 0 ]]; then
+    rm -f "${source_tmps[@]}"
+  fi
+}
 trap cleanup EXIT
 
-# Commit and push work repo (only the course notes dirs — unstage anything
-# else the user had queued so the commit is strictly scoped to these courses).
-echo "Committing work repo..."
-git -C "$WORK_DIR" reset --quiet
 note_paths=()
-for course_path in "${COURSE_PATHS[@]}"; do
-  note_paths+=("$course_path/notes")
-done
-git -C "$WORK_DIR" add "${note_paths[@]}"
-if git -C "$WORK_DIR" diff --cached --quiet; then
-  echo "No note changes in work repo"
-else
-  git -C "$WORK_DIR" commit -m "update notes $DATE"
-fi
-git -C "$WORK_DIR" push
-
-# Compile notes
 pdfs=()
+compiled_pdfs=()
+
 for course_path in "${COURSE_PATHS[@]}"; do
   course="${course_path##*/}"
   main="$WORK_DIR/$course_path/notes/main.typ"
-  output="$WEBSITE_NOTES_DIR/${course}-notes.pdf"
+  note_paths+=("$course_path/notes")
+  pdfs+=("$WEBSITE_NOTES_REL/${course}-notes.pdf")
+  compiled_pdfs+=("$tmpdir/${course}-notes.pdf")
 
   echo "Compiling $course..."
 
-  # Insert 12pt text size for PDF output via temp file (avoids corrupting source on failure).
-  # Temp file must be in the same directory so Typst resolves relative imports correctly.
-  # BSD mktemp (macOS) requires the X's at the end of the template, so rename to add .typ.
-  # Register $tmp_base with cleanup BEFORE mv so a failure between mktemp and mv doesn't leak.
+  # Keep the temporary source beside main.typ so relative imports resolve.
   tmp_base="$(mktemp "$(dirname "$main")/.main_website.XXXXXX")"
-  tmps+=("$tmp_base")
+  source_tmps+=("$tmp_base")
   tmp="$tmp_base.typ"
   mv "$tmp_base" "$tmp"
-  tmps+=("$tmp")
+  source_tmps+=("$tmp")
   sed -e '/show: preamble/a\
 #set text(12pt)
 ' "$main" >"$tmp"
 
-  typst compile --root "$WORK_DIR" "$tmp" "$output"
+  typst compile --root "$WORK_DIR" "$tmp" "$tmpdir/${course}-notes.pdf"
   rm -f "$tmp"
-
-  pdfs+=("$WEBSITE_NOTES_REL/${course}-notes.pdf")
 done
 
-# Commit and push website repo (only these course PDFs — unstage anything else first).
+# Do not update the website unless every course compiled successfully.
+for i in "${!pdfs[@]}"; do
+  cp "${compiled_pdfs[$i]}" "$WEBSITE_DIR/${pdfs[$i]}"
+done
+
+echo "Committing work repo..."
+git -C "$WORK_DIR" add -- "${note_paths[@]}"
+if git -C "$WORK_DIR" diff --cached --quiet -- "${note_paths[@]}"; then
+  echo "No note changes in work repo"
+else
+  git -C "$WORK_DIR" commit --only -m "update notes $DATE" -- "${note_paths[@]}"
+fi
+
 echo "Committing website repo..."
-git -C "$WEBSITE_DIR" reset --quiet
-git -C "$WEBSITE_DIR" add "${pdfs[@]}"
-if git -C "$WEBSITE_DIR" diff --cached --quiet; then
+git -C "$WEBSITE_DIR" add -- "${pdfs[@]}"
+if git -C "$WEBSITE_DIR" diff --cached --quiet -- "${pdfs[@]}"; then
   echo "No note PDF changes in website repo"
 else
-  git -C "$WEBSITE_DIR" commit -m "update notes $DATE"
+  git -C "$WEBSITE_DIR" commit --only -m "update notes $DATE" -- "${pdfs[@]}"
 fi
+
+git -C "$WORK_DIR" push
 git -C "$WEBSITE_DIR" push
 
 echo "Done!"

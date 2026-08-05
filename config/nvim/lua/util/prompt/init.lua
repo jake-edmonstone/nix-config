@@ -264,6 +264,7 @@ function M.ask(default)
 
   local function close()
     if api.nvim_win_is_valid(win) then api.nvim_win_close(win, true) end
+    pcall(api.nvim_del_augroup_by_id, group)
     if api.nvim_buf_is_valid(buf) then api.nvim_buf_delete(buf, { force = true }) end
   end
 

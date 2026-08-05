@@ -32,9 +32,10 @@
   programs.fish.shellInit = ''
     set -gx HOMEBREW_PREFIX /opt/homebrew
     set -gx HOMEBREW_CELLAR /opt/homebrew/Cellar
-    set -gx HOMEBREW_REPOSITORY /opt/homebrew
-    set -q MANPATH; and set -gx MANPATH "" $MANPATH
-    set -gx INFOPATH /opt/homebrew/share/info $INFOPATH
-    set -gp fish_complete_path /opt/homebrew/share/fish/vendor_completions.d
+    set -gx HOMEBREW_REPOSITORY /opt/homebrew/Library/.homebrew-is-managed-by-nix
+    test -n "$MANPATH[1]"; and set -gx MANPATH "" $MANPATH
+    contains /opt/homebrew/share/info $INFOPATH; or set -gx INFOPATH /opt/homebrew/share/info $INFOPATH
+    contains /opt/homebrew/share/fish/vendor_completions.d $fish_complete_path; or \
+      set -ga fish_complete_path /opt/homebrew/share/fish/vendor_completions.d
   '';
 }
