@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+picker_colors="${1:-bg+:-1,border:#6272a4,fg:#f8f8f2,fg+:#f8f8f2,header:#6272a4,hl:#bd93f9,hl+:#bd93f9,label:#bd93f9,marker:#ff79c6,pointer:#ff79c6,prompt:#50fa7b}"
+
 # Tab-delimited format: "name\tmarker" — ensures names with spaces stay intact
 # Current session gets a * marker, others get no marker
 list_cmd="cur=\$(tmux display-message -p '#S') && {
@@ -20,7 +22,7 @@ sel=$(eval "$list_cmd" | SHELL="${BASH:-/bin/bash}" fzf \
   --with-nth '1,2' \
   --border-label ' Sessions ' \
   --header $'C-x kill    C-n new\nC-r rename  C-/ preview' \
-  --color='header:#6272a4,label:#bd93f9' \
+  --color="$picker_colors" \
   --preview 'tmux capture-pane -t {1}: -ep 2>/dev/null || echo "(no pane)"' \
   --preview-window 'right:60%,noinfo,border-left,follow' \
   --bind 'ctrl-/:change-preview-window(hidden|right:60%)' \

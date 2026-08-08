@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+accent="${1:-#bd93f9}"
+text="${2:-colour250}"
+muted="${3:-#6272a4}"
+
 if ! command -v timew >/dev/null 2>&1; then
   exit 0
 fi
@@ -47,7 +51,7 @@ if (( ${#tags} > 28 )); then
 fi
 
 if [[ -n "$tags" ]]; then
-  printf '#[fg=#bd93f9]time #[fg=colour250]%s #[fg=#6272a4]%s#[default]' "$tags" "$elapsed"
+  printf '#[fg=%s]time #[fg=%s]%s #[fg=%s]%s#[default]' "$accent" "$text" "$tags" "$muted" "$elapsed"
 else
-  printf '#[fg=#bd93f9]time #[fg=#6272a4]%s#[default]' "$elapsed"
+  printf '#[fg=%s]time #[fg=%s]%s#[default]' "$accent" "$muted" "$elapsed"
 fi

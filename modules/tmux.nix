@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   theme = import ../theme.nix;
@@ -6,6 +11,19 @@ let
   statusText = if theme.isDark then "colour250" else palette.foreground;
   statusMuted = if theme.isDark then "colour244" else palette.comment;
   activeText = if theme.isDark then "black" else palette.background;
+  pickerColors = lib.concatStringsSep "," [
+    "bg+:-1"
+    "border:${palette.comment}"
+    "fg:${palette.foreground}"
+    "fg+:${palette.foreground}"
+    "header:${palette.comment}"
+    "hl:${palette.purple}"
+    "hl+:${palette.purple}"
+    "label:${palette.purple}"
+    "marker:${palette.pink}"
+    "pointer:${palette.pink}"
+    "prompt:${palette.green}"
+  ];
 in
 
 {
@@ -28,7 +46,7 @@ in
         extraConfig = ''
           set -g @continuum-restore 'on'
           # Set before continuum loads; the plugin appends its autosave hook here.
-          set -g status-right "#(${config.home.homeDirectory}/.local/bin/tmux-timewarrior-status)"
+          set -g status-right "#(${config.home.homeDirectory}/.local/bin/tmux-timewarrior-status '${palette.purple}' '${statusText}' '${statusMuted}')"
         '';
       }
     ];
@@ -88,7 +106,7 @@ in
       bind-key -T prefix l send-keys -R C-l \; clear-history
 
       # Pop-ups
-      bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=${palette.purple}' -b rounded tmux-session-picker
+      bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=${palette.purple}' -b rounded tmux-session-picker '${pickerColors}'
       bind w display-popup -w 80% -h 80% -d "#{pane_current_path}"
       unbind k
       bind g run-shell -b -c "#{pane_current_path}" "gh browse"

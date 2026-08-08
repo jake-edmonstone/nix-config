@@ -6,7 +6,7 @@ let
     dark = {
       name = "Dracula";
       background = "#282A36";
-      currentLine = "#6272A4";
+      currentLine = "#44475A";
       currentLineSolid = "#353747";
       selection = "#44475A";
       foreground = "#F8F8F2";
@@ -18,13 +18,6 @@ let
       cyan = "#8BE9FD";
       purple = "#BD93F9";
       pink = "#FF79C6";
-      ui = {
-        floating = "#343746";
-        lighter = "#424450";
-        light = "#343746";
-        dark = "#21222C";
-        darker = "#191A21";
-      };
       ansi = [
         "#21222C"
         "#FF5555"
@@ -60,13 +53,6 @@ let
       cyan = "#036A96";
       purple = "#644AC9";
       pink = "#A3144D";
-      ui = {
-        floating = "#EFEDDC";
-        lighter = "#ECE9DF";
-        light = "#DEDCCF";
-        dark = "#CECCC0";
-        darker = "#BCBAB3";
-      };
       ansi = [
         "#FFFBEB"
         "#CB3A2A"
