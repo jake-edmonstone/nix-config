@@ -5,6 +5,10 @@
   ...
 }:
 
+let
+  theme = import ../theme.nix;
+in
+
 {
   imports = [
     ../modules/git.nix
@@ -66,7 +70,11 @@
 
     bat = {
       enable = true;
-      config.theme = "Dracula";
+      config.theme = theme.palette.name;
+      themes.Alucard = {
+        src = ../config/themes;
+        file = "Alucard.tmTheme";
+      };
     };
 
     fd.enable = true;

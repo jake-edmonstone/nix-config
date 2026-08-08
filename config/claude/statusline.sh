@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code status line - mirrors the shell Dracula prompt style
-# Colors: dir=#bd93f9 (purple), git=#ff79c6 (pink), user=#8be9fd (cyan)
+# Claude Code status line - mirrors the selected shell theme
 
 input=$(cat)
 
@@ -28,11 +27,11 @@ fi
 
 # Build output
 # dir: bold purple
-printf '\033[1;38;2;189;147;249m%s\033[0m' "$dir"
+printf '\033[1;38;2;@dirRgb@m%s\033[0m' "$dir"
 
 # git: " on <branch>" in pink
 if [ -n "$git_branch" ]; then
-  printf ' \033[0;2mon \033[0m\033[38;2;255;121;198m%s\033[0m' "$git_branch"
+  printf ' \033[0;2mon \033[0m\033[38;2;@gitRgb@m%s\033[0m' "$git_branch"
 fi
 
 # model: dim, after a separator

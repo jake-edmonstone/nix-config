@@ -1,45 +1,63 @@
+local is_dark = vim.g.theme_mode ~= "light"
+local colorscheme = is_dark and "dracula" or "dracula-alucard"
+local palette = vim.g.theme
+
 local bg = "NONE"
-local yellow = "#F1FA8C"
-local green = "#50fa7b"
-local purple = "#BD93F9"
-local cyan = "#8BE9FD"
-local pink = "#FF79C6"
-local visual = "#3E4452"
-local white = "#ABB2BF"
-local black = "#191A21"
+local yellow = palette.yellow
+local green = palette.green
+local purple = palette.purple
+local cyan = palette.cyan
+local pink = palette.pink
+local visual = is_dark and "#3E4452" or palette.selection
+local white = is_dark and "#ABB2BF" or palette.foreground
+local black = is_dark and "#191A21" or palette.background
+
+local overrides = {
+  CursorLine = { bg = is_dark and "#2E303E" or palette.currentLineSolid },
+  NormalFloat = { bg = "NONE", ctermbg = "NONE" },
+  BufferLineBufferSelected = { fg = "NONE" },
+  TabLineFill = { fg = "NONE" },
+  BufferLineFill = { fg = "NONE" },
+  StatusLine = { bg = "NONE" },
+  StatusLineTerm = { bg = "NONE" },
+  StatusLineTermNC = { bg = "NONE" },
+  MiniFilesNormal = { bg = "NONE" },
+  MiniFilesBorder = { bg = "NONE" },
+  TreesitterContextBottom = { underline = true, sp = palette.comment },
+  LualineModified = { fg = yellow, bold = true },
+}
+
+if is_dark then
+  -- Delta-like dark red/green background blocks for mini.diff overlays.
+  overrides.MiniDiffOverDelete = { bg = "#3f0001" }
+  overrides.MiniDiffOverChange = { bg = "#901011" }
+  overrides.MiniDiffOverContext = { bg = "#3f0001" }
+  overrides.MiniDiffOverAdd = { bg = "#002800" }
+  overrides.MiniDiffOverChangeBuf = { bg = "#006000" }
+  overrides.MiniDiffOverContextBuf = { bg = "#002800" }
+end
+
+local theme_opts = {
+  transparent_bg = true,
+  overrides = overrides,
+}
+
 return {
-  { "LazyVim/LazyVim", opts = { colorscheme = "dracula" } },
+  { "LazyVim/LazyVim", opts = { colorscheme = colorscheme } },
   { "catppuccin/nvim", enabled = false },
   { "folke/tokyonight.nvim", enabled = false },
 
   {
     "Mofiqul/dracula.nvim",
-    lazy = false,
+    lazy = not is_dark,
     priority = 1000,
-    opts = {
-      transparent_bg = true,
-      overrides = {
-        CursorLine = { bg = "#2E303E" },
-        NormalFloat = { bg = "NONE", ctermbg = "NONE" },
-        BufferLineBufferSelected = { fg = "NONE" },
-        TabLineFill = { fg = "NONE" },
-        BufferLineFill = { fg = "NONE" },
-        StatusLine = { bg = "NONE" },
-        StatusLineTerm = { bg = "NONE" },
-        StatusLineTermNC = { bg = "NONE" },
-        MiniFilesNormal = { bg = "NONE" },
-        MiniFilesBorder = { bg = "NONE" },
-        TreesitterContextBottom = { underline = true, sp = "#6272a4" },
-        LualineModified = { fg = yellow, bold = true },
-        -- mini.diff overlay colors (delta-like dark red/green background blocks)
-        MiniDiffOverDelete = { bg = "#3f0001" },
-        MiniDiffOverChange = { bg = "#901011" },
-        MiniDiffOverContext = { bg = "#3f0001" },
-        MiniDiffOverAdd = { bg = "#002800" },
-        MiniDiffOverChangeBuf = { bg = "#006000" },
-        MiniDiffOverContextBuf = { bg = "#002800" },
-      },
-    },
+    opts = theme_opts,
+  },
+  {
+    "jaljoue/dracula-alucard.nvim",
+    lazy = is_dark,
+    priority = 1000,
+    opts = theme_opts,
   },
 
   {

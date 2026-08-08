@@ -4,6 +4,10 @@
   ...
 }:
 
+let
+  theme = import ../theme.nix;
+in
+
 {
   programs.neovim = {
     enable = true;
@@ -15,6 +19,14 @@
     # sideloadInitLua = true skips writing init.lua and passes the same
     # content via `--cmd 'lua dofile(...)'` (additive, doesn't shadow ours).
     sideloadInitLua = true;
+
+    # Make the rebuild-selected palette available before the mutable config's
+    # init.lua runs. JSON is decoded at startup to avoid maintaining a second
+    # Lua copy of the palette.
+    initLua = ''
+      vim.g.theme_mode = ${builtins.toJSON theme.mode}
+      vim.g.theme = vim.json.decode([==[${builtins.toJSON theme.palette}]==])
+    '';
 
     # LSP servers + formatters, declared declaratively instead of mason.
     # Mason re-installs these into ~/.local/share/nvim/mason/bin at runtime,

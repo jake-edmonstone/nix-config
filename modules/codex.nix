@@ -2,6 +2,23 @@
 
 let
   home = config.home.homeDirectory;
+  theme = import ../theme.nix;
+  chromeTheme = palette: {
+    accent = palette.pink;
+    contrast = 60;
+    fonts = {
+      code = "Maple Mono NF";
+      ui = "SF Pro Text";
+    };
+    ink = palette.foreground;
+    opaqueWindows = false;
+    semanticColors = {
+      diffAdded = palette.green;
+      diffRemoved = palette.red;
+      skill = palette.pink;
+    };
+    surface = palette.background;
+  };
 in
 
 {
@@ -25,28 +42,15 @@ in
 
       tui = {
         vim_mode_default = true;
-        theme = "dracula";
+        theme = if theme.isDark then "dracula" else "alucard";
       };
 
       desktop = {
-        appearanceTheme = "dark";
+        appearanceTheme = theme.mode;
+        appearanceLightCodeThemeId = "codex";
         appearanceDarkCodeThemeId = "dracula";
-        appearanceDarkChromeTheme = {
-          accent = "#ff79c6";
-          contrast = 60;
-          fonts = {
-            code = "Maple Mono NF";
-            ui = "SF Pro Text";
-          };
-          ink = "#f8f8f2";
-          opaqueWindows = false;
-          semanticColors = {
-            diffAdded = "#50fa7b";
-            diffRemoved = "#ff5555";
-            skill = "#ff79c6";
-          };
-          surface = "#282a36";
-        };
+        appearanceLightChromeTheme = chromeTheme theme.palettes.light;
+        appearanceDarkChromeTheme = chromeTheme theme.palettes.dark;
       };
 
       notice = {
@@ -70,4 +74,6 @@ in
     };
 
   };
+
+  home.file.".codex/themes/alucard.tmTheme".source = ../config/themes/Alucard.tmTheme;
 }

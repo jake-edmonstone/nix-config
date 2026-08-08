@@ -79,14 +79,15 @@ local function screen_row(win, lnum)
 end
 
 -- Highlight groups — nvim_set_hl is idempotent, no need for hlexists guard
-local hl = "DraculaPrompt"
-local hl_border = "DraculaPromptBorder"
-local hl_title = "DraculaPromptTitle"
-local hl_placeholder = "DraculaPromptPlaceholder"
-api.nvim_set_hl(0, hl, { bg = "#282A36" })
-api.nvim_set_hl(0, hl_border, { fg = "#BD93F9", bg = "#282A36" })
-api.nvim_set_hl(0, hl_title, { fg = "#282A36", bg = "#BD93F9", bold = true })
-api.nvim_set_hl(0, hl_placeholder, { fg = "#BD93F9", bold = true })
+local palette = vim.g.theme
+local hl = "PromptFloat"
+local hl_border = "PromptFloatBorder"
+local hl_title = "PromptFloatTitle"
+local hl_placeholder = "PromptFloatPlaceholder"
+api.nvim_set_hl(0, hl, { bg = palette.background })
+api.nvim_set_hl(0, hl_border, { fg = palette.purple, bg = palette.background })
+api.nvim_set_hl(0, hl_title, { fg = palette.background, bg = palette.purple, bold = true })
+api.nvim_set_hl(0, hl_placeholder, { fg = palette.purple, bold = true })
 
 --- Replace @placeholders with actual context, longest-first to avoid partial matches.
 --- Invokes cb(result) when done. Asynchronous because @diff shells out to git,

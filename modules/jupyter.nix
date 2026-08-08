@@ -1,5 +1,9 @@
 _:
 
+let
+  theme = import ../theme.nix;
+in
+
 {
   home.file = {
     ".jupyter/jupyter_server_config.py" = {
@@ -12,7 +16,7 @@ _:
     ".jupyter/lab/user-settings/@jupyterlab/apputils-extension/themes.jupyterlab-settings" = {
       force = true;
       text = builtins.toJSON {
-        theme = "JupyterLab Dark";
+        theme = if theme.isDark then "JupyterLab Dark" else "JupyterLab Light";
       };
     };
 

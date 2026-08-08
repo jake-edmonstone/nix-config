@@ -1,5 +1,9 @@
 { pkgs, ... }:
 
+let
+  theme = import ../theme.nix;
+in
+
 {
   programs.ghostty = {
     enable = true;
@@ -12,9 +16,9 @@
       adjust-cell-height = "8%";
       window-padding-y = "2,3";
       font-feature = [ "cv01" ];
-      theme = "Dracula";
+      theme = theme.palette.name;
       cursor-style-blink = true;
-      cursor-text = "#000000";
+      cursor-text = if theme.isDark then "#000000" else theme.palette.background;
       custom-shader = "shaders/cursor_smear.glsl";
       background-opacity = 0.9;
       background-blur = true;
@@ -37,4 +41,5 @@
 
   xdg.configFile."ghostty/shaders/cursor_smear.glsl".source =
     ../config/ghostty/shaders/cursor_smear.glsl;
+  xdg.configFile."ghostty/themes/Alucard".source = ../config/ghostty/themes/Alucard;
 }

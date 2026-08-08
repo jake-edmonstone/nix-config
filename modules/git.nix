@@ -1,5 +1,9 @@
 { lib, ... }:
 
+let
+  theme = import ../theme.nix;
+in
+
 {
   programs = {
     git = {
@@ -52,8 +56,10 @@
       options = {
         line-numbers = true;
         navigate = true;
-        syntax-theme = "Dracula";
-      };
+        syntax-theme = theme.palette.name;
+      }
+      // lib.optionalAttrs theme.isDark { dark = true; }
+      // lib.optionalAttrs theme.isLight { light = true; };
     };
 
     gh.enable = true;

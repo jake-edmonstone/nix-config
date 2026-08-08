@@ -1,8 +1,13 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
+
+let
+  theme = import ../../theme.nix;
+in
 
 {
   system = {
@@ -61,12 +66,12 @@
       };
 
       NSGlobalDomain = {
-        AppleInterfaceStyle = "Dark";
+        AppleInterfaceStyle = if theme.isDark then "Dark" else null;
         AppleShowAllExtensions = true;
         KeyRepeat = 2;
         InitialKeyRepeat = 15;
         ApplePressAndHoldEnabled = false; # disable diacritics popup, allow key repeat
-        AppleIconAppearanceTheme = "RegularDark"; # dark app icons
+        AppleIconAppearanceTheme = if theme.isDark then "RegularDark" else null;
         NSAutomaticCapitalizationEnabled = true;
         NSAutomaticPeriodSubstitutionEnabled = true;
         NSAutomaticQuoteSubstitutionEnabled = false;
@@ -120,6 +125,18 @@
       };
     };
 
+    activationScripts.preActivation.text = lib.optionalString theme.isLight ''
+      # A null nix-darwin default means "do not manage", so remove the
+      # dark-only preferences before the normal defaults phase restarts Dock.
+      _uid=$(id -u ${config.system.primaryUser})
+      if [ -n "$_uid" ]; then
+        launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
+          defaults delete NSGlobalDomain AppleInterfaceStyle || true
+        launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
+          defaults delete NSGlobalDomain AppleIconAppearanceTheme || true
+      fi
+    '';
+
     activationScripts.postActivation.text = ''
       # macOS Sequoia/Tahoe reads `com.apple.mouse.tapBehavior` at per-host
       # (ByHost) scope for the "Tap to click" switch, but nix-darwin's
@@ -130,6 +147,13 @@
       if [ -n "$_uid" ]; then
         launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
           defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1 || true
+        # AppleInterfaceStyle otherwise requires logout/login before the live
+        # desktop adopts the persisted value.
+        launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
+          /usr/bin/osascript -e \
+            'tell application "System Events" to tell appearance preferences to set dark mode to ${
+              if theme.isDark then "true" else "false"
+            }' || true
         launchctl asuser "$_uid" sudo --user=${config.system.primaryUser} -- \
           /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
       fi

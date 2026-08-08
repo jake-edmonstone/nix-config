@@ -2,10 +2,11 @@
 
 local api = vim.api
 local ns = api.nvim_create_namespace("mini_files_git")
+local palette = vim.g.theme
 
-api.nvim_set_hl(0, "MiniFilesGitAdd", { fg = "#50fa7b" })
-api.nvim_set_hl(0, "MiniFilesGitChange", { fg = "#8BE9FD" })
-api.nvim_set_hl(0, "MiniFilesGitDelete", { fg = "#ff5555" })
+api.nvim_set_hl(0, "MiniFilesGitAdd", { fg = palette.green })
+api.nvim_set_hl(0, "MiniFilesGitChange", { fg = palette.cyan })
+api.nvim_set_hl(0, "MiniFilesGitDelete", { fg = palette.red })
 
 local gitStatusCache = {}
 local pendingFetches = {}

@@ -1,5 +1,11 @@
 _:
 
+let
+  theme = import ../theme.nix;
+  inherit (theme) palette;
+  selectedLine = if theme.isDark then palette.comment else palette.selection;
+in
+
 {
   programs.lazygit = {
     enable = true;
@@ -12,23 +18,23 @@ _:
         wrapLinesInStagingView = false;
         theme = {
           activeBorderColor = [
-            "#FF79C6"
+            palette.pink
             "bold"
           ];
-          inactiveBorderColor = [ "#BD93F9" ];
+          inactiveBorderColor = [ palette.purple ];
           searchingActiveBorderColor = [
-            "#8BE9FD"
+            palette.cyan
             "bold"
           ];
-          optionsTextColor = [ "#6272A4" ];
-          selectedLineBgColor = [ "#6272A4" ];
+          optionsTextColor = [ palette.comment ];
+          selectedLineBgColor = [ selectedLine ];
           inactiveViewSelectedLineBgColor = [ "bold" ];
-          cherryPickedCommitFgColor = [ "#6272A4" ];
-          cherryPickedCommitBgColor = [ "#8BE9FD" ];
-          markedBaseCommitFgColor = [ "#8BE9FD" ];
-          markedBaseCommitBgColor = [ "#F1FA8C" ];
-          unstagedChangesColor = [ "#FF5555" ];
-          defaultFgColor = [ "#F8F8F2" ];
+          cherryPickedCommitFgColor = [ palette.comment ];
+          cherryPickedCommitBgColor = [ palette.cyan ];
+          markedBaseCommitFgColor = [ palette.cyan ];
+          markedBaseCommitBgColor = [ palette.yellow ];
+          unstagedChangesColor = [ palette.red ];
+          defaultFgColor = [ palette.foreground ];
         };
       };
       git = {

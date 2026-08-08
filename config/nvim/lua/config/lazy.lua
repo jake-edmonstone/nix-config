@@ -36,7 +36,7 @@ require("lazy").setup({
     version = false, -- always use the latest git commit
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
-  install = { colorscheme = { "dracula" } },
+  install = { colorscheme = { vim.g.theme_mode == "light" and "dracula-alucard" or "dracula" } },
   -- Plugins are Git-pinned via lazy-lock.json; runtime update checks + mtime
   -- polling are noise here and pull in lazy.view.commands/lazy.manage at startup.
   checker = { enabled = false },

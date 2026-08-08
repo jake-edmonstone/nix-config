@@ -1,5 +1,13 @@
 { config, pkgs, ... }:
 
+let
+  theme = import ../theme.nix;
+  inherit (theme) palette;
+  statusText = if theme.isDark then "colour250" else palette.foreground;
+  statusMuted = if theme.isDark then "colour244" else palette.comment;
+  activeText = if theme.isDark then "black" else palette.background;
+in
+
 {
   programs.tmux = {
     enable = true;
@@ -80,7 +88,7 @@
       bind-key -T prefix l send-keys -R C-l \; clear-history
 
       # Pop-ups
-      bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=#bd93f9' -b rounded tmux-session-picker
+      bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=${palette.purple}' -b rounded tmux-session-picker
       bind w display-popup -w 80% -h 80% -d "#{pane_current_path}"
       unbind k
       bind g run-shell -b -c "#{pane_current_path}" "gh browse"
@@ -95,25 +103,25 @@
 
       # Pane borders
       set -g pane-border-lines heavy
-      set -g pane-border-style 'fg=#6272a4'
-      set -g pane-active-border-style 'fg=#bd93f9'
+      set -g pane-border-style 'fg=${palette.comment}'
+      set -g pane-active-border-style 'fg=${palette.purple}'
 
-      # Status line (Dracula)
+      # Status line
       set -g status-justify centre
-      set -g status-style fg=colour250,bg=default
-      set -g message-style fg=colour250,bg=default
-      set -g message-command-style fg=colour250,bg=default
+      set -g status-style fg=${statusText},bg=default
+      set -g message-style fg=${statusText},bg=default
+      set -g message-command-style fg=${statusText},bg=default
 
-      set -g @PURPLE "#BD93F9"
+      set -g @ACCENT "${palette.purple}"
 
       set -g status-left-length 60
-      set -g status-left '#[fg=#{@PURPLE},bold]#S#[default]'
+      set -g status-left '#[fg=#{@ACCENT},bold]#S#[default]'
       set -g status-right-length 80
 
       set -g automatic-rename-format '#{?#{==:#{pane_current_command},codex-raw},codex,#{pane_current_command}}'
-      set -g window-status-style fg=colour244,bg=default
-      set -g window-status-format ' #[fg=colour244]#I #[fg=colour250]#W '
-      set -g window-status-current-format ' #[bg=#{@PURPLE},fg=black,bold] #I:#W #[bg=default,fg=#{@PURPLE}]'
+      set -g window-status-style fg=${statusMuted},bg=default
+      set -g window-status-format ' #[fg=${statusMuted}]#I #[fg=${statusText}]#W '
+      set -g window-status-current-format ' #[bg=#{@ACCENT},fg=${activeText},bold] #I:#W #[bg=default,fg=#{@ACCENT}]'
     '';
   };
 }

@@ -5,6 +5,8 @@
 }:
 
 let
+  theme = import ../theme.nix;
+
   ankiConnectSrc = pkgs.fetchgit {
     url = "https://git.sr.ht/~foosoft/anki-connect";
     rev = "25.11.9.0";
@@ -24,7 +26,7 @@ let
     hash = "sha256-TbDUVCfqDXQmCwRgDW+hLZPfIElQAW2wFFgWOc3iKiU=";
   };
 
-  # Merge upstream's src/addon/ with our Dracula-palette meta.json into one
+  # Merge upstream's src/addon/ with our selected-palette meta.json into one
   # deploy-ready directory. Activation copies it into Anki's writable addon
   # directory because Anki stores addon configuration beside the code.
   ankiRecolor = pkgs.runCommandLocal "anki-addon-recolor-688199788" { } ''
@@ -72,7 +74,13 @@ in
 
     install_addon 2055492159 ${ankiConnectSrc}/plugin preserve
     install_addon 688199788 ${ankiRecolor} replace
-    install_addon dracula_titlebar ${../config/anki/addons21/dracula_titlebar} preserve
+    ${lib.optionalString theme.isDark ''
+      install_addon dracula_titlebar ${../config/anki/addons21/dracula_titlebar} preserve
+    ''}
+    ${lib.optionalString theme.isLight ''
+      # This local add-on hardcodes a dark macOS titlebar.
+      run rm -rf "$addons/dracula_titlebar"
+    ''}
 
   '';
 }
