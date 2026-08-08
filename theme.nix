@@ -1,6 +1,6 @@
 let
   # Change this to "light" and rebuild to use Alucard everywhere.
-  mode = "dark";
+  mode = "light";
 
   palettes = {
     dark = {
