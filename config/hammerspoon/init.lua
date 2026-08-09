@@ -43,7 +43,7 @@ local splits = {
 
 local function getUsableWindow(app)
 	local win = app:mainWindow()
-	if win and win:isStandard() then
+	if win then
 		return win
 	end
 	for _, w in ipairs(app:allWindows()) do
