@@ -1,5 +1,5 @@
 local is_dark = vim.g.theme_mode ~= "light"
-local colorscheme = is_dark and "dracula" or "dracula-alucard"
+local colorscheme = is_dark and "dracula" or "catppuccin-latte"
 local palette = vim.g.theme
 
 local bg = "NONE"
@@ -42,10 +42,56 @@ local theme_opts = {
   overrides = overrides,
 }
 
+local lualine_theme = {
+  normal = {
+    a = { fg = black, bg = purple, gui = "bold" },
+    b = { fg = purple, bg = bg },
+    c = { fg = white, bg = bg },
+  },
+  command = {
+    a = { fg = black, bg = cyan, gui = "bold" },
+    b = { fg = cyan, bg = bg },
+  },
+  visual = {
+    a = { fg = black, bg = pink, gui = "bold" },
+    b = { fg = pink, bg = bg },
+  },
+  inactive = {
+    a = { fg = white, bg = visual, gui = "bold" },
+    b = { fg = black, bg = white },
+  },
+  replace = {
+    a = { fg = black, bg = yellow, gui = "bold" },
+    b = { fg = yellow, bg = bg },
+    c = { fg = white, bg = bg },
+  },
+  insert = {
+    a = { fg = black, bg = green, gui = "bold" },
+    b = { fg = green, bg = bg },
+    c = { fg = white, bg = bg },
+  },
+}
+
 return {
   { "LazyVim/LazyVim", opts = { colorscheme = colorscheme } },
-  { "catppuccin/nvim", enabled = false },
   { "folke/tokyonight.nvim", enabled = false },
+
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    lazy = is_dark,
+    priority = 1000,
+    opts = {
+      flavour = "latte",
+      transparent_background = true,
+      float = { transparent = true },
+      highlight_overrides = {
+        latte = function()
+          return overrides
+        end,
+      },
+    },
+  },
 
   {
     "Mofiqul/dracula.nvim",
@@ -54,45 +100,10 @@ return {
     opts = theme_opts,
   },
   {
-    "jaljoue/dracula-alucard.nvim",
-    lazy = is_dark,
-    priority = 1000,
-    opts = theme_opts,
-  },
-
-  {
     "nvim-lualine/lualine.nvim",
     opts = {
       options = {
-        theme = {
-          normal = {
-            a = { fg = black, bg = purple, gui = "bold" },
-            b = { fg = purple, bg = bg },
-            c = { fg = white, bg = bg },
-          },
-          command = {
-            a = { fg = black, bg = cyan, gui = "bold" },
-            b = { fg = cyan, bg = bg },
-          },
-          visual = {
-            a = { fg = black, bg = pink, gui = "bold" },
-            b = { fg = pink, bg = bg },
-          },
-          inactive = {
-            a = { fg = white, bg = visual, gui = "bold" },
-            b = { fg = black, bg = white },
-          },
-          replace = {
-            a = { fg = black, bg = yellow, gui = "bold" },
-            b = { fg = yellow, bg = bg },
-            c = { fg = white, bg = bg },
-          },
-          insert = {
-            a = { fg = black, bg = green, gui = "bold" },
-            b = { fg = green, bg = bg },
-            c = { fg = white, bg = bg },
-          },
-        },
+        theme = lualine_theme,
       },
     },
   },

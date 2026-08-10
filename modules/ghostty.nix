@@ -1,19 +1,7 @@
-{ lib, pkgs, ... }:
+{ pkgs, ... }:
 
 let
   theme = import ../theme.nix;
-  alucard = theme.palettes.light;
-  alucardTheme = ''
-    ${lib.concatStringsSep "\n" (
-      lib.imap0 (index: color: "palette = ${toString index}=${color}") alucard.ansi
-    )}
-    background = ${alucard.background}
-    foreground = ${alucard.foreground}
-    cursor-color = ${alucard.purple}
-    cursor-text = ${alucard.background}
-    selection-background = ${alucard.selection}
-    selection-foreground = ${alucard.foreground}
-  '';
 in
 
 {
@@ -53,5 +41,4 @@ in
 
   xdg.configFile."ghostty/shaders/cursor_smear.glsl".source =
     ../config/ghostty/shaders/cursor_smear.glsl;
-  xdg.configFile."ghostty/themes/Alucard".text = alucardTheme;
 }

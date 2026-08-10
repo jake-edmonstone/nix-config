@@ -42,12 +42,12 @@ in
 
       tui = {
         vim_mode_default = true;
-        theme = if theme.isDark then "dracula" else "alucard";
+        theme = if theme.isDark then "dracula" else "catppuccin-latte";
       };
 
       desktop = {
         appearanceTheme = theme.mode;
-        appearanceLightCodeThemeId = "codex";
+        appearanceLightCodeThemeId = "catppuccin";
         appearanceDarkCodeThemeId = "dracula";
         appearanceLightChromeTheme = chromeTheme theme.palettes.light;
         appearanceDarkChromeTheme = chromeTheme theme.palettes.dark;
@@ -72,8 +72,5 @@ in
         "${home}".trust_level = "trusted";
       };
     };
-
   };
-
-  home.file.".codex/themes/alucard.tmTheme".source = ../config/themes/Alucard.tmTheme;
 }
