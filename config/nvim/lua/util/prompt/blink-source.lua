@@ -8,7 +8,9 @@ local cached_items
 local function get_items()
   if cached_items then return cached_items end
   cached_items = {}
-  for name in pairs(contexts) do
+  local names = vim.tbl_keys(contexts)
+  table.sort(names)
+  for _, name in ipairs(names) do
     cached_items[#cached_items + 1] = {
       label = name,
       kind = CompletionItemKind.Variable,

@@ -12,6 +12,20 @@ local function buf_path()
   return vim.fn.fnamemodify(name, ":.")
 end
 
+local function selection_lines()
+  local mode = api.nvim_get_mode().mode
+  local s, e
+  if mode:match("[vV\22]") then
+    s = vim.fn.getpos("v")[2]
+    e = vim.fn.getpos(".")[2]
+  else
+    s = vim.fn.getpos("'<")[2]
+    e = vim.fn.getpos("'>")[2]
+  end
+  if s == 0 or e == 0 then return nil end
+  return math.min(s, e), math.max(s, e)
+end
+
 M.contexts = {
   ["@buffer"] = function()
     local path = buf_path()
@@ -27,10 +41,8 @@ M.contexts = {
   ["@selection"] = function()
     local path = buf_path()
     if not path then return nil end
-    local s = vim.fn.getpos("'<")[2]
-    local e = vim.fn.getpos("'>")[2]
-    if s == 0 and e == 0 then return nil end
-    if s > e then s, e = e, s end
+    local s, e = selection_lines()
+    if not s then return nil end
     return string.format("@%s#L%d-%d", path, s, e)
   end,
   ["@diagnostic"] = function()
@@ -68,12 +80,12 @@ table.sort(placeholder_names, function(a, b) return #a > #b end)
 
 local placeholder_ns = api.nvim_create_namespace("prompt_placeholders")
 
-local function screen_row(win, lnum)
+local function screen_row(win, lnum, col)
   if not api.nvim_win_is_valid(win) or type(lnum) ~= "number" then return nil end
   local buf = api.nvim_win_get_buf(win)
   if lnum < 1 or lnum > api.nvim_buf_line_count(buf) then return nil end
 
-  local ok, pos = pcall(vim.fn.screenpos, win, lnum, 1)
+  local ok, pos = pcall(vim.fn.screenpos, win, lnum, col or 1)
   if not ok or pos.row == 0 then return nil end
   return pos.row
 end
@@ -94,7 +106,13 @@ api.nvim_set_hl(0, hl_placeholder, { fg = palette.purple, bold = true })
 --- which can take multiple seconds on large repos; we don't want to freeze the
 --- editor on `:wait()`. All other placeholders resolve synchronously.
 local function inject(prompt, source_win, cb)
+  if not api.nvim_win_is_valid(source_win) then
+    vim.notify("Prompt source window no longer exists", vim.log.levels.WARN)
+    return
+  end
   api.nvim_set_current_win(source_win)
+  local source_name = api.nvim_buf_get_name(api.nvim_win_get_buf(source_win))
+  local git_cwd = source_name ~= "" and vim.fs.dirname(source_name) or nil
   local failed = {}
 
   -- Snapshot @diff presence on the ORIGINAL prompt so a sync placeholder whose
@@ -122,7 +140,7 @@ local function inject(prompt, source_win, cb)
   end
 
   if has_diff then
-    vim.system({ "git", "--no-pager", "diff" }, { text = true }, function(obj)
+    vim.system({ "git", "--no-pager", "diff" }, { text = true, cwd = git_cwd }, function(obj)
       vim.schedule(function()
         if obj.code == 0 and obj.stdout and obj.stdout ~= "" then
           prompt = prompt:gsub(vim.pesc("@diff"), function() return obj.stdout end)
@@ -152,52 +170,63 @@ function M.ask(default)
   local source_win = api.nvim_get_current_win()
 
   -- figure out where the context lines are on screen so we don't cover them
-  local float_height = 3 -- border (1) + content (1) + border (1)
   local editor_h = vim.o.lines - vim.o.cmdheight
-  local cursor_screen = screen_row(source_win, vim.fn.line(".")) or math.floor(editor_h * 0.5)
+  local cursor = api.nvim_win_get_cursor(source_win)
+  local cursor_screen = screen_row(source_win, cursor[1], cursor[2] + 1) or math.floor(editor_h * 0.5)
   local sel_start, sel_end = cursor_screen, cursor_screen
   local uses_selection = default and default:find("@selection", 1, true) ~= nil
   if uses_selection then
-    local vstart = vim.fn.getpos("'<")[2]
-    local vend = vim.fn.getpos("'>")[2]
-    if vstart > 0 and vend > 0 then
-      local sp_s = screen_row(source_win, math.min(vstart, vend))
-      local sp_e = screen_row(source_win, math.max(vstart, vend))
+    local vstart, vend = selection_lines()
+    if vstart then
+      local end_line = api.nvim_buf_get_lines(api.nvim_win_get_buf(source_win), vend - 1, vend, false)[1] or ""
+      local sp_s = screen_row(source_win, vstart)
+      local sp_e = screen_row(source_win, vend, math.max(1, #end_line))
       if sp_s then sel_start = sp_s end
       if sp_e then sel_end = sp_e end
     end
   end
 
   local gap = 1
-  local float_row
+  local border_height = 2
+  local global_max_height = math.max(1, math.floor(vim.o.lines * 0.4))
   local space_below = editor_h - sel_end
   local space_above = sel_start - 1
-  if space_below >= float_height + gap then
-    float_row = sel_end + gap
-  elseif space_above >= float_height + gap then
-    float_row = sel_start - gap - float_height
+  local capacity_below = space_below - gap - border_height
+  local capacity_above = space_above - gap - border_height
+  local side
+  local max_height
+  if math.max(capacity_below, capacity_above) >= 1 then
+    side = capacity_below >= capacity_above and "below" or "above"
+    local capacity = side == "below" and capacity_below or capacity_above
+    max_height = math.min(global_max_height, capacity)
   else
-    float_row = math.floor(editor_h * 0.4)
+    side = "center"
+    max_height = global_max_height
   end
 
   local buf = api.nvim_create_buf(false, true)
-  local width = math.floor(vim.o.columns * 0.5)
+  local width = math.max(1, math.floor(vim.o.columns * 0.5))
+  local float_col = math.floor((vim.o.columns - width) / 2)
+  local function float_row(height)
+    if side == "below" then return sel_end + gap end
+    if side == "above" then return sel_start - gap - height - border_height end
+    return math.max(0, math.floor((editor_h - height - border_height) / 2))
+  end
   local win = api.nvim_open_win(buf, true, {
     relative = "editor",
-    row = float_row,
-    col = math.floor((vim.o.columns - width) / 2),
+    row = float_row(1),
+    col = float_col,
     width = width,
     height = 1,
     border = "rounded",
     title = " 󰭻 Prompt ",
     title_pos = "center",
-    footer = " <CR> send  <Esc> cancel ",
-    footer_pos = "center",
   })
 
   vim.wo[win].wrap = true
   vim.wo[win].linebreak = true
-  vim.wo[win].winhl = "Normal:" .. hl .. ",FloatBorder:" .. hl_border .. ",FloatTitle:" .. hl_title .. ",FloatFooter:" .. hl_border
+  vim.wo[win].scrolloff = 0
+  vim.wo[win].winhl = "Normal:" .. hl .. ",FloatBorder:" .. hl_border .. ",FloatTitle:" .. hl_title
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].filetype = "prompt"
 
@@ -205,8 +234,6 @@ function M.ask(default)
     api.nvim_buf_set_lines(buf, 0, -1, false, { default })
     api.nvim_win_set_cursor(win, { 1, #default })
   end
-
-  local max_height = math.floor(vim.o.lines * 0.4)
 
   local function resize()
     if not api.nvim_win_is_valid(win) then return end
@@ -225,7 +252,20 @@ function M.ask(default)
         end
       end
     end
-    api.nvim_win_set_height(win, math.max(1, math.min(h, max_height)))
+    local height = math.max(1, math.min(h, max_height))
+    api.nvim_win_set_height(win, height)
+    api.nvim_win_set_config(win, {
+      relative = "editor",
+      row = float_row(height),
+      col = float_col,
+    })
+    if h <= max_height then
+      -- Growing a smooth-scrolled window does not clear the wrapped-line
+      -- offset that Neovim set while the window was shorter.
+      api.nvim_win_call(win, function()
+        vim.fn.winrestview({ topline = 1, skipcol = 0 })
+      end)
+    end
   end
 
   local function highlight()
@@ -248,11 +288,25 @@ function M.ask(default)
     end
   end
 
-  -- Initial highlight for prefilled text
+  -- Initial layout and highlighting for prefilled text.
+  resize()
   highlight()
 
   local group = api.nvim_create_augroup("PromptFloat_" .. buf, { clear = true })
-  api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+  local cleaned = false
+  local function delete_buffer()
+    if api.nvim_buf_is_valid(buf) then pcall(api.nvim_buf_delete, buf, { force = true }) end
+  end
+
+  local function close()
+    if cleaned then return end
+    cleaned = true
+    pcall(api.nvim_del_augroup_by_id, group)
+    if api.nvim_win_is_valid(win) then pcall(api.nvim_win_close, win, true) end
+    delete_buffer()
+  end
+
+  api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
     group = group,
     buffer = buf,
     callback = function()
@@ -261,25 +315,30 @@ function M.ask(default)
     end,
   })
 
-  vim.cmd.startinsert({ bang = true })
+  api.nvim_create_autocmd("WinClosed", {
+    group = group,
+    pattern = tostring(win),
+    once = true,
+    callback = function()
+      if cleaned then return end
+      cleaned = true
+      pcall(api.nvim_del_augroup_by_id, group)
+      vim.schedule(delete_buffer)
+    end,
+  })
 
-  local function close()
-    if api.nvim_win_is_valid(win) then api.nvim_win_close(win, true) end
-    pcall(api.nvim_del_augroup_by_id, group)
-    if api.nvim_buf_is_valid(buf) then api.nvim_buf_delete(buf, { force = true }) end
-  end
+  vim.cmd.startinsert({ bang = true })
+  vim.schedule(resize)
 
   local function submit()
     local lines = api.nvim_buf_get_lines(buf, 0, -1, false)
-    local text = vim.trim(table.concat(lines, " "))
+    local text = table.concat(lines, "\n")
     close()
-    if text == "" then return end
-    if api.nvim_win_is_valid(source_win) then
-      inject(text, source_win, function(result)
-        vim.fn.setreg("+", result)
-        vim.notify("Prompt copied to clipboard", vim.log.levels.INFO)
-      end)
-    end
+    if not text:find("%S") then return end
+    inject(text, source_win, function(result)
+      vim.fn.setreg("+", result)
+      vim.notify("Prompt copied to clipboard", vim.log.levels.INFO)
+    end)
   end
 
   local kopts = { buf = buf, silent = true }
