@@ -34,11 +34,26 @@ in
     package = pkgs.codex;
     enableMcpIntegration = true;
 
+    context = ''
+      Use `trash` for filesystem deletions so files remain recoverable. Never use `rm`.
+    '';
+
+    rules.delete-safely = ''
+      prefix_rule(
+          pattern = [["rm", "/bin/rm", "/usr/bin/rm"]],
+          decision = "forbidden",
+          justification = "Use `trash` instead of `rm` so deleted files remain recoverable.",
+          match = ["rm file", "/bin/rm -rf build"],
+          not_match = ["trash file"],
+      )
+    '';
+
     settings = {
       model = "gpt-5.6-sol";
       model_reasoning_effort = "medium";
-      sandbox_mode = "danger-full-access";
-      approval_policy = "never";
+      sandbox_mode = "workspace-write";
+      approval_policy = "on-request";
+      approvals_reviewer = "user";
 
       tui = {
         vim_mode_default = true;
