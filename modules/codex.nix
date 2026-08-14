@@ -84,6 +84,7 @@ in
         "${home}/projects/jake-edmonstone.github.io".trust_level = "trusted";
         "${home}/projects".trust_level = "trusted";
         "${home}/misc".trust_level = "trusted";
+        "${home}/Library/Mobile Documents/com~apple~CloudDocs".trust_level = "trusted";
         "${home}".trust_level = "trusted";
       };
     };
