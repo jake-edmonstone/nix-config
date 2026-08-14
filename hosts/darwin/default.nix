@@ -166,6 +166,8 @@ in
   # evaluation/build work to every system generation.
   documentation.enable = false;
 
+  networking.localHostName = "Jakes-MacBook";
+
   nixpkgs.hostPlatform = "aarch64-darwin";
   nixpkgs.config.allowUnfree = true;
 

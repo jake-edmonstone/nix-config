@@ -6,23 +6,30 @@ warn() { printf "\033[1;33mWARNING:\033[0m %s\n" "$*"; }
 err() { printf "\033[1;31mERROR:\033[0m %s\n" "$*" >&2; }
 
 DOTFILES="$(cd "$(dirname "$0")" && pwd)"
+DARWIN_ATTR="Jakes-MacBook"
+EXPECTED_USER="jbedm"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   err "install.sh only supports macOS"
   exit 1
 fi
 
+if [[ "$(uname -m)" != "arm64" ]]; then
+  err "This configuration requires an Apple silicon Mac"
+  exit 1
+fi
+
+if [[ "$(id -un)" != "$EXPECTED_USER" ]]; then
+  err "This configuration requires the macOS account name '$EXPECTED_USER'"
+  exit 1
+fi
+
+# Homebrew requires the Command Line Tools for a supported macOS setup.
 if ! xcode-select -p >/dev/null 2>&1; then
   msg "Installing Xcode Command Line Tools"
   xcode-select --install
   echo "Finish the CLT install in the popup, then re-run this script."
   exit 0
-fi
-
-if [[ "$(uname -m)" == "arm64" ]] \
-  && ! /usr/sbin/pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1; then
-  msg "Installing Rosetta 2"
-  softwareupdate --install-rosetta --agree-to-license
 fi
 
 if ! command -v nix >/dev/null 2>&1 \
@@ -57,25 +64,29 @@ if [[ ! -e /etc/nix-darwin ]] \
   sudo ln -snf "$DOTFILES" /etc/nix-darwin
 fi
 
-darwin_attr="$(scutil --get LocalHostName)"
-if ! nix eval "$DOTFILES#darwinConfigurations.\"$darwin_attr\"" \
+if [[ "$(scutil --get LocalHostName 2>/dev/null || true)" != "$DARWIN_ATTR" ]]; then
+  msg "Setting LocalHostName to $DARWIN_ATTR"
+  sudo scutil --set LocalHostName "$DARWIN_ATTR"
+fi
+
+if ! nix eval "$DOTFILES#darwinConfigurations.\"$DARWIN_ATTR\"" \
   --raw --apply 'x: "ok"' >/dev/null 2>&1; then
-  err "No darwinConfigurations.\"$darwin_attr\" found in flake.nix"
+  err "No darwinConfigurations.\"$DARWIN_ATTR\" found in flake.nix"
   echo "Available configurations:"
   nix eval "$DOTFILES#darwinConfigurations" --apply builtins.attrNames 2>/dev/null \
     || echo "  (could not list configurations)"
   exit 1
 fi
 
-msg "Building nix-darwin configuration for $darwin_attr"
+msg "Building nix-darwin configuration for $DARWIN_ATTR"
 
 if ! command -v darwin-rebuild >/dev/null 2>&1; then
   msg "Bootstrapping nix-darwin"
   sudo -H nix run nix-darwin/master#darwin-rebuild -- \
-    switch --flake "$DOTFILES#$darwin_attr"
+    switch --flake "$DOTFILES#$DARWIN_ATTR"
 else
   sudo -H "$(command -v darwin-rebuild)" \
-    switch --flake "$DOTFILES#$darwin_attr"
+    switch --flake "$DOTFILES#$DARWIN_ATTR"
 fi
 
 msg "Done! Open a new terminal session to pick up all changes."
