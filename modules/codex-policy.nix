@@ -1,8 +1,8 @@
 { pkgs, ... }:
 
 let
-  blockRm = pkgs.writeShellApplication {
-    name = "codex-block-rm";
+  blockUnsafeDelete = pkgs.writeShellApplication {
+    name = "codex-block-unsafe-delete";
     runtimeInputs = [
       pkgs.gnugrep
       pkgs.jq
@@ -10,12 +10,12 @@ let
     text = ''
       command=$(jq -r '.tool_input.command // ""')
 
-      if grep -Eq '(^|[[:space:];|&()])([^[:space:];|&()]*/)?rm([[:space:];|&()]|$)' <<< "$command"; then
+      if grep -Eq '(^|[[:space:];|&()])([^[:space:];|&()]*/)?(rm|unlink)([[:space:];|&()]|$)' <<< "$command"; then
         jq -n '{
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
             permissionDecision: "deny",
-            permissionDecisionReason: "Use `trash` instead of `rm` so deleted files remain recoverable."
+            permissionDecisionReason: "Use `trash` instead so deleted files remain recoverable."
           }
         }'
       fi
@@ -24,14 +24,14 @@ let
   requirements = (pkgs.formats.toml { }).generate "codex-requirements.toml" {
     features.hooks = true;
     hooks = {
-      managed_dir = "${blockRm}/bin";
+      managed_dir = "${blockUnsafeDelete}/bin";
       PreToolUse = [
         {
           matcher = "^Bash$";
           hooks = [
             {
               type = "command";
-              command = "${blockRm}/bin/codex-block-rm";
+              command = "${blockUnsafeDelete}/bin/codex-block-unsafe-delete";
               timeout = 2;
             }
           ];

@@ -1,6 +1,5 @@
 let
-  # Change this to "light" and rebuild to use Catppuccin Latte everywhere.
-  mode = "dark";
+  mode = "dark"; # "light" or "dark"
 
   palettes = {
     dark = {

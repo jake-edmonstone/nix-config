@@ -40,8 +40,10 @@ in
   programs.sioyek = {
     enable = true;
 
-    # History navigation (vim-style, backspace broken on macOS)
     bindings = {
+      # Sioyek uses D for the macOS Command modifier.
+      copy = "<D-c>";
+      # Vim-style history navigation (backspace is broken on macOS).
       prev_state = "<C-o>";
       next_state = "<C-i>";
     };

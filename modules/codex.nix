@@ -35,15 +35,15 @@ in
     enableMcpIntegration = true;
 
     context = ''
-      Use `trash` for filesystem deletions so files remain recoverable. Never use `rm`.
+      Use `trash` for filesystem deletions so files remain recoverable. Never use `rm` or `unlink`.
     '';
 
     rules.delete-safely = ''
       prefix_rule(
-          pattern = [["rm", "/bin/rm", "/usr/bin/rm"]],
+          pattern = [["rm", "/bin/rm", "/usr/bin/rm", "unlink", "/bin/unlink", "/usr/bin/unlink"]],
           decision = "forbidden",
-          justification = "Use `trash` instead of `rm` so deleted files remain recoverable.",
-          match = ["rm file", "/bin/rm -rf build"],
+          justification = "Use `trash` instead so deleted files remain recoverable.",
+          match = ["rm file", "/bin/rm -rf build", "unlink symlink"],
           not_match = ["trash file"],
       )
     '';
