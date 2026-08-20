@@ -22,9 +22,10 @@ watchers without custom polling autocommands.
 
 ## tmux 3.7 popup redraw regression
 
-**Status:** Fixed on tmux `master`; waiting for tmux 3.8 to reach nixpkgs.
+**Status:** Fixed on tmux `master`; waiting for a release containing the fix to
+reach nixpkgs.
 
-tmux 3.7 through 3.7b corrupts or repeatedly redraws the title border of tmux
+tmux 3.7 through 3.7c corrupts or repeatedly redraws the title border of tmux
 popups while Codex is streaming output. The configuration therefore pins tmux
 3.6b, the latest maintenance release from the unaffected 3.6 series. This matches
 [tmux#5336](https://github.com/tmux/tmux/issues/5336): scrolling or full-region
@@ -34,11 +35,14 @@ redraws in a pane behind `display-popup` unnecessarily repaint the popup.
 - Upstream fix:
   [tmux@824a072](https://github.com/tmux/tmux/commit/824a07290f853a97219ee2624a46c0aada246efb),
   developed through [tmux#5398](https://github.com/tmux/tmux/pull/5398).
-- The fix is part of the changes from 3.7b to 3.8, but tmux 3.8 has no announced
-  release date. Current nixpkgs still packages 3.7b.
-- When nixpkgs ships tmux 3.8, remove the overlay, rebuild, restart the tmux
-  server, and test the session picker while Codex is actively generating text.
-  Keep the pin if the popup title still flickers or is cut off.
+- tmux 3.7c was released on 2026-08-17, but does not contain the fix. Its
+  `screen_redraw_update()` still marks an existing overlay for repaint on every
+  redraw, and neither its commit range nor `CHANGES` includes the master fix.
+  Current nixpkgs still packages 3.7b.
+- When nixpkgs ships a tmux release containing the fix, remove the overlay,
+  rebuild, restart the tmux server, and test the session picker while Codex is
+  actively generating text. Keep the pin if the popup title still flickers or
+  is cut off.
 
 ## nix-homebrew auto-update breaks MAS activation
 
