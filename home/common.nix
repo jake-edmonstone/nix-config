@@ -38,6 +38,7 @@ in
 
     packages = with pkgs; [
       typst
+      elan
       nodejs
       ghc
       cmake
