@@ -10,8 +10,6 @@ let
 in
 
 {
-  imports = [ ../../modules/codex-policy.nix ];
-
   system = {
     primaryUser = "jbedm";
     # Compatibility pin for nix-darwin migrations, not the package release.

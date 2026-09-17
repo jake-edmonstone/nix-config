@@ -39,25 +39,12 @@ in
     package = pkgs.codex;
     enableMcpIntegration = true;
 
-    context = ''
-      Use `trash` for filesystem deletions so files remain recoverable. Never use `rm` or `unlink`.
-    '';
-
-    rules.delete-safely = ''
-      prefix_rule(
-          pattern = [["rm", "/bin/rm", "/usr/bin/rm", "unlink", "/bin/unlink", "/usr/bin/unlink"]],
-          decision = "forbidden",
-          justification = "Use `trash` instead so deleted files remain recoverable.",
-          match = ["rm file", "/bin/rm -rf build", "unlink symlink"],
-          not_match = ["trash file"],
-      )
-    '';
-
     settings = {
       model = "gpt-5.6-sol";
       model_reasoning_effort = "medium";
-      sandbox_mode = "workspace-write";
-      approval_policy = "on-request";
+      service_tier = "default";
+      sandbox_mode = "danger-full-access";
+      approval_policy = "never";
       approvals_reviewer = "user";
 
       tui = {
@@ -66,6 +53,7 @@ in
       };
 
       notice = {
+        hide_full_access_warning = true;
         hide_gpt5_1_migration_prompt = true;
         "hide_gpt-5.1-codex-max_migration_prompt" = true;
         model_migrations."gpt-5.3-codex" = "gpt-5.4";
