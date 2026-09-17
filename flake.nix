@@ -22,9 +22,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO: temporary Neovim nightly pin for watcher-backed 'autoread'
-    # (neovim/neovim#37971). Remove this input and the Darwin HM package
-    # override once nixpkgs neovim includes that commit.
+    # Neovim nightly provides watcher-backed 'autoread'
+    # (neovim/neovim#37971) on both configured platforms.
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
 
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
@@ -95,9 +94,7 @@
               users.jbedm = {
                 imports = [ ./home/darwin.nix ];
 
-                # TODO: temporary Neovim nightly pin for watcher-backed
-                # 'autoread' (neovim/neovim#37971). Revert to nixpkgs neovim
-                # once that package includes the commit.
+                # Keep macOS on the same watcher-enabled Neovim build as Linux.
                 programs.neovim.package = neovim-nightly-overlay.packages.aarch64-darwin.default;
               };
             };
@@ -113,7 +110,14 @@
               inherit overlays;
               config.allowUnfree = true;
             };
-            modules = [ ./hosts/gts ];
+            modules = [
+              ./hosts/gts
+              {
+                # Keep Linux on the same watcher-enabled Neovim nightly build
+                # as macOS, rather than the nixpkgs release package.
+                programs.neovim.package = neovim-nightly-overlay.packages.x86_64-linux.default;
+              }
+            ];
           };
     };
 }

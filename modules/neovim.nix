@@ -35,8 +35,8 @@ in
     # PATH. Managing them via nix puts them on nvim's wrapper PATH directly
     # and lets the mason plugins be disabled (see config/nvim/lua/plugins/lang.lua).
     # On Darwin, clangd comes from Apple's toolchain and project environments
-    # provide clang-format. Linux has no Apple toolchain, so add clang-tools to
-    # the wrapper PATH there.
+    # provide clang-format. Linux uses Clang 22: it correctly understands the
+    # GCC 15 / C++23 Bazel compilation database under /scratch/dev/engine.
     extraPackages =
       (with pkgs; [
         tree-sitter
@@ -59,7 +59,10 @@ in
         nixfmt
         statix
       ])
-      ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.clang-tools ];
+      ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+        pkgs.llvmPackages_22.clang-tools
+        pkgs.gdb
+      ];
 
   };
 

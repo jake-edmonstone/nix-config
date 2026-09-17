@@ -96,6 +96,11 @@ return {
 
   {
     "christoomey/vim-tmux-navigator",
+    init = function()
+      -- Own the mappings below so the plugin's default <C-l> mapping cannot
+      -- replace the native-multicursor-aware version.
+      vim.g.tmux_navigator_no_mappings = 1
+    end,
     cmd = {
       "TmuxNavigateLeft",
       "TmuxNavigateDown",
@@ -108,7 +113,19 @@ return {
       { "<c-h>", "<cmd><C-U>TmuxNavigateLeft<cr>", desc = "Navigate left (tmux)" },
       { "<c-j>", "<cmd><C-U>TmuxNavigateDown<cr>", desc = "Navigate down (tmux)" },
       { "<c-k>", "<cmd><C-U>TmuxNavigateUp<cr>", desc = "Navigate up (tmux)" },
-      { "<c-l>", "<cmd><C-U>TmuxNavigateRight<cr>", desc = "Navigate right (tmux)" },
+      {
+        "<c-l>",
+        function()
+          local multicursor = vim.api.nvim_create_namespace("nvim.multicursor")
+          local cursors = vim.api.nvim_buf_get_extmarks(0, multicursor, 0, -1, { limit = 1 })
+          if #cursors > 0 then
+            vim.api.nvim_buf_clear_namespace(0, multicursor, 0, -1)
+          else
+            vim.cmd("TmuxNavigateRight")
+          end
+        end,
+        desc = "Clear multicursors / navigate right (tmux)",
+      },
       { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>", desc = "Navigate previous (tmux)" },
     },
   },

@@ -11,6 +11,36 @@ return {
   { "mason-org/mason.nvim",           enabled = false },
   { "mason-org/mason-lspconfig.nvim", enabled = false },
 
+  -- Keep clangd's background indexing from monopolizing large Linux
+  -- workstations. In particular, /scratch/dev/engine has roughly 39,000
+  -- compilation-database entries, so the defaults can consume several cores
+  -- and retain a large amount of memory while indexing.
+  {
+    "neovim/nvim-lspconfig",
+    opts = function(_, opts)
+      opts.servers.clangd.cmd_env = vim.tbl_extend("force", opts.servers.clangd.cmd_env or {}, {
+        -- Keep clangd's shared index (standard-library and external headers)
+        -- off the small root filesystem. Project files remain indexed in the
+        -- ignored /scratch/dev/engine/.cache/clangd directory.
+        XDG_CACHE_HOME = "/scratch/dev/.cache",
+      })
+      -- LazyVim's bare flag is rejected by newer clangd versions, which
+      -- require an explicit boolean value.
+      for i, arg in ipairs(opts.servers.clangd.cmd) do
+        if arg == "--function-arg-placeholders" then
+          opts.servers.clangd.cmd[i] = "--function-arg-placeholders=true"
+        end
+      end
+      if vim.fn.has("linux") == 1 then
+        vim.list_extend(opts.servers.clangd.cmd, {
+          "-j=2",
+          "--background-index-priority=background",
+          "--malloc-trim",
+        })
+      end
+    end,
+  },
+
   {
     "nvim-treesitter/nvim-treesitter",
     opts = {
@@ -31,6 +61,11 @@ return {
         "svelte",
         "vue",
         "yaml",
+      },
+      -- Use Vim's mature cindent engine for C/C++. Tree-sitter indentation
+      -- misplaces the opening brace of an incomplete else block.
+      indent = {
+        disable = { "c", "cpp" },
       },
     },
   },

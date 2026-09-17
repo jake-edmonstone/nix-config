@@ -82,6 +82,8 @@ in
         "${home}/projects".trust_level = "trusted";
         "${home}/misc".trust_level = "trusted";
         "${home}".trust_level = "trusted";
+        "/scratch/dev/engine".trust_level = "trusted";
+        "/scratch/dev".trust_level = "trusted";
       }
       // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
         "${home}/Library/Mobile Documents/com~apple~CloudDocs".trust_level = "trusted";

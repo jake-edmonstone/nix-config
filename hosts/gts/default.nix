@@ -5,14 +5,18 @@
 }:
 
 {
-  imports = [ ../../home/linux.nix ];
+  imports = [ ./home.nix ];
 
   home = {
     username = "jedmonstone";
     homeDirectory = "/home/STRIKETECH/jedmonstone";
     # GTS intercepts HTTPS with a CA installed in AlmaLinux's system trust
     # bundle. Nix otherwise uses its bundled Mozilla roots and rejects it.
-    sessionVariables.NIX_SSL_CERT_FILE = "/etc/pki/tls/certs/ca-bundle.crt";
+    sessionVariables = {
+      NIX_SSL_CERT_FILE = "/etc/pki/tls/certs/ca-bundle.crt";
+      # Some build helpers use Python requests rather than Nix's fetcher.
+      REQUESTS_CA_BUNDLE = "/etc/pki/tls/certs/ca-bundle.crt";
+    };
   };
 
   programs = {

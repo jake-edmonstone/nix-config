@@ -6,7 +6,7 @@
 }:
 
 {
-  imports = [ ./common.nix ];
+  imports = [ ../../home/common.nix ];
 
   targets.genericLinux = {
     enable = true;
@@ -16,9 +16,26 @@
   };
 
   home.packages = with pkgs; [
-    clang-tools
+    # Keep the command-line toolchain in lockstep with Neovim's clangd.
+    # Clang 22 handles this machine's GCC 15 / C++23 projects correctly.
+    llvmPackages_22.clang-tools
+    gdb
+    netcat-openbsd
     trash-cli
   ];
+
+  # Bazel's outputs and action cache are large and fully rebuildable. The
+  # engine documents this /scratch layout; keeping it here prevents a future
+  # Home Manager switch from silently returning them to the small root disk.
+  home.file.".bazelrc" = {
+    force = true;
+    text = ''
+      startup --output_user_root=/scratch/bazel-cache
+      build --disk_cache=/scratch/bazel-disk-cache
+      build --experimental_disk_cache_gc_max_age=14d
+      build --experimental_disk_cache_gc_max_size=250G
+    '';
+  };
 
   programs = {
     home-manager.enable = true;
