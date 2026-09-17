@@ -5,6 +5,65 @@
   ...
 }:
 
+let
+  flatbuffersLanguageServerSrc = pkgs.fetchFromGitHub {
+    owner = "smpanaro";
+    repo = "flatbuffers-language-server";
+    rev = "0.0.2";
+    hash = "sha256-Qt52TkVxBou6ZrPHmls0Rv+x0JT3OWRhc8iWBzQk+Yw=";
+  };
+
+  # The server's FlatBuffers C++ submodule is omitted from GitHub source
+  # archives, so bring in the exact revision recorded by its release.
+  flatbuffersLanguageServerFlatbuffersSrc = pkgs.fetchFromGitHub {
+    owner = "google";
+    repo = "flatbuffers";
+    rev = "82396fa0fe9a61e7a30bdd008e180d56f5e49ebf";
+    hash = "sha256-O/8rTq/yrk2hxmms0OPbSp8a+cjWBZdZAJU9RdYO8kM=";
+  };
+
+  flatbuffersLanguageServer = pkgs.rustPlatform.buildRustPackage {
+    pname = "flatbuffers-language-server";
+    version = "0.0.2";
+    src = flatbuffersLanguageServerSrc;
+
+    # The release binary needs GLIBC_2.38 while GTS provides 2.34.  Build it
+    # locally instead.  Cargo needs the internal CA during fixed-output
+    # vendoring; Nix is configured to expose that certificate to sandboxes.
+    cargoHash = "sha256-QFcPeqV8iD0e+vFyzsvgUMvG6LQ4s/gG79Zq8q4xNQw=";
+    depsExtraArgs = {
+      env.REQUESTS_CA_BUNDLE = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem";
+    };
+
+    postPatch = ''
+      mkdir -p third_party
+      rm -rf third_party/flatbuffers
+      cp -R ${flatbuffersLanguageServerFlatbuffersSrc} third_party/flatbuffers
+      chmod -R u+w third_party/flatbuffers
+    '';
+
+    nativeBuildInputs = [ pkgs.llvmPackages.libclang pkgs.llvmPackages.clang ];
+    LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+  };
+
+  # fcat is an engine Bazel target, not a package supplied by FlatBuffers.
+  # Running it through Bazel keeps it aligned with the checkout's toolchains.
+  # Preserve input paths relative to the caller, rather than the engine root.
+  fcat = pkgs.writeShellScriptBin "fcat" ''
+    original_pwd="$PWD"
+    args=()
+    for arg in "$@"; do
+      if [[ "$arg" != /* && "$arg" != -* && -e "$original_pwd/$arg" ]]; then
+        args+=("$original_pwd/$arg")
+      else
+        args+=("$arg")
+      fi
+    done
+
+    cd /scratch/dev/engine
+    exec /usr/bin/bazel run //marketaccess/logging/fcat:fcat -- "''${args[@]}"
+  '';
+in
 {
   imports = [ ../../home/common.nix ];
 
@@ -22,6 +81,9 @@
     gdb
     netcat-openbsd
     trash-cli
+    flatbuffers # provides flatc
+    flatbuffersLanguageServer
+    fcat
   ];
 
   # Bazel's outputs and action cache are large and fully rebuildable. The

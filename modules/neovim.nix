@@ -27,6 +27,7 @@ in
     initLua = ''
       vim.g.theme_mode = ${builtins.toJSON theme.mode}
       vim.g.theme = vim.json.decode([==[${builtins.toJSON theme.palette}]==])
+      vim.g.flatbuffers_treesitter_dir = "${pkgs.tree-sitter-grammars.tree-sitter-flatbuffers}"
     '';
 
     # LSP servers + formatters, declared declaratively instead of mason.
@@ -40,6 +41,7 @@ in
     extraPackages =
       (with pkgs; [
         tree-sitter
+        tree-sitter-grammars.tree-sitter-flatbuffers
         lua-language-server
         stylua
         pyright
