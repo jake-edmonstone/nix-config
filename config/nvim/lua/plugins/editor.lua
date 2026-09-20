@@ -108,8 +108,20 @@ return {
       { "<c-h>", "<cmd><C-U>TmuxNavigateLeft<cr>", desc = "Navigate left (tmux)" },
       { "<c-j>", "<cmd><C-U>TmuxNavigateDown<cr>", desc = "Navigate down (tmux)" },
       { "<c-k>", "<cmd><C-U>TmuxNavigateUp<cr>", desc = "Navigate up (tmux)" },
-      { "<c-l>", "<cmd><C-U>TmuxNavigateRight<cr>", desc = "Navigate right (tmux)" },
+      { "<c-l>", desc = "Clear multicursors or navigate right (tmux)" },
       { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>", desc = "Navigate previous (tmux)" },
     },
+    config = function()
+      -- Install after the plugin's default mappings so it cannot overwrite this.
+      vim.keymap.set("n", "<c-l>", function()
+        -- :help mcursor-clear: clear this buffer's cursors before navigating away.
+        local ns = vim.api.nvim_get_namespaces()["nvim.multicursor"]
+        if ns and #vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { limit = 1 }) > 0 then
+          vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+        else
+          vim.cmd.TmuxNavigateRight()
+        end
+      end, { desc = "Clear multicursors or navigate right (tmux)", silent = true })
+    end,
   },
 }
