@@ -183,6 +183,11 @@ in
     determinateNixd.telemetry.sentry.endpoint = null;
   };
 
+  # The CLI reads this file directly, not determinate/config.json.
+  # TODO: Remove once the daemon opt-out reliably clears the CLI endpoint too.
+  # https://github.com/DeterminateSystems/nix-src/issues/626
+  environment.etc."nix/sentry-endpoint".text = "";
+
   security.pam.services.sudo_local = {
     touchIdAuth = true;
     reattach = true; # Touch ID works inside tmux via pam_reattach

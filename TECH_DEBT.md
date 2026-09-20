@@ -3,6 +3,28 @@
 Temporary workarounds and blocked updates in this configuration. Keep the
 corresponding `TODO` comments in the code until each item is resolved.
 
+## Determinate Nix creates project-local Sentry caches
+
+**Status:** Upstream issue open as of 2026-09-19; explicitly disable the CLI's
+Sentry endpoint as well as the daemon's.
+
+Root-owned `.cache/nix/sentry` directories recur in project directories.
+[DeterminateSystems/nix-src#626](https://github.com/DeterminateSystems/nix-src/issues/626)
+reports the same problem with missing or empty home-directory environment data.
+On this machine, `telemetry.sentry.endpoint = null` was applied in
+`/etc/determinate/config.json`, but `/etc/nix/sentry-endpoint` still held a live
+endpoint. The CLI reads the latter directly; an empty file skips Sentry setup.
+
+- Temporary code: `environment.etc."nix/sentry-endpoint"` in
+  `hosts/darwin/default.nix`.
+- First activation requires moving the existing unmanaged endpoint file to
+  `/etc/nix/sentry-endpoint.before-nix-darwin`.
+- After a Determinate installer/upgrade, verify the endpoint remains empty;
+  the installer may replace files it originally owned. Reapply the configuration
+  if necessary. This is a declarative workaround, not an upstream fix.
+- Remove the workaround once the daemon opt-out reliably disables CLI Sentry
+  too. Confirm with a rebuild from a directory without an existing `.cache`.
+
 ## Neovim nightly for watcher-backed autoread
 
 **Status:** Waiting for the required Neovim commit to reach the nixpkgs Neovim
