@@ -1,18 +1,35 @@
 local M = {}
 
-local engine_root = "/scratch/dev/engine"
-local tmtraining_dir = engine_root .. "/SupportModels/TMTraining"
-local binary = engine_root .. "/bazel-bin/SupportModels/TMTraining/vulcan_training"
-local stage_root = engine_root .. "/.cache/nvim-dap/tmtraining"
-local stage_cwd = stage_root .. "/bin/release"
-
-local function is_engine_context()
-  local function is_under_engine(path)
-    path = vim.fs.normalize(path or "")
-    return path == engine_root or vim.startswith(path, engine_root .. "/")
+local function find_engine_root(path)
+  if not path or path == "" then
+    return nil
   end
 
-  return is_under_engine(vim.uv.cwd()) or is_under_engine(vim.api.nvim_buf_get_name(0))
+  local root = vim.fs.root(path, { "MODULE.bazel", "WORKSPACE", "WORKSPACE.bazel" })
+  if root and vim.fn.isdirectory(root .. "/SupportModels/TMTraining") == 1 then
+    return root
+  end
+end
+
+local function engine_paths()
+  local root = find_engine_root(vim.api.nvim_buf_get_name(0)) or find_engine_root(vim.uv.cwd())
+  if not root then
+    error("Open a source file inside an engine worktree before starting this debug profile.")
+  end
+
+  local tmtraining_dir = root .. "/SupportModels/TMTraining"
+  local stage_root = root .. "/.cache/nvim-dap/tmtraining"
+  return {
+    root = root,
+    tmtraining_dir = tmtraining_dir,
+    binary = root .. "/bazel-bin/SupportModels/TMTraining/vulcan_training",
+    stage_root = stage_root,
+    stage_cwd = stage_root .. "/bin/release",
+  }
+end
+
+local function is_engine_context()
+  return find_engine_root(vim.api.nvim_buf_get_name(0)) ~= nil or find_engine_root(vim.uv.cwd()) ~= nil
 end
 
 local function require_file(path, remedy)
@@ -29,21 +46,22 @@ local function copy(source, destination)
 end
 
 local function prepare_tmtraining()
+  local paths = engine_paths()
   require_file(
-    binary,
+    paths.binary,
     "Build it with: bazel build --config=simulation --config=debug //SupportModels/TMTraining:TMTraining_engine"
   )
-  require_file(tmtraining_dir .. "/config/autorun.cfg", "The TMTraining runtime config is missing.")
-  require_file(engine_root .. "/risk/riskLimits.cfg", "The engine risk configuration is missing.")
+  require_file(paths.tmtraining_dir .. "/config/autorun.cfg", "The TMTraining runtime config is missing.")
+  require_file(paths.root .. "/risk/riskLimits.cfg", "The engine risk configuration is missing.")
 
   -- The runner resolves config via ../../config. Mirror only that layout in
   -- the project's ignored cache, never in the source tree's build directory.
-  vim.fn.delete(stage_root, "rf")
-  vim.fn.mkdir(stage_cwd, "p")
-  copy(tmtraining_dir .. "/config", stage_root .. "/config")
-  copy(engine_root .. "/risk/riskLimits.cfg", stage_root .. "/config/riskLimits.cfg")
+  vim.fn.delete(paths.stage_root, "rf")
+  vim.fn.mkdir(paths.stage_cwd, "p")
+  copy(paths.tmtraining_dir .. "/config", paths.stage_root .. "/config")
+  copy(paths.root .. "/risk/riskLimits.cfg", paths.stage_root .. "/config/riskLimits.cfg")
 
-  return binary
+  return paths.binary
 end
 
 local function debug_environment()
@@ -67,12 +85,19 @@ function M.configure(dap)
     type = "gdb",
     request = "launch",
     program = prepare_tmtraining,
-    cwd = stage_cwd,
+    cwd = function()
+      return engine_paths().stage_cwd
+    end,
     args = { "-simulatedDate=2023_05_02", "-simulatedStartTime=00:00:00" },
     -- Bazel recorded this synthetic compilation directory in the DWARF data.
     -- GDB itself runs from stage_cwd, so map it back to the actual checkout.
     gdb_source_substitutions = {
-      { from = "/proc/self/cwd", to = engine_root },
+      {
+        from = "/proc/self/cwd",
+        to = function()
+          return engine_paths().root
+        end,
+      },
     },
     -- GDB DAP replaces the inferior environment when env is supplied, so pass
     -- through Neovim's environment as well as the engine's GCC runtime path.

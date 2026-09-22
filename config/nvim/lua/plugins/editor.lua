@@ -1,6 +1,10 @@
 return {
   { "folke/persistence.nvim", enabled = false },
   { "folke/flash.nvim", enabled = false },
+  {
+    "nvim-treesitter/nvim-treesitter-context",
+    opts = { max_lines = 0 }, -- values <= 0 disable the context-height limit
+  },
 
   {
     "nvim-mini/mini.ai",

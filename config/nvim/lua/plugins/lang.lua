@@ -24,6 +24,9 @@ return {
         -- ignored /scratch/dev/engine/.cache/clangd directory.
         XDG_CACHE_HOME = "/scratch/dev/.cache",
       })
+      if not vim.tbl_contains(opts.servers.clangd.cmd, "--enable-config") then
+        table.insert(opts.servers.clangd.cmd, "--enable-config")
+      end
       -- LazyVim's bare flag is rejected by newer clangd versions, which
       -- require an explicit boolean value.
       for i, arg in ipairs(opts.servers.clangd.cmd) do
@@ -33,7 +36,7 @@ return {
       end
       if vim.fn.has("linux") == 1 then
         vim.list_extend(opts.servers.clangd.cmd, {
-          "-j=2",
+          "-j=4",
           "--background-index-priority=background",
           "--malloc-trim",
         })

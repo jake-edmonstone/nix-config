@@ -99,6 +99,23 @@ in
     '';
   };
 
+  # Private clangd settings for the GTS engine and sibling Git worktrees. Keep
+  # this out of the source tree: it removes an incompatible GCC 15 intrinsic
+  # include path but is not a project-wide compiler setting.
+  home.file.".config/clangd/config.yaml" = {
+    force = true;
+    text = ''
+      CompileFlags:
+        Add: [--gcc-toolchain=/opt/packages/gcc/15.2.0/]
+      ---
+      If:
+        PathMatch: '/scratch/dev/engine(-[^/]*)?/.*'
+      CompileFlags:
+        Remove:
+          - "-isystem external/strike_bazel_tools++strike_cc_configure_extension+strike_cc_gcc15_el9/opt/packages/gcc/15.2.0/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include"
+    '';
+  };
+
   programs = {
     home-manager.enable = true;
     lazygit.enableBashIntegration = false;

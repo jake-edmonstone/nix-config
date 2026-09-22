@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+export LC_ALL=C
+
+engine_repo=/scratch/dev/engine
+dev_root=/scratch/dev
+developer=jedmonstone
+base_ref=origin/master
+
+usage() {
+  cat <<'EOF'
+Usage: engine-ticket <JIRA-key> <summary> [--base <ref>]
+
+Creates or resumes an engine worktree and tmux workspace.
+
+Examples:
+  engine-ticket PT-2433 "Document base62 pillar"
+  engine-ticket PT-2433 "Release hotfix" --base origin/release/2026.1
+EOF
+}
+
+die() {
+  printf 'engine-ticket: %s\n' "$*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || die "Required command is unavailable: $1"
+}
+
+slugify() {
+  local value=$1
+  value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
+  [[ -n $value ]] || die 'Summary must contain at least one ASCII letter or digit.'
+  printf '%s\n' "$value"
+}
+
+session_exists() {
+  tmux has-session -t "$1" 2>/dev/null
+}
+
+session_option() {
+  tmux show-options -v -t "$1" "@$2" 2>/dev/null || true
+}
+
+attach_session() {
+  local session=$1
+  if [[ -n ${TMUX:-} ]]; then
+    tmux switch-client -t "$session"
+  else
+    exec tmux attach-session -t "$session"
+  fi
+}
+
+create_session() {
+  local session=$1
+  local worktree=$2
+  local branch=$3
+  local codex_bin=$4
+  local nvim_bin=$5
+  local lazygit_bin=$6
+  local fish_bin=$7
+
+  # Fish's init command runs the TUI as its child, then Fish remains as the
+  # interactive shell when it exits. This keeps the tmux window available for
+  # the next command instead of closing the pane with the TUI process.
+  tmux new-session -d -s "$session" -c "$worktree" -n codex "$fish_bin" -C "$codex_bin"
+  tmux set-option -t "$session" @engine_ticket_branch "$branch"
+  tmux set-option -t "$session" @engine_ticket_worktree "$worktree"
+  tmux new-window -t "$session:" -n nvim -c "$worktree" "$fish_bin" -C "$nvim_bin ."
+  tmux new-window -t "$session:" -n lazygit -c "$worktree" "$fish_bin" -C "$lazygit_bin"
+  tmux new-window -t "$session:" -n fish -c "$worktree" "$fish_bin"
+  tmux select-window -t "$session:codex"
+}
+
+positionals=()
+while (($#)); do
+  case $1 in
+    --base)
+      (($# >= 2)) || die '--base requires a revision.'
+      base_ref=$2
+      shift 2
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      positionals+=("$1")
+      shift
+      ;;
+  esac
+done
+
+((${#positionals[@]} == 2)) || {
+  usage >&2
+  exit 1
+}
+
+ticket=${positionals[0]}
+summary=${positionals[1]}
+[[ $ticket =~ ^[A-Z][A-Z0-9]*-[0-9]+$ ]] || die "Invalid Jira key: $ticket"
+
+slug=$(slugify "$summary")
+branch="$ticket/$developer/$slug"
+worktree="$dev_root/engine-$slug"
+session=$slug
+
+for tool in git tmux codex nvim lazygit fish; do
+  require_command "$tool"
+done
+
+[[ -d $engine_repo ]] || die "Engine checkout is missing: $engine_repo"
+[[ $(git -C "$engine_repo" rev-parse --show-toplevel) == "$engine_repo" ]] \
+  || die "$engine_repo is not the engine repository root."
+
+codex_bin=$(command -v codex)
+nvim_bin=$(command -v nvim)
+lazygit_bin=$(command -v lazygit)
+fish_bin=$(command -v fish)
+
+if [[ -e $worktree ]]; then
+  [[ -d $worktree ]] || die "Worktree path exists but is not a directory: $worktree"
+  [[ $(git -C "$worktree" rev-parse --show-toplevel 2>/dev/null) == "$worktree" ]] \
+    || die "Worktree path is not a Git worktree: $worktree"
+  [[ $(git -C "$worktree" branch --show-current) == "$branch" ]] \
+    || die "Worktree path is on a different branch: $worktree"
+elif git -C "$engine_repo" worktree list --porcelain | grep -Fqx "branch refs/heads/$branch"; then
+  die "Branch $branch is already checked out by a different worktree."
+fi
+
+if session_exists "$session"; then
+  [[ -d $worktree ]] || die "tmux session $session exists but $worktree does not."
+  [[ $(session_option "$session" engine_ticket_branch) == "$branch" ]] \
+    || die "tmux session $session belongs to a different workspace."
+  [[ $(session_option "$session" engine_ticket_worktree) == "$worktree" ]] \
+    || die "tmux session $session points at a different worktree."
+  attach_session "$session"
+fi
+
+if [[ ! -d $worktree ]]; then
+  if git -C "$engine_repo" show-ref --verify --quiet "refs/heads/$branch"; then
+    git -C "$engine_repo" worktree add "$worktree" "$branch"
+  elif git -C "$engine_repo" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+    git -C "$engine_repo" fetch origin "$branch"
+    git -C "$engine_repo" worktree add --track -b "$branch" "$worktree" "origin/$branch"
+  else
+    if [[ $base_ref == origin/* ]]; then
+      git -C "$engine_repo" fetch origin "${base_ref#origin/}"
+    fi
+    git -C "$engine_repo" rev-parse --verify --quiet "$base_ref^{commit}" >/dev/null \
+      || die "Base revision does not resolve to a commit: $base_ref"
+    # The base ref is only the starting point. Do not make the ticket branch
+    # track it: after the first push, `git push -u origin "$branch"` will set
+    # the ticket's own remote branch as its upstream.
+    git -C "$engine_repo" worktree add --no-track -b "$branch" "$worktree" "$base_ref"
+  fi
+fi
+
+create_session "$session" "$worktree" "$branch" "$codex_bin" "$nvim_bin" "$lazygit_bin" "$fish_bin"
+printf 'Created %s at %s on %s\n' "$session" "$worktree" "$branch"
+attach_session "$session"

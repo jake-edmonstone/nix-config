@@ -40,8 +40,8 @@ in
     enableMcpIntegration = true;
 
     settings = {
-      model = "gpt-5.6-sol";
-      model_reasoning_effort = "medium";
+      model = "gpt-5.6-terra";
+      model_reasoning_effort = "high";
       service_tier = "default";
       sandbox_mode = "danger-full-access";
       approval_policy = "never";
