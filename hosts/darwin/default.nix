@@ -224,10 +224,8 @@ in
   homebrew = {
     enable = true;
     onActivation = {
-      # TODO: nix-homebrew#131/#149 lose HOMEBREW_PATH when auto-update
-      # re-executes brew, preventing Brew Bundle from finding mas.
       autoUpdate = false;
-      upgrade = true;
+      upgrade = false;
       cleanup = "uninstall";
     };
     casks = [
