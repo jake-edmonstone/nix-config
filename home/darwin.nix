@@ -24,7 +24,10 @@
     ];
 
     # GNU sed fixes Fish completions that assume GNU extensions on macOS.
-    packages = [ pkgs.gnused ];
+    packages = with pkgs; [
+      gnused
+      mas
+    ];
   };
 
   # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
