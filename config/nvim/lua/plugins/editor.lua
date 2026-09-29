@@ -5,6 +5,50 @@ return {
     "nvim-treesitter/nvim-treesitter-context",
     opts = { max_lines = 0 }, -- values <= 0 disable the context-height limit
   },
+  {
+    "lewis6991/gitsigns.nvim",
+    init = function()
+      local function git_from_current_buffer(args)
+        local name = vim.api.nvim_buf_get_name(0)
+        if name == "" then
+          vim.notify("Gitsigns needs a file in a Git repository", vim.log.levels.WARN)
+          return nil
+        end
+
+        local result = vim.system(vim.list_extend({ "git", "-C", vim.fs.dirname(name) }, args), { text = true }):wait()
+        if result.code ~= 0 then
+          vim.notify(vim.trim(result.stderr), vim.log.levels.ERROR)
+          return nil
+        end
+        return vim.trim(result.stdout)
+      end
+
+      vim.api.nvim_create_user_command("GitsignsMergeBase", function(command)
+        local base_ref = command.args
+        if base_ref == "" then
+          base_ref = git_from_current_buffer({ "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD" })
+        end
+        if not base_ref or base_ref == "" then
+          vim.notify("Could not resolve origin/HEAD for this repository", vim.log.levels.ERROR)
+          return
+        end
+
+        local merge_base = git_from_current_buffer({ "merge-base", "HEAD", base_ref })
+        if merge_base and merge_base ~= "" then
+          require("gitsigns").change_base(merge_base, true)
+          vim.notify("Gitsigns base set to the merge-base with " .. base_ref)
+        end
+      end, {
+        nargs = "?",
+        desc = "Compare Gitsigns against the merge-base with a revision (default: origin/HEAD)",
+      })
+
+      vim.api.nvim_create_user_command("GitsignsResetBase", function()
+        require("gitsigns").reset_base(true)
+        vim.notify("Gitsigns base reset to the index")
+      end, { desc = "Reset Gitsigns to compare against the index" })
+    end,
+  },
 
   {
     "nvim-mini/mini.ai",
@@ -114,9 +158,27 @@ return {
       "TmuxNavigatorProcessList",
     },
     keys = {
-      { "<c-h>", "<cmd><C-U>TmuxNavigateLeft<cr>", desc = "Navigate left (tmux)" },
-      { "<c-j>", "<cmd><C-U>TmuxNavigateDown<cr>", desc = "Navigate down (tmux)" },
-      { "<c-k>", "<cmd><C-U>TmuxNavigateUp<cr>", desc = "Navigate up (tmux)" },
+      {
+        "<c-h>",
+        function()
+          vim.cmd("TmuxNavigateLeft")
+        end,
+        desc = "Navigate left (tmux)",
+      },
+      {
+        "<c-j>",
+        function()
+          vim.cmd("TmuxNavigateDown")
+        end,
+        desc = "Navigate down (tmux)",
+      },
+      {
+        "<c-k>",
+        function()
+          vim.cmd("TmuxNavigateUp")
+        end,
+        desc = "Navigate up (tmux)",
+      },
       {
         "<c-l>",
         function()

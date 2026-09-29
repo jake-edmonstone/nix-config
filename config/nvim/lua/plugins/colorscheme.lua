@@ -28,6 +28,11 @@ local overrides = {
 }
 
 if is_dark then
+  -- Match Delta's `plus-style` and `minus-style` for diff lines. Snacks
+  -- overlays syntax colors on code, so the background carries the add/remove cue.
+  overrides.DiffAdd = { bg = "#002800", fg = "#F8F8F2" }
+  overrides.DiffDelete = { bg = "#3f0001", fg = "#F8F8F2" }
+
   -- Delta-like dark red/green background blocks for mini.diff overlays.
   overrides.MiniDiffOverDelete = { bg = "#3f0001" }
   overrides.MiniDiffOverChange = { bg = "#901011" }

@@ -36,7 +36,7 @@ return {
       end
       if vim.fn.has("linux") == 1 then
         vim.list_extend(opts.servers.clangd.cmd, {
-          "-j=4",
+          "-j=3",
           "--background-index-priority=background",
           "--malloc-trim",
         })

@@ -94,8 +94,7 @@ in
     text = ''
       startup --output_user_root=/scratch/bazel-cache
       build --disk_cache=/scratch/bazel-disk-cache
-      build --experimental_disk_cache_gc_max_age=14d
-      build --experimental_disk_cache_gc_max_size=250G
+      build --experimental_disk_cache_gc_max_size=500G
     '';
   };
 
