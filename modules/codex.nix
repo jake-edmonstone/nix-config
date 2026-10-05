@@ -40,7 +40,7 @@ in
     enableMcpIntegration = true;
 
     settings = {
-      model = "gpt-6-sol";
+      model = "gpt-6.1-sol";
       model_reasoning_effort = "high";
       service_tier = "default";
       sandbox_mode = "danger-full-access";
