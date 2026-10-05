@@ -116,7 +116,7 @@ msg "Building nix-darwin configuration for $DARWIN_ATTR"
 
 if ! command -v darwin-rebuild >/dev/null 2>&1; then
   msg "Bootstrapping nix-darwin"
-  sudo -H "$NIX_BIN" run nix-darwin/master#darwin-rebuild -- \
+  sudo -H "$NIX_BIN" run "$DOTFILES#darwin-rebuild" -- \
     switch --flake "$DOTFILES#$DARWIN_ATTR"
 else
   sudo -H "$(command -v darwin-rebuild)" \

@@ -192,7 +192,13 @@ return {
         end,
         desc = "Clear multicursors / navigate right (tmux)",
       },
-      { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>", desc = "Navigate previous (tmux)" },
+      {
+        "<c-\\>",
+        function()
+          vim.cmd("TmuxNavigatePrevious")
+        end,
+        desc = "Navigate previous (tmux)",
+      },
     },
   },
 }

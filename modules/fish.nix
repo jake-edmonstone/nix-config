@@ -79,13 +79,21 @@ in
       };
     };
 
-    shellInit = ''
-      # Neovim's LSP clients and watcher-backed autoread need many descriptors.
-      # Only raise the soft limit inherited by interactive tools.
-      ulimit -Sn 8192
-    '';
-
     interactiveShellInit = ''
+      # Neovim's LSP clients and watcher-backed autoread need many descriptors.
+      # Raise it for interactive tools without lowering it or exceeding the hard limit.
+      begin
+        set -l soft_limit (ulimit -Sn)
+        if test "$soft_limit" != unlimited; and test "$soft_limit" -lt 8192
+          set -l hard_limit (ulimit -Hn)
+          if test "$hard_limit" = unlimited; or test "$hard_limit" -ge 8192
+            ulimit -Sn 8192
+          else if test "$soft_limit" -lt "$hard_limit"
+            ulimit -Sn "$hard_limit"
+          end
+        end
+      end
+
       set -g fish_greeting
 
       set -g fish_color_normal ${color "foreground"}
@@ -209,8 +217,7 @@ in
       set -g fish_cursor_replace_one underscore blink
       set -g fish_cursor_visual block blink
 
-      fish_vi_key_bindings
-      fish_user_key_bindings
+      set -g fish_key_bindings fish_vi_key_bindings
     '';
   };
 }

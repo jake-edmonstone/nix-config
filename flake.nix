@@ -79,6 +79,9 @@
       # without fetching an unrelated Home Manager revision.
       packages.x86_64-linux.home-manager = home-manager.packages.x86_64-linux.default;
 
+      # Bootstrap macOS with the CLI from the same locked nix-darwin input.
+      packages.aarch64-darwin.darwin-rebuild = nix-darwin.packages.aarch64-darwin.darwin-rebuild;
+
       darwinConfigurations."Jakes-MacBook" = nix-darwin.lib.darwinSystem {
         modules = [
           ./hosts/darwin
