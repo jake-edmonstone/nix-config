@@ -6,6 +6,8 @@
 }:
 
 let
+  clangdBuiltinHeaders = "${pkgs.llvmPackages_22.libclang.lib}/lib/clang/${lib.versions.major pkgs.llvmPackages_22.libclang.version}/include";
+
   flatbuffersLanguageServerSrc = pkgs.fetchFromGitHub {
     owner = "smpanaro";
     repo = "flatbuffers-language-server";
@@ -42,7 +44,10 @@ let
       chmod -R u+w third_party/flatbuffers
     '';
 
-    nativeBuildInputs = [ pkgs.llvmPackages.libclang pkgs.llvmPackages.clang ];
+    nativeBuildInputs = [
+      pkgs.llvmPackages.libclang
+      pkgs.llvmPackages.clang
+    ];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
   };
 
@@ -107,7 +112,18 @@ in
       If:
         PathMatch: '/scratch/dev/engine(-[^/]*)?/.*'
       CompileFlags:
-        Add: [--gcc-toolchain=/opt/packages/gcc/15.2.0/]
+        # Put Clang's intrinsic headers ahead of GCC's explicit -isystem
+        # paths. Disable the implicit entry so it cannot demote this -I
+        # entry back to system-header priority during deduplication.
+        Add:
+          - --gcc-toolchain=/opt/packages/gcc/15.2.0/
+          - -nobuiltininc
+          - -I${clangdBuiltinHeaders}
+          # Avoid a Clang recovery-AST mangling crash in persist.h. This
+          # keeps background indexing on, but drops invalid expressions
+          # instead of preserving them for editor features.
+          - -Xclang
+          - -fno-recovery-ast
     '';
   };
 
