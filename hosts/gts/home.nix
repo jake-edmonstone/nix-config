@@ -75,6 +75,7 @@ in
   };
 
   home.packages = with pkgs; [
+    python3 # Keep the CLI without the scientific Python/Jupyter environment.
     # Keep the command-line toolchain in lockstep with Neovim's clangd.
     # Clang 22 handles this machine's GCC 15 / C++23 projects correctly.
     llvmPackages_22.clang-tools

@@ -48,11 +48,9 @@ in
         ruff
         shfmt
         tinymist
-        haskell-language-server
         websocat
         typstyle # conform.nvim formatter for typst (LazyVim typst extra)
         tectonic # modern LaTeX engine (~80 MB vs texlive's ~4 GB)
-        mermaid-cli # mmdc — Mermaid diagrams
         vscode-langservers-extracted # json/html/css/eslint LSPs (unrelated to VSCode at runtime)
         # LazyVim lang.nix extra expects all three: nil_ls (LSP), nixfmt (formatter
         # via conform.nvim), statix (linter via nvim-lint). flake's `nix fmt` uses
@@ -61,6 +59,12 @@ in
         nixfmt
         statix
       ])
+      # Academic language support and Chromium-backed Mermaid rendering are
+      # kept on macOS, not the space-constrained GTS workstation.
+      ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+        pkgs.haskell-language-server
+        pkgs.mermaid-cli
+      ]
       ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
         pkgs.llvmPackages_22.clang-tools
         pkgs.gdb

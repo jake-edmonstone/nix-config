@@ -19,8 +19,6 @@ in
     ../modules/neovim.nix
     ../modules/claude.nix
     ../modules/codex.nix
-    ../modules/python.nix
-    ../modules/jupyter.nix
     ../modules/nh.nix
     ../modules/copilot.nix
     ../modules/scripts.nix
@@ -40,7 +38,6 @@ in
       typst
       elan
       nodejs
-      ghc
       cmake
       docker-client
       mosh

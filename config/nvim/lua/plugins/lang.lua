@@ -5,6 +5,8 @@ vim.filetype.add({
   },
 })
 
+local has_haskell = vim.fn.executable("haskell-language-server") == 1
+
 return {
   -- LSP servers and formatters are installed via nix (modules/neovim.nix
   -- extraPackages), not mason. Disabling mason drops ~15-22 ms from BufReadPre.
@@ -47,10 +49,9 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     opts = {
-      ensure_installed = {
+      ensure_installed = vim.list_extend({
         "cpp",
         "typst",
-        "haskell",
         -- Needed by Snacks.image for inline image rendering inside docs
         -- written in these languages (checkhealth flags them when missing).
         -- `norg` omitted: not in nvim-treesitter's registry (maintained by
@@ -64,7 +65,7 @@ return {
         "svelte",
         "vue",
         "yaml",
-      },
+      }, has_haskell and { "haskell" } or {}),
       -- Use Vim's mature cindent engine for C/C++. Tree-sitter indentation
       -- misplaces the opening brace of an incomplete else block.
       indent = {
@@ -147,6 +148,7 @@ return {
   -- Haskell
   {
     "mrcjkb/haskell-tools.nvim",
+    enabled = has_haskell,
     version = "^6",
     ft = "haskell",
   },

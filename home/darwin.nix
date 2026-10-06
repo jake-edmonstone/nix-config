@@ -3,6 +3,8 @@
 {
   imports = [
     ./common.nix
+    ../modules/python.nix
+    ../modules/jupyter.nix
     ../modules/ghostty.nix
     ../modules/hammerspoon.nix
     ../modules/anki.nix
@@ -23,8 +25,10 @@
       "/opt/homebrew/sbin"
     ];
 
-    # GNU sed fixes Fish completions that assume GNU extensions on macOS.
-    packages = [ pkgs.gnused ];
+    packages = with pkgs; [
+      gnused # Fish completions assume GNU sed extensions.
+      ghc # Academic toolchain; not needed on GTS.
+    ];
   };
 
   # Inline `brew shellenv` output so we skip the ~100ms Ruby fork per shell.
