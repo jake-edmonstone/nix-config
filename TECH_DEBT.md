@@ -3,6 +3,37 @@
 Temporary workarounds and blocked updates in this configuration. Keep the
 corresponding `TODO` comments in the code until each item is resolved.
 
+## Sioyek macOS packaging
+
+**Status:** Local workaround verified on macOS 27.0.1 on 2026-10-04; waiting
+for nixpkgs packaging fixes.
+
+The installed `2.0.0-unstable-2026-08-18` package puts shaders, default configs,
+and the tutorial in `Contents/MacOS`, but its source reads them from
+`Contents/Resources`. Missing shaders leave PDF pages blank. The current nixpkgs
+[package recipe](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/si/sioyek/package.nix)
+still uses the old location.
+
+Upstream fix: [nixpkgs#566097: install Darwin resources into Contents/Resources](https://github.com/NixOS/nixpkgs/pull/566097).
+This PR fixes the blank pages, but does not change executable wrapping. Once it
+lands in the locked nixpkgs revision, remove the resource-moving step; retain
+the unwrapped executable and `qt.conf` workaround until the PID/hiding issue is
+also resolved.
+
+The copied app's Qt executable wrapper also leaves AppKit reporting its PID as
+`-1`, so Hammerspoon cannot manage it normally. A temporary copy with the native
+executable and corrected resources rendered the tutorial and hid correctly
+when switching apps with Hyper.
+
+- Temporary code: `programs.sioyek.package`, `qtRuntime`, and `qtConf` in
+  `modules/sioyek.nix`.
+- Move the resources into their expected directory and use Qt's supported
+  [qt.conf](https://doc.qt.io/qt-6/qt-conf.html) for plugin/QML paths instead of
+  wrapping the app executable. Hammerspoon needs no special-case workaround.
+- Remove the override and Qt configuration helpers when the stock nixpkgs
+  package renders PDFs and exposes a valid application PID. Test both opening
+  from Finder/Hyper-P and hiding when switching to another app.
+
 ## Determinate Nix creates project-local Sentry caches
 
 **Status:** Upstream issue open as of 2026-09-19; explicitly disable the CLI's

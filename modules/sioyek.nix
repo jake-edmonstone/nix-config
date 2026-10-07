@@ -1,7 +1,31 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 
 let
   theme = import ../theme.nix;
+  # The native .app uses qt.conf instead of an executable wrapper. Preserve the
+  # plugin/QML search paths normally supplied by wrapQtAppsHook.
+  qtRuntime = pkgs.buildEnv {
+    name = "sioyek-qt-runtime";
+    paths = with pkgs.qt6; [
+      qtbase
+      qt3d
+      qtdeclarative
+      qtmultimedia
+      qtquick3d
+      qtspeech
+      qtsvg
+    ];
+    pathsToLink = [
+      "/lib/qt-6/plugins"
+      "/lib/qt-6/qml"
+    ];
+  };
+  qtConf = (pkgs.formats.ini { }).generate "sioyek-qt.conf" {
+    Paths = {
+      Plugins = "${qtRuntime}/lib/qt-6/plugins";
+      QmlImports = "${qtRuntime}/lib/qt-6/qml";
+    };
+  };
   rgbPalettes = {
     dark = {
       background = "0.15686 0.16471 0.21176";
@@ -39,6 +63,17 @@ in
   # https://github.com/Homebrew/homebrew-cask/blob/HEAD/Casks/s/sioyek.rb
   programs.sioyek = {
     enable = true;
+    # TODO: remove when nixpkgs fixes macOS resource placement and app wrapping.
+    # Missing Resources/shaders makes PDFs blank. On macOS 27, the wrapped app
+    # reports PID -1 to AppKit, preventing Hammerspoon from managing its windows.
+    package = pkgs.sioyek.overrideAttrs (old: {
+      dontWrapQtApps = true;
+      postInstall = old.postInstall + ''
+        contents="$out/Applications/sioyek.app/Contents"
+        mv "$contents/MacOS/"{shaders,prefs.config,keys.config,tutorial.pdf} "$contents/Resources/"
+        cp ${qtConf} "$contents/Resources/qt.conf"
+      '';
+    });
 
     bindings = {
       # Sioyek uses D for the macOS Command modifier.
@@ -96,8 +131,7 @@ in
     };
   };
 
-  # Sioyek on macOS reads from ~/Library/Application Support/sioyek/, not the XDG
-  # path. Redirect via symlink so the programs.sioyek-managed XDG configs are used.
+  # Keep Sioyek's macOS data and preferences together in the XDG directory.
   # (Module is only imported from home/darwin.nix, so no platform guard needed.)
   home.file."Library/Application Support/sioyek".source =
     config.lib.file.mkOutOfStoreSymlink "${config.xdg.configHome}/sioyek";
