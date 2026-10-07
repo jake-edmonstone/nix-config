@@ -1,0 +1,6 @@
+interface:
+  display_name: "Engine Ticket Workflow"
+  short_description: "Minimal engine changes with independent adversarial review"
+  default_prompt: "Use $engine-ticket-workflow to start or resume an engine ticket."
+policy:
+  allow_implicit_invocation: false

@@ -70,7 +70,10 @@ let
   '';
 in
 {
-  imports = [ ../../home/common.nix ];
+  imports = [
+    ../../home/common.nix
+    ../../modules/engine-ticket-workflow.nix
+  ];
 
   targets.genericLinux = {
     enable = true;
