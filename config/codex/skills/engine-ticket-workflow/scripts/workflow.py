@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shlex
 import signal
+import stat
 import subprocess
 import sys
 import uuid
@@ -18,10 +19,11 @@ def git(root, *args):
     return subprocess.check_output(["git", "-C", str(root), *args])
 
 
-def private_dir(path):
+def private_dir(path, create=True):
     if path.is_symlink():
         raise ValueError(f"Private directory must not be a symlink: {path}")
-    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if create:
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
     if path.stat().st_uid != os.getuid():
         raise ValueError(f"Private directory belongs to another user: {path}")
     path.chmod(0o700)
@@ -37,6 +39,19 @@ def write_new(path, text):
         return
     with os.fdopen(fd, "w", errors="surrogateescape") as handle:
         handle.write(text)
+
+
+def private_append(path):
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+            raise ValueError(f"Private file must be regular and owned by this user: {path}")
+        os.fchmod(fd, 0o600)
+        return os.fdopen(fd, "a")
+    except BaseException:
+        os.close(fd)
+        raise
 
 
 def engine_workspace(args):
@@ -67,6 +82,13 @@ def field(text, name):
 
 def dossier(args, root, branch):
     path = ticket_dir(args)
+    private_dir(args.data_dir / "tickets", create=False)
+    private_dir(path, create=False)
+    records = [args.data_dir / "preferences.md", args.data_dir / "lessons.md"]
+    records.extend(path / name for name in ["status.md", "context.md", "brief.md", "plan.md", "baseline.patch", "verification.md"])
+    for record in records:
+        if record.is_symlink() or not record.is_file():
+            raise ValueError(f"Missing or non-regular private record; reconcile before continuing: {record}")
     status = (path / "status.md").read_text()
     if Path(field(status, "Worktree")).resolve() != root or field(status, "Branch") != branch:
         raise ValueError("Ticket records belong to a different branch/worktree; reconcile with the user.")
@@ -109,8 +131,7 @@ def initialize(args, root, branch):
     path = ticket_dir(args)
     private_dir(args.data_dir / "tickets")
     private_dir(path)
-    with (path / ".record.lock").open("a") as lock:
-        (path / ".record.lock").chmod(0o600)
+    with private_append(path / ".record.lock") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if (path / "status.md").exists():
             dossier(args, root, branch)
@@ -154,10 +175,11 @@ def run_bazel(args, root, path, base):
     invocation = [args.bazel_bin, *command, *limits]
     private_dir(args.log_dir)
     lock_path = args.log_dir / ".bazel.lock"
-    with lock_path.open("a") as lock:
-        lock_path.chmod(0o600)
+    with private_append(lock_path) as lock:
         print("Waiting for the shared agent-managed Bazel lock...", flush=True)
         fcntl.flock(lock, fcntl.LOCK_EX)
+        root, branch = engine_workspace(args)
+        path, base = dossier(args, root, branch)
         before = fingerprint(args, root, path, base)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         logs = private_dir(args.log_dir / args.ticket)
@@ -187,12 +209,19 @@ def run_bazel(args, root, path, base):
                     result = 130
         finally:
             signal.signal(signal.SIGTERM, old_handler)
-        after = fingerprint(args, root, path, base)
+        snapshot_error = ""
+        try:
+            after = fingerprint(args, root, path, base)
+        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+            after = "unavailable"
+            snapshot_error = f"- Snapshot error: {error}\n"
         outcome = "interrupted" if interrupted else "passing" if result == 0 else "failing"
-        if before != after:
+        if snapshot_error:
+            outcome += "; invalidated: candidate snapshot unavailable"
+        elif before != after:
             outcome += "; invalidated: candidate changed during execution"
-        evidence = f"\n## {timestamp}\n\n- Worktree: `{root}`\n- Command: `{shlex.join(invocation)}`\n- Exit code: `{result}`\n- Result: {outcome}\n- Candidate before: `{before}`\n- Candidate after: `{after}`\n- Log: `{log_path}`\n"
-        with (path / "verification.md").open("a") as record:
+        evidence = f"\n## {timestamp}\n\n- Worktree: `{root}`\n- Command: `{shlex.join(invocation)}`\n- Exit code: `{result}`\n- Result: {outcome}\n- Candidate before: `{before}`\n- Candidate after: `{after}`\n{snapshot_error}- Log: `{log_path}`\n"
+        with private_append(path / "verification.md") as record:
             record.write(evidence)
         print(f"Result: {outcome} (exit {result})", flush=True)
         return 3 if result == 0 and before != after else result if result >= 0 else 128 - result

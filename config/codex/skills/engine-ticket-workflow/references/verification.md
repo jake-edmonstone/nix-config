@@ -28,6 +28,9 @@ Poll relevant log excerpts when a build runs for a while; give concise progress
 updates without flooding the main context. Keep source unchanged during checks.
 Interrupted and failed commands are not verification success. A passing command
 with changed candidate inputs is invalidated and must be reassessed/repeated.
+If the post-command snapshot cannot be read, the helper retains the command's
+exit result and log but invalidates its verification evidence; reconcile the
+missing inputs before resuming.
 
 Use direct format/lint tools on changed files only. Inspect format changes;
 avoid repository-wide rewrites or a `bazel run` target with unclear side effects.

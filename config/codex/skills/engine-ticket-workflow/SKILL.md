@@ -34,8 +34,10 @@ but do not change their selection or introduce a profile.
   Draft `brief.md` with acceptance criteria and non-goals. Stop for explicit approval.
 - Inspect repository guidance, surrounding implementation, callers, analogous code,
   helpers, and existing tests. Use targeted searches rather than indexing the whole
-  repository. Draft `plan.md` with code locations for reuse candidates, justified
-  changed files, and ticket-specific verification targets/configurations.
+  repository. Use the approved planning context sources in
+  [records.md](references/records.md) when useful. Draft `plan.md` with code locations
+  for reuse candidates, justified changed files, and ticket-specific verification
+  targets/configurations.
 - Before presenting the plan for approval, read [review.md](references/review.md)
   and request the two independent design reviews described there. Resolve supported
   findings, then stop for explicit user approval of the reviewed plan.
@@ -44,7 +46,9 @@ but do not change their selection or introduce a profile.
   separated. Avoid unrelated formatting, renaming, cleanup, abstractions, and style
   normalization. Do not silently change approved scope to satisfy a reviewer.
 - Read [verification.md](references/verification.md) before builds/tests. Freeze the
-  candidate during verification and independent code review. Fix confirmed findings,
+  candidate during verification and independent code review. Read
+  [review.md](references/review.md) again for code review, including on resume.
+  Fix confirmed findings,
   rerun affected checks, and re-review affected areas; widen scope when warranted.
 - Stop after three unsuccessful fix/review rounds per stage, or sooner for an
   unresolved design dispute, and ask the user. Report uncertainty instead of
@@ -62,11 +66,9 @@ separate implementation, administrative, or summarization agents. Give fresh
 reviewers only the relevant approved context, source locations, and candidate;
 do not fork the full implementation chat.
 
-If native named-agent selection is unavailable, first read the corresponding
-`~/.codex/agents/<name>.toml`, then give a fresh subagent those role instructions
-and explicitly request its model and effort. Verify effective settings if exposed;
-never silently inherit a higher-cost setting. If neither mechanism works, or a
-model is unavailable, stop and ask. Obtain explicit approval before increasing
+Use the role-selection procedure in [review.md](references/review.md). If a
+requested model or role-selection mechanism is unavailable, stop and ask.
+Obtain explicit approval before increasing
 reviewer effort, switching to a more expensive model, or recommending a bounded
 main-session Sol/high escalation. Never automatically use Astra, Extra High, Max,
 or Ultra.
@@ -82,6 +84,7 @@ user where and why so they can write it. Mechanical comments allowed by their
 preferences, private workflow records, and PR drafts are permitted.
 
 Keep company material out of personal Git, Nix store derivations, and public web
-queries. Use external context retrieval only when explicitly requested and
-read-only. Do not modify shell permissions or assume this skill is a security
-boundary under full-access runtime settings.
+queries. Read-only Redmine access is preauthorized during intake and planning as
+described in [records.md](references/records.md); other external context retrieval
+requires an explicit read-only request. Do not modify shell permissions or assume
+this skill is a security boundary under full-access runtime settings.

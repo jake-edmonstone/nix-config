@@ -14,6 +14,15 @@ independence when full implementation history was inherited. Limit each reviewer
 to its assigned stage and affected paths. Reviewers must not edit files, run
 builds/tests, spawn more agents, or use externally mutating tools.
 
+If native named-agent selection is unavailable, read the corresponding
+`~/.codex/agents/<name>.toml` and supply its developer instructions to a fresh
+subagent/session with its explicit model, effort and Standard service tier.
+Inspect effective settings where exposed; distinguish configured metadata from
+per-turn execution telemetry. Do not claim native role discovery from merely
+reading the TOML. Never silently inherit a higher-cost setting. If selection
+cannot be established or the model is unavailable, stop and ask; do not retry
+with another model automatically.
+
 ## Initial packet
 
 Include the stage/round, approved brief, private guidance paths, this procedure,
