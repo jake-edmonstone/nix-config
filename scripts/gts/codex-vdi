@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "${1:-}" in
+  -h|--help|help|-V|--version)
+    exec codex "$@"
+    ;;
+esac
+
+service=codex-vdi-proxy.service
+proxy=http://127.0.0.1:18181
+
+bypass="localhost,127.0.0.1,::1,.striketechnologies.com${NO_PROXY:+,$NO_PROXY}${no_proxy:+,$no_proxy}"
+if [[ ",$bypass," == *,\*,* ]]; then
+  printf 'codex-vdi: NO_PROXY contains "*", which would bypass the relay. Remove that wildcard for this invocation.\n' >&2
+  exit 1
+fi
+
+if ! systemctl --user start "$service"; then
+  printf 'codex-vdi: could not start %s; check journalctl --user -u %s.\n' "$service" "$service" >&2
+  exit 1
+fi
+
+if ! curl --silent --show-error --head --proxy "$proxy" --noproxy '' \
+  --connect-timeout 3 --max-time 10 --retry 2 --retry-connrefused \
+  --retry-delay 1 --retry-max-time 5 --output /dev/null https://chatgpt.com/; then
+  printf 'codex-vdi: the VDI relay is unavailable. Check the SSH tunnel in your Windows VDI terminal and journalctl --user -u %s.\n' "$service" >&2
+  exit 1
+fi
+
+export HTTP_PROXY="$proxy" HTTPS_PROXY="$proxy" ALL_PROXY="$proxy"
+export http_proxy="$proxy" https_proxy="$proxy" all_proxy="$proxy"
+export NO_PROXY="$bypass" no_proxy="$bypass"
+
+exec codex --no-daemon \
+  -c 'shell_environment_policy.filters.HTTP_PROXY="exclude"' \
+  -c 'shell_environment_policy.filters.HTTPS_PROXY="exclude"' \
+  -c 'shell_environment_policy.filters.ALL_PROXY="exclude"' \
+  -c 'shell_environment_policy.filters.NO_PROXY="exclude"' \
+  "$@"

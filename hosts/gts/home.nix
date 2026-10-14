@@ -7,6 +7,27 @@
 
 let
   clangdBuiltinHeaders = "${pkgs.llvmPackages_22.libclang.lib}/lib/clang/${lib.versions.major pkgs.llvmPackages_22.libclang.version}/include";
+  engineClangdDrivers = lib.concatStringsSep "," (
+    lib.concatMap
+      (
+        root:
+        map
+          (
+            compiler:
+            "${root}/external/strike_bazel_tools++strike_cc_configure_extension+strike_cc_*/wrappers-*/${compiler}.sh"
+          )
+          [
+            "gcc"
+            "g++"
+            "clang"
+            "clang++"
+          ]
+      )
+      [
+        "/scratch/dev/engine"
+        "/scratch/dev/engine-*"
+      ]
+  );
 
   flatbuffersLanguageServerSrc = pkgs.fetchFromGitHub {
     owner = "smpanaro";
@@ -73,6 +94,7 @@ in
   imports = [
     ../../home/common.nix
     ../../modules/engine-ticket-workflow.nix
+    ./codex-vdi.nix
   ];
 
   targets.genericLinux = {
@@ -81,6 +103,10 @@ in
     # nixGL or pull in graphics-driver integration.
     gpu.enable = false;
   };
+
+  programs.neovim.initLua = lib.mkAfter ''
+    vim.g.engine_clangd_query_driver = ${builtins.toJSON engineClangdDrivers}
+  '';
 
   home.packages = with pkgs; [
     python3 # Keep the CLI without the scientific Python/Jupyter environment.
@@ -119,7 +145,6 @@ in
         # paths. Disable the implicit entry so it cannot demote this -I
         # entry back to system-header priority during deduplication.
         Add:
-          - --gcc-toolchain=/opt/packages/gcc/15.2.0/
           - -nobuiltininc
           - -I${clangdBuiltinHeaders}
           # Avoid a Clang recovery-AST mangling crash in persist.h. This

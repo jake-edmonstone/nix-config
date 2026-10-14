@@ -7,21 +7,42 @@ Run two fresh reviewers for design and again for the frozen candidate code:
 - `engine_patterns_reviewer`: concrete surrounding patterns and existing helpers,
   minimal diff, redundant work, new abstractions, and approved user preferences.
 
-Delegate explicitly with these roles. If spawning tools expose history controls,
-use no inherited conversation (`fork_turns="none"` or `fork_context=false`, as
-supported). Otherwise use a fresh session with a task packet; never claim reviewer
-independence when full implementation history was inherited. Limit each reviewer
+Use these roles through the launcher below, each in a fresh CLI session with a
+separate task packet and no inherited implementation conversation. Limit each reviewer
 to its assigned stage and affected paths. Reviewers must not edit files, run
 builds/tests, spawn more agents, or use externally mutating tools.
 
-If native named-agent selection is unavailable, read the corresponding
-`~/.codex/agents/<name>.toml` and supply its developer instructions to a fresh
-subagent/session with its explicit model, effort and Standard service tier.
-Inspect effective settings where exposed; distinguish configured metadata from
-per-turn execution telemetry. Do not claim native role discovery from merely
-reading the TOML. Never silently inherit a higher-cost setting. If selection
-cannot be established or the model is unavailable, stop and ask; do not retry
-with another model automatically.
+## Reviewer launcher
+
+Prepare each packet as an owner-only file inside the ticket's private `reviews/`
+directory, following the packet guidance below. From the existing worktree run:
+
+```sh
+python3 <this-skill>/scripts/workflow.py review <KEY> \
+  --role engine_correctness_reviewer --stage design --round 1 \
+  --packet ~/.local/share/engine-tickets/tickets/<KEY>/reviews/design-correctness-packet-1.md
+```
+
+Run the same command with `engine_patterns_reviewer` and its own packet. Use
+`--stage code` for candidate review and the applicable round number for re-review.
+At most two reviewer processes may run concurrently; keep the candidate frozen.
+Do not use native spawning tools first or ask to use Priority when they fail.
+
+The helper reads `~/.codex/agents/<name>.toml` and launches a fresh, ephemeral
+`codex exec` with its explicit model, effort, developer instructions, Standard
+(`service_tier="default"`), read-only sandbox, and no approvals. It uses `codex-vdi`
+when installed (otherwise `codex --no-daemon`), preserving the normal connection
+route. It disables nested delegation, app tools, and web search: provide the
+relevant retrieved context in the packet instead of making reviewers depend on
+Jira availability. These overrides affect only the reviewer, not the main session.
+
+The helper saves private logs/settings under `reviews/`, accepts a completed
+report only if the candidate fingerprint and packet are unchanged, and refuses
+to overwrite an existing report or run the same role/round concurrently. Configured settings
+are not per-turn execution telemetry; inspect any exposed telemetry separately.
+For a genuine CLI/auth/model failure, inspect the saved logs and stop; do not
+automatically retry, change models, raise effort, relax permissions, or use Priority.
+The default timeout is ten minutes; `--timeout <seconds>` changes only that deadline.
 
 ## Initial packet
 

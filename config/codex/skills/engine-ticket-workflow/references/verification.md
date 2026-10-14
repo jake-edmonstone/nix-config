@@ -6,6 +6,22 @@ uses simulation/debug. Preserve original regression coverage; add focused tests
 with independent expectations. Use the configured caches, toolchains and Bazelisk
 version from the ticket worktree. Never run `bazel clean` as a routine retry.
 
+## Existing PR verification
+
+Read approved lessons, then map the changed components to relevant CI suites using
+the repository's current CI documentation, workflow conditions and comparable PRs
+within the authorized read-only scope. Inspect the PR's labels and exact label
+names required to enable those suites. Flag missing labels for relevant suites;
+do not just report that the displayed checks are green.
+
+Confirm that relevant suites ran for the current PR head. Distinguish skipped or
+unrun suites from passing ones; default test jobs may omit manual integration
+suites. Explain which label or trigger is needed to close a coverage gap. A
+read-only verification request does not authorize editing labels or triggering
+CI runs; report the needed action and preserve the requested access scope.
+
+## Local builds and tests
+
 Use the helper for all agent-managed Bazel build/test/query commands:
 
 ```sh

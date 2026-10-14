@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+
+ENGINE_REPO = Path("/scratch/dev/engine")
+PACKAGE = ".engine-local-compile-commands"
+OWNER = "engine-compile-commands-v1\n"
+USAGE = "Usage: engine-compile-commands <target>... [-- <Bazel build flags>...]"
+REFRESH_RULE = '''load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
+
+def _refresh_impl(ctx):
+    ctx.actions.expand_template(
+        output = ctx.outputs.out,
+        template = ctx.file._template,
+        is_executable = True,
+        substitutions = {
+            "        {target_flag_pairs}": "\\n".join(["        %r," % ((target, ""),) for target in ctx.attr.targets]),
+            "        {windows_default_include_paths}": "\\n".join(["        %r," % path for path in find_cpp_toolchain(ctx).built_in_include_directories]),
+            "{exclude_headers}": repr(""),
+            "{exclude_external_sources}": repr(False),
+            "{print_args_executable}": repr(ctx.executable._print_args.path),
+        },
+    )
+    ctx.actions.expand_template(
+        output = ctx.outputs.launcher,
+        template = ctx.file._launcher_template,
+        substitutions = {"{to_run}": "refresh"},
+    )
+    return DefaultInfo(files = depset([ctx.outputs.out, ctx.outputs.launcher]))
+
+refresh_script = rule(
+    implementation = _refresh_impl,
+    attrs = {
+        "targets": attr.string_list(mandatory = True),
+        "out": attr.output(mandatory = True),
+        "launcher": attr.output(mandatory = True),
+        "_template": attr.label(default = "@compile_commands//:refresh.template.py", allow_single_file = True),
+        "_launcher_template": attr.label(default = "@compile_commands//:check_python_version.template.py", allow_single_file = True),
+        "_print_args": attr.label(default = "@compile_commands//:print_args", executable = True, cfg = "target"),
+        "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:current_cc_toolchain"),
+    },
+    toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
+)
+'''
+
+
+def git(*args, cwd=None):
+    return subprocess.check_output(["git", *args], cwd=cwd, text=True).strip()
+
+
+def validate_database(path):
+    decoder = json.JSONDecoder()
+    with path.open() as source:
+        buffer = ""
+        eof = False
+
+        def refill():
+            nonlocal buffer, eof
+            chunk = source.read(65536)
+            buffer += chunk
+            eof = not chunk
+
+        def token():
+            nonlocal buffer
+            buffer = buffer.lstrip()
+            while not buffer and not eof:
+                refill()
+                buffer = buffer.lstrip()
+            return buffer[:1]
+
+        if token() != "[":
+            raise ValueError("Compilation database must be a JSON array.")
+        buffer = buffer[1:]
+        count = 0
+        while token() != "]":
+            if count:
+                if token() != ",":
+                    raise ValueError("Invalid compilation database separator.")
+                buffer = buffer[1:]
+            token()
+            while True:
+                try:
+                    entry, end = decoder.raw_decode(buffer)
+                    break
+                except json.JSONDecodeError:
+                    if eof:
+                        raise
+                    refill()
+            if not isinstance(entry, dict) or not isinstance(entry.get("file"), str):
+                raise ValueError("Compilation database entry has no source file.")
+            if not isinstance(entry.get("directory"), str):
+                raise ValueError("Compilation database entry has no working directory.")
+            arguments = entry.get("arguments")
+            if not (isinstance(arguments, list) and arguments
+                    and all(isinstance(arg, str) for arg in arguments)):
+                raise ValueError("Compilation database entry has no valid arguments.")
+            count += 1
+            buffer = buffer[end:]
+        buffer = buffer[1:]
+        if token() or not count:
+            raise ValueError("Compilation database is empty or has trailing content.")
+
+
+def refresh(targets, flags):
+    root = Path(git("rev-parse", "--show-toplevel"))
+    common = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir"))
+    engine_common = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir", cwd=ENGINE_REPO))
+    if common.resolve() != engine_common.resolve():
+        raise ValueError("Run this command inside an engine checkout or worktree.")
+    if git("ls-files", "--", PACKAGE, cwd=root):
+        raise ValueError("The private refresh package contains tracked files; refusing to modify it.")
+    package = root / PACKAGE
+    marker = package / ".owner"
+    if package.is_symlink() or (package.exists() and
+                               (not marker.is_file() or marker.read_text() != OWNER)):
+        raise ValueError(f"Refusing to overwrite unmanaged package: {package}")
+    exclude = common / "info" / "exclude"
+    exclude.parent.mkdir(parents=True, exist_ok=True)
+    with exclude.open("a+") as exclusions:
+        fcntl.flock(exclusions, fcntl.LOCK_EX)
+        exclusions.seek(0)
+        if f"/{PACKAGE}/" not in exclusions.read().splitlines():
+            exclusions.write(f"\n/{PACKAGE}/\n")
+    package.mkdir(exist_ok=True)
+    marker.write_text(OWNER)
+    with (package / ".lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        build = (
+            'load(":refresh.bzl", "refresh_script")\n\n'
+            "refresh_script(\n"
+            '    name = "script",\n'
+            '    out = "refresh.py",\n'
+            '    launcher = "refresh.check_python_version.py",\n'
+            f"    targets = {json.dumps(targets)},\n"
+            ")\n\n"
+            "py_binary(\n"
+            '    name = "refresh",\n'
+            '    srcs = [":script"],\n'
+            '    main = "refresh.check_python_version.py",\n'
+            '    imports = [""],\n'
+            '    data = ["@compile_commands//:print_args"],\n'
+            ")\n"
+        )
+        (package / "refresh.bzl").write_text(REFRESH_RULE)
+        (package / "BUILD.bazel").write_text(build)
+        database = root / "compile_commands.json"
+        if database.is_symlink() or (database.exists() and not database.is_file()):
+            raise ValueError("Refusing to replace a compilation database that is not a regular file.")
+        backup = None
+        if database.exists():
+            fd, name = tempfile.mkstemp(prefix="previous-", suffix=".json", dir=package)
+            os.close(fd)
+            backup = Path(name)
+            try:
+                os.replace(database, backup)
+            except OSError:
+                backup.unlink()
+                raise
+        try:
+            subprocess.run(["bazel", "run", f"//{PACKAGE}:refresh", "--", *flags], cwd=root, check=True)
+            validate_database(database)
+        except BaseException:
+            if backup is not None:
+                try:
+                    os.replace(backup, database)
+                except OSError as error:
+                    raise OSError(f"Could not restore the previous database; it is preserved at {backup}") from error
+            elif database.exists():
+                database.unlink()
+            raise
+        if backup is not None:
+            backup.unlink()
+        print(f"Updated {database}")
+
+
+def main(argv):
+    if argv == ["--help"] or argv == ["-h"]:
+        print(USAGE)
+        return 0
+    separator = argv.index("--") if "--" in argv else len(argv)
+    targets = argv[:separator]
+    flags = argv[separator + 1:]
+    if not targets or any(not target.startswith("//") for target in targets):
+        print(USAGE, file=sys.stderr)
+        print("Supply workspace-absolute engine targets, such as //core/logging/orderslog/helpers:helpers_test.",
+              file=sys.stderr)
+        return 2
+    try:
+        refresh(targets, flags)
+        return 0
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        print(f"engine-compile-commands: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

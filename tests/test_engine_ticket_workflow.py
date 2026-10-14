@@ -2,6 +2,7 @@ import fcntl
 import argparse
 import errno
 import importlib.util
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -389,6 +390,186 @@ class WorkflowTests(unittest.TestCase):
                 helper.run_bazel(args, self.engine, path, self.git("rev-parse", "HEAD"))
         self.assertEqual(len(list(self.logs.glob("*/*.log"))), 1)
         self.assertNotIn("Result: passing", (path / "verification.md").read_text())
+
+    def prepare_review(self, role="engine_correctness_reviewer", executable="codex"):
+        path = self.initialize()
+        packet = path / "reviews" / "packet.md"
+        packet.write_text("Review only source.cpp. Do not change files or run tests.\n")
+        codex = self.root / executable
+        codex.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, sys, time\n"
+            "from pathlib import Path\n"
+            "prompt = sys.stdin.read()\n"
+            "Path(os.environ['CAPTURE']).write_text(json.dumps({'argv':sys.argv[1:], 'prompt':prompt}))\n"
+            "time.sleep(float(os.environ.get('DELAY', '0')))\n"
+            "if os.environ.get('MUTATE'): Path('source.cpp').write_text('int value = 9;\\n')\n"
+            "if os.environ.get('MUTATE_PACKET'): Path(os.environ['MUTATE_PACKET']).write_text('Changed packet')\n"
+            "mode = os.environ.get('MODE', 'complete')\n"
+            "if mode == 'malformed': print('not JSON'); sys.exit(0)\n"
+            "if mode != 'empty': print(json.dumps({'type':'item.completed', 'item':{'type':'agent_message', 'text':'No actionable findings.'}}))\n"
+            "if mode == 'fail': print(json.dumps({'type':'turn.failed'})); sys.exit(1)\n"
+            "if mode != 'incomplete': print(json.dumps({'type':'turn.completed'}))\n"
+        )
+        codex.chmod(0o700)
+        invocation = [*self.invocation("review", self.key, "--role", role, "--stage", "design",
+                                      "--round", "1", "--packet", str(packet))]
+        invocation[2:2] = ["--codex-bin", str(codex), "--agents-dir", str(REPO / "config/codex/agents")]
+        return path, packet, invocation
+
+    def run_review_fixture(self, invocation, **env):
+        return subprocess.run(invocation, cwd=self.engine, capture_output=True, text=True, timeout=8,
+                              env={**os.environ, "CAPTURE": str(self.root / "launch.json"), **env})
+
+    def test_review_launches_both_roles_at_standard_with_independent_stdin_packets(self):
+        for role, model, effort in [("engine_correctness_reviewer", "gpt-6.1-sol", "medium"),
+                                   ("engine_patterns_reviewer", "gpt-6-luna", "high")]:
+            with self.subTest(role=role):
+                path, packet, invocation = self.prepare_review(role)
+                before = self.snapshot()
+                result = self.run_review_fixture(invocation)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                capture = json.loads((self.root / "launch.json").read_text())
+                argv = capture["argv"]
+                self.assertEqual(argv[:2], ["--no-daemon", "exec"])
+                self.assertEqual(argv[argv.index("--model") + 1], model)
+                self.assertEqual(argv[argv.index("--sandbox") + 1], "read-only")
+                settings = dict(arg.split("=", 1) for i, arg in enumerate(argv) if i and argv[i - 1] == "-c")
+                self.assertEqual(json.loads(settings["model_reasoning_effort"]), effort)
+                self.assertEqual(json.loads(settings["service_tier"]), "default")
+                self.assertEqual(json.loads(settings["approval_policy"]), "never")
+                self.assertFalse(json.loads(settings["agents.enabled"]))
+                self.assertFalse(json.loads(settings["features.apps"]))
+                self.assertIn("Review the assigned engine ticket", json.loads(settings["developer_instructions"]))
+                self.assertEqual(capture["prompt"], packet.read_text())
+                self.assertEqual(argv[-1], "-")
+                self.assertIn("--ephemeral", argv)
+                self.assertNotIn("resume", argv)
+                self.assertNotIn("fork", argv)
+                self.assertNotIn("agent_type", argv)
+                report = path / "reviews" / f"design-{role}-1.md"
+                self.assertEqual(report.read_text(), "No actionable findings.\n")
+                self.assertEqual(report.stat().st_mode & 0o777, 0o600)
+                self.assertEqual(self.snapshot(), before)
+
+    def test_review_uses_vdi_wrapper_without_duplicate_no_daemon_flag(self):
+        _, _, invocation = self.prepare_review(executable="codex-vdi")
+        result = self.run_review_fixture(invocation)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        argv = json.loads((self.root / "launch.json").read_text())["argv"]
+        self.assertEqual(argv[0], "exec")
+        self.assertNotIn("--no-daemon", argv)
+
+    def test_review_automatically_selects_installed_vdi_wrapper(self):
+        _, _, invocation = self.prepare_review(executable="codex-vdi")
+        index = invocation.index("--codex-bin")
+        del invocation[index:index + 2]
+        result = self.run_review_fixture(invocation, PATH=f"{self.root}:/usr/bin:/bin")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        argv = json.loads((self.root / "launch.json").read_text())["argv"]
+        self.assertEqual(argv[0], "exec")
+        self.assertNotIn("--no-daemon", argv)
+
+    def test_review_automatically_falls_back_to_bare_codex(self):
+        _, _, invocation = self.prepare_review()
+        index = invocation.index("--codex-bin")
+        del invocation[index:index + 2]
+        result = self.run_review_fixture(invocation, PATH=f"{self.root}:/usr/bin:/bin")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        argv = json.loads((self.root / "launch.json").read_text())["argv"]
+        self.assertEqual(argv[:2], ["--no-daemon", "exec"])
+
+    def test_failed_or_incomplete_review_never_creates_accepted_report(self):
+        path, _, invocation = self.prepare_review()
+        for mode in ["fail", "incomplete", "empty", "malformed"]:
+            with self.subTest(mode=mode):
+                result = self.run_review_fixture(invocation, MODE=mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((path / "reviews" / "design-engine_correctness_reviewer-1.md").exists())
+
+    def test_review_refuses_to_overwrite_a_report_before_starting_codex(self):
+        path, _, invocation = self.prepare_review()
+        report = path / "reviews" / "design-engine_correctness_reviewer-1.md"
+        report.write_text("Existing human review\n")
+        result = self.run_review_fixture(invocation)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "launch.json").exists())
+        self.assertEqual(report.read_text(), "Existing human review\n")
+
+    def test_candidate_change_invalidates_review(self):
+        path, _, invocation = self.prepare_review()
+        result = self.run_review_fixture(invocation, MUTATE="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Candidate changed", result.stderr)
+        self.assertFalse((path / "reviews" / "design-engine_correctness_reviewer-1.md").exists())
+
+    def test_packet_change_invalidates_review(self):
+        path, packet, invocation = self.prepare_review()
+        result = self.run_review_fixture(invocation, MUTATE_PACKET=str(packet))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Review packet changed", result.stderr)
+        self.assertFalse((path / "reviews" / "design-engine_correctness_reviewer-1.md").exists())
+
+    def test_unchanged_crlf_packet_is_accepted(self):
+        _, packet, invocation = self.prepare_review()
+        packet.write_bytes(b"Read only source.cpp.\r\nDo not write files.\r\n")
+        result = self.run_review_fixture(invocation)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_packet_outside_private_reviews_is_refused_before_launch(self):
+        _, packet, invocation = self.prepare_review()
+        outside = self.root / "packet.md"
+        outside.write_text(packet.read_text())
+        invocation[-1] = str(outside)
+        result = self.run_review_fixture(invocation)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "launch.json").exists())
+
+    def test_packet_symlink_is_refused_before_launch(self):
+        _, packet, invocation = self.prepare_review()
+        target = packet.with_name("source-packet.md")
+        packet.rename(target)
+        packet.symlink_to(target)
+        result = self.run_review_fixture(invocation)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "launch.json").exists())
+
+    def test_priority_role_configuration_is_refused_before_launch(self):
+        _, _, invocation = self.prepare_review()
+        agents = self.root / "agents"
+        agents.mkdir()
+        source = REPO / "config/codex/agents/engine_correctness_reviewer.toml"
+        (agents / source.name).write_text(source.read_text().replace('service_tier = "default"', 'service_tier = "priority"'))
+        invocation[invocation.index("--agents-dir") + 1] = str(agents)
+        result = self.run_review_fixture(invocation)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Standard", result.stderr)
+        self.assertFalse((self.root / "launch.json").exists())
+
+    def test_review_timeout_preserves_logs_without_accepting_a_report(self):
+        path, _, invocation = self.prepare_review()
+        result = self.run_review_fixture([*invocation, "--timeout", "1"], DELAY="4")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("timed out", result.stderr)
+        self.assertEqual(len(list((path / "reviews").glob("*/events.jsonl"))), 1)
+        self.assertFalse((path / "reviews" / "design-engine_correctness_reviewer-1.md").exists())
+
+    def test_same_review_round_cannot_launch_twice_concurrently(self):
+        _, _, invocation = self.prepare_review()
+        env = {**os.environ, "CAPTURE": str(self.root / "launch.json"), "DELAY": "0.5"}
+        first = subprocess.Popen(invocation, cwd=self.engine, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            deadline = time.monotonic() + 3
+            while not (self.root / "launch.json").exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            second = self.run_review_fixture(invocation)
+            self.assertNotEqual(second.returncode, 0)
+            out, err = first.communicate(timeout=5)
+            self.assertEqual(first.returncode, 0, out + err)
+        finally:
+            if first.poll() is None:
+                first.kill()
+                first.communicate()
 
 
 class AgentConfigurationTests(unittest.TestCase):

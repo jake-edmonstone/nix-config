@@ -43,6 +43,22 @@ return {
           "--malloc-trim",
         })
       end
+      if vim.g.engine_clangd_query_driver then
+        local command = vim.deepcopy(opts.servers.clangd.cmd)
+        opts.servers.clangd.cmd = function(dispatchers, config)
+          local cmd = vim.deepcopy(command)
+          local root = config.root_dir or config.cmd_cwd or ""
+          root = root:gsub("/+$", "")
+          if root == "/scratch/dev/engine" or root:match("^/scratch/dev/engine%-[^/]+$") then
+            table.insert(cmd, "--query-driver=" .. vim.g.engine_clangd_query_driver)
+          end
+          return vim.lsp.rpc.start(cmd, dispatchers, {
+            cwd = config.cmd_cwd or config.root_dir,
+            env = config.cmd_env,
+            detached = config.detached,
+          })
+        end
+      end
     end,
   },
 

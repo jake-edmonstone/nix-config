@@ -110,7 +110,7 @@ branch="$ticket/$developer/$slug"
 worktree="$dev_root/engine-$slug"
 session=$slug
 
-for tool in git tmux codex nvim lazygit fish; do
+for tool in git tmux codex-vdi nvim lazygit fish; do
   require_command "$tool"
 done
 
@@ -118,7 +118,7 @@ done
 [[ $(git -C "$engine_repo" rev-parse --show-toplevel) == "$engine_repo" ]] \
   || die "$engine_repo is not the engine repository root."
 
-codex_bin=$(command -v codex)
+codex_bin=$(command -v codex-vdi)
 nvim_bin=$(command -v nvim)
 lazygit_bin=$(command -v lazygit)
 fish_bin=$(command -v fish)

@@ -4,14 +4,17 @@ import argparse
 from datetime import datetime, timezone
 import fcntl
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import signal
 import stat
 import subprocess
 import sys
+import tomllib
 import uuid
 
 
@@ -227,13 +230,114 @@ def run_bazel(args, root, path, base):
         return 3 if result == 0 and before != after else result if result >= 0 else 128 - result
 
 
+def run_review(args, root, path, base):
+    reviews = private_dir(path / "reviews", create=False)
+    with private_append(reviews / f".{args.stage}-{args.role}-{args.round}.lock") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return execute_review(args, root, path, base)
+
+
+def execute_review(args, root, path, base):
+    role_path = args.agents_dir / f"{args.role}.toml"
+    with role_path.open("rb") as source:
+        role = tomllib.load(source)
+    if role.get("name") != args.role or role.get("service_tier") != "default":
+        raise ValueError("Reviewer configuration must match the requested role and Standard service tier.")
+    for key in ("model", "model_reasoning_effort", "developer_instructions"):
+        if not isinstance(role.get(key), str) or not role[key].strip():
+            raise ValueError(f"Reviewer configuration is missing {key}.")
+    if args.round < 1 or args.timeout <= 0:
+        raise ValueError("Review round and timeout must be positive.")
+    reviews = private_dir(path / "reviews", create=False)
+    packet = args.packet.resolve()
+    if args.packet.is_symlink() or not packet.is_relative_to(reviews.resolve()) or not packet.is_file():
+        raise ValueError("Review packet must be a regular file inside this ticket's private reviews directory.")
+    prompt = packet.read_bytes().decode("utf-8")
+    if not prompt.strip():
+        raise ValueError("Review packet is empty.")
+    report = reviews / f"{args.stage}-{args.role}-{args.round}.md"
+    if report.exists() or report.is_symlink():
+        raise ValueError("Review report already exists; preserve it and choose a new round.")
+    executable = args.codex_bin or shutil.which("codex-vdi") or shutil.which("codex")
+    if not executable:
+        raise ValueError("Neither codex-vdi nor codex is available on PATH.")
+    invocation = [str(executable)]
+    if Path(executable).name != "codex-vdi":
+        invocation.append("--no-daemon")
+    invocation += ["exec", "--ephemeral", "--json", "--strict-config", "--cd", str(root),
+                   "--model", role["model"], "--sandbox", "read-only"]
+    settings = {"model_reasoning_effort": role["model_reasoning_effort"],
+                "service_tier": "default", "approval_policy": "never",
+                "developer_instructions": role["developer_instructions"],
+                "agents.enabled": False, "features.apps": False, "web_search": "disabled"}
+    for key, value in settings.items():
+        invocation += ["-c", f"{key}={json.dumps(value)}"]
+    invocation.append("-")
+    before = fingerprint(args, root, path, base)
+    attempt = private_dir(reviews / f"{args.stage}-{args.role}-{args.round}-{uuid.uuid4().hex[:8]}")
+    events_path, stderr_path = attempt / "events.jsonl", attempt / "stderr.log"
+    metadata = {"role": args.role, "stage": args.stage, "round": args.round,
+                "model": role["model"], "effort": role["model_reasoning_effort"],
+                "configured_service_tier": "default", "worktree": str(root),
+                "candidate_before": before, "packet_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+                "started_at": datetime.now(timezone.utc).isoformat()}
+    write_new(attempt / "settings.json", json.dumps(metadata, indent=2) + "\n")
+    print(f"Starting fresh {args.role}: {role['model']}/{role['model_reasoning_effort']}, Standard", flush=True)
+    print(f"Review logs: {attempt}", flush=True)
+    process = None
+    old_handler = signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
+    try:
+        with private_append(events_path) as events, private_append(stderr_path) as stderr:
+            process = subprocess.Popen(invocation, cwd=root, stdin=subprocess.PIPE,
+                                       stdout=events, stderr=stderr, text=True, start_new_session=True)
+            process.communicate(prompt, timeout=args.timeout)
+        result = process.returncode
+    except (subprocess.TimeoutExpired, KeyboardInterrupt):
+        if process is not None and process.poll() is None:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+        raise ValueError(f"Review interrupted or timed out; no report accepted. Logs: {attempt}")
+    finally:
+        signal.signal(signal.SIGTERM, old_handler)
+    after = fingerprint(args, root, path, base)
+    final_message, completed = "", False
+    for line in events_path.read_text().splitlines():
+        event = json.loads(line)
+        if event.get("type") == "item.completed" and event.get("item", {}).get("type") == "agent_message":
+            final_message = event["item"].get("text", "")
+        if event.get("type") == "turn.completed":
+            completed = True
+        elif event.get("type") == "turn.failed":
+            completed = False
+    outcome = {"exit_code": result, "candidate_after": after,
+               "packet_sha256_after": hashlib.sha256(packet.read_bytes()).hexdigest(),
+               "completed": completed, "finished_at": datetime.now(timezone.utc).isoformat()}
+    write_new(attempt / "result.json", json.dumps(outcome, indent=2) + "\n")
+    if result != 0 or not completed or not final_message.strip():
+        raise ValueError(f"Reviewer did not finish successfully; no report accepted. Logs: {attempt}")
+    if before != after:
+        raise ValueError(f"Candidate changed during review; no report accepted. Logs: {attempt}")
+    if metadata["packet_sha256"] != outcome["packet_sha256_after"]:
+        raise ValueError(f"Review packet changed during review; no report accepted. Logs: {attempt}")
+    write_new(attempt / "report.md", final_message.rstrip() + "\n")
+    os.link(attempt / "report.md", report)
+    print(f"Review report: {report}", flush=True)
+    return 0
+
+
 def main():
     os.umask(0o077)
-    parser = argparse.ArgumentParser(description="Private engine ticket records and serialized Bazel verification.")
+    parser = argparse.ArgumentParser(description="Private engine ticket records, Standard-speed reviews, and serialized Bazel verification.")
     parser.add_argument("--engine-repo", type=Path, default=Path("/scratch/dev/engine"))
     parser.add_argument("--data-dir", type=Path, default=Path.home() / ".local/share/engine-tickets")
     parser.add_argument("--log-dir", type=Path, default=Path("/scratch/dev/.cache/engine-tickets"))
     parser.add_argument("--bazel-bin", default="/usr/bin/bazel")
+    parser.add_argument("--codex-bin")
+    parser.add_argument("--agents-dir", type=Path, default=Path.home() / ".codex/agents")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("identify")
     init = commands.add_parser("init")
@@ -244,6 +348,13 @@ def main():
     bazel = commands.add_parser("bazel")
     bazel.add_argument("ticket")
     bazel.add_argument("bazel_args", nargs=argparse.REMAINDER)
+    review = commands.add_parser("review")
+    review.add_argument("ticket")
+    review.add_argument("--role", required=True, choices=("engine_correctness_reviewer", "engine_patterns_reviewer"))
+    review.add_argument("--stage", required=True, choices=("design", "code"))
+    review.add_argument("--round", required=True, type=int)
+    review.add_argument("--packet", required=True, type=Path)
+    review.add_argument("--timeout", type=int, default=600)
     args = parser.parse_args()
     try:
         root, branch = engine_workspace(args)
@@ -255,6 +366,8 @@ def main():
             path, base = dossier(args, root, branch)
             if args.command == "snapshot":
                 print(fingerprint(args, root, path, base))
+            elif args.command == "review":
+                return run_review(args, root, path, base)
             else:
                 return run_bazel(args, root, path, base)
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
