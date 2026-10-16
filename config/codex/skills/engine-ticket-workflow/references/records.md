@@ -10,14 +10,15 @@ content when access fails.
 
 ## Context sources
 
-Assume Jira is connected as a plugin. Discover its available read/search tools and
-use them proactively, without asking permission for each ticket-relevant read.
+Use the skill-local Jira helper below instead of built-in Jira tools. It uses the
+connected account through the working curl transport and existing VDI relay.
+Use it proactively, without asking permission for each ticket-relevant read.
 Retrieve the current ticket's description, acceptance criteria, and relevant
 comments before drafting the brief. Follow useful issue links, parents/epics,
 subtasks, blockers, and related tickets; search by relevant components, symbols,
 or terms for prior fixes, decisions, requirements, and discussion. Use Jira
 liberally to resolve context gaps instead of relying only on the initial ticket
-text or asking the user to paste material the plugin can retrieve.
+text or asking the user to paste material the helper can retrieve.
 
 Use Jira to clarify unfamiliar acronyms, shorthand, domain language, and
 team-specific terminology in tickets. Search the terms in related issues and
@@ -34,12 +35,81 @@ user; newly discovered scope or design changes still require renewed approval.
 Jira access never authorizes issue edits, comments, transitions, or other writes.
 Links to other systems do not extend the existing access permissions.
 
-If the plugin is unavailable or a read fails, report the limitation rather than
-inventing context or changing access settings. Use any saved Jira snapshot below,
+If the helper is unavailable or a read fails, stop that request sequence and report
+the limitation rather than inventing context or changing access settings. Use any saved Jira snapshot below,
 state its retrieval date and that current updates could not be checked, and ask
 only for context still missing or needing confirmation. Ask for that source or a
 focused user-run Rovo query with issue keys and specific questions, including the
 returned text and source links. Do not install another integration on their behalf.
+
+### Jira helper
+
+Run resource discovery once per Codex session, select the returned Jira site, and
+reuse its cloud ID explicitly. On resume, reuse discovery already performed in
+this session; never infer that a cached ticket proves current access.
+
+```sh
+python3 <this-skill>/scripts/jira.py resources
+python3 <this-skill>/scripts/jira.py --cloud-id <ID> issue <KEY>
+python3 <this-skill>/scripts/jira.py --cloud-id <ID> search 'project = CE AND text ~ "term"'
+python3 <this-skill>/scripts/jira.py --cloud-id <ID> comments <KEY>
+```
+
+The default source site is `https://gtsjira.atlassian.net`; for another discovered
+site pass `--site <URL>` before the command as well. `--data-dir <directory>` before
+the command selects the same private record root as `workflow.py --data-dir`.
+The helper works without initializing a ticket dossier or changing a worktree.
+
+Issue reads default to `--view evidence`, including decision-relevant custom fields
+and issue links. Use `--view compact` for scanning or `--view full` when necessary;
+`--fields summary description ...` explicitly selects fields for issues/searches.
+Search defaults to compact results and `--limit 25`; follow returned
+`nextPageToken` with `--next-page-token <token>` when needed until `isLast` is true.
+Searches do not return an approximate count or automatically crawl every page.
+
+Fetch relevant comments separately; an issue read is not proof that its discussion
+was fetched. Comments default to evidence view, oldest-first, with `--limit 25`.
+Continue with `--start-at <offset>` using the returned effective pagination values,
+not just the requested limit (full view can cap pages at 20). Preserve comment
+thread relationships and respect visibility/internal-note metadata when quoting
+or preparing review packets. Mark incomplete searches/discussion as partial.
+
+Stdout contains decoded JSON, including pagination and rich-text format metadata.
+Stderr reports each successfully saved snapshot. A nonzero exit is a failure,
+including when the read succeeded but saving failed; in that case fetched JSON
+may still be available on stdout. Do not claim all results were saved if only
+some snapshot messages were emitted. Add the relevant evidence to `context.md`
+as usual; automatic snapshots do not update approval gates or fingerprints.
+
+Each allowlisted read gets at most two attempts, with a one-second delay before
+the second. The helper retries transient connection/transfer failures, timeouts,
+and HTTP 408/502/503/504 once; it uses a fresh request ID for each attempt. Each
+attempt has a 60-second curl limit and a 65-second process deadline. Retry messages
+identify the failure without printing credentials or response bodies. A timeout
+after HTTP 200 with no matching reply does not by itself prove the VDI tunnel is
+down. A complete matching reply is still usable if curl times
+out only because the SSE stream stayed open.
+
+Authentication/TLS failures, blocked pages, rate limits, malformed responses, and
+JSON-RPC/MCP tool errors are not retried. After the helper's final failure, stop
+the request sequence; do not add another agent-controlled retry loop or silently
+weaken the query. Successful reads alone are snapshotted, once per invocation.
+
+The helper reads `${CODEX_HOME:-~/.codex}/auth.json` privately and sends credentials
+only to `https://chatgpt.com/backend-api/ps/mcp` through the explicit local proxy
+`http://127.0.0.1:18181`. Python and curl must be installed and the existing VDI
+tunnel/proxy must be running. It never starts services, refreshes credentials,
+follows redirects, disables TLS verification, or falls back to direct networking
+or built-in Jira calls. Do not print credentials, inspect auth files through agent
+tools, or improvise authenticated shell commands when it fails. Report expired
+or unsupported login storage and ask the user to resolve it normally.
+
+Only resource discovery, issue reads, JQL search, and the verified read-only
+comments operation are supported. This uses an internal Codex endpoint and may
+need maintenance after future changes; a schema/transport error is not permission
+to guess new endpoints, broaden access, or bypass existing restrictions.
+
+### Redmine
 
 During intake and planning, the user authorizes relevant read-only Redmine API
 queries at `http://st-redmine.striketechnologies.com/` using the API key in
