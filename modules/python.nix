@@ -9,6 +9,7 @@ let
       torch
       torchvision
       pandas
+      playwright
       nbclient
       nbformat
       jupyter
