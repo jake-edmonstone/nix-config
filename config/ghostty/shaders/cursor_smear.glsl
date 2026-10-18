@@ -36,12 +36,8 @@ float getSdfParallelogram(in vec2 p, in vec2 v0, in vec2 v1, in vec2 v2, in vec2
     return s * sqrt(d);
 }
 
-vec2 normalize(vec2 value, float isPosition) {
-    return (value * 2.0 - (iResolution.xy * isPosition)) / iResolution.y;
-}
-
-float antialising(float distance) {
-    return 1. - smoothstep(0., normalize(vec2(2., 2.), 0.).x, distance);
+float antialising(float distance, float aaWidth) {
+    return 1. - smoothstep(0., aaWidth, distance);
 }
 
 float determineStartVertexFactor(vec2 a, vec2 b) {
@@ -57,7 +53,8 @@ vec2 getRectangleCenter(vec4 rectangle) {
     return vec2(rectangle.x + (rectangle.z / 2.), rectangle.y - (rectangle.w / 2.));
 }
 float ease(float x) {
-    return pow(1.0 - x, 3.0);
+    float t = 1.0 - x;
+    return t * t * t;
 }
 
 // Use this site to convert from HEX to vec4
@@ -78,15 +75,31 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     #if !defined(WEB)
     fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
     #endif
-    // Normalization for fragCoord to a space of -1 to 1;
-    vec2 vu = normalize(fragCoord, 1.);
-    vec2 offsetFactor = vec2(-.5, 0.5);
+
+    // Skip trail geometry once the animation has finished.
+    float progress = clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1.0);
+    if (progress >= 1.0) {
+        return;
+    }
+
+    // Reuse antialiasing width as in KroneCorylus/ghostty-shader-playground
+    // commit 2a39f0b; retain the original coordinate math for trail-edge rounding.
+    float aaWidth = 4.0 / iResolution.y;
+    vec2 vu = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
 
     // Normalization for cursor position and size;
     // cursor xy has the postion in a space of -1 to 1;
     // zw has the width and height
-    vec4 currentCursor = vec4(normalize(iCurrentCursor.xy, 1.), normalize(iCurrentCursor.zw, 0.));
-    vec4 previousCursor = vec4(normalize(iPreviousCursor.xy, 1.), normalize(iPreviousCursor.zw, 0.));
+    vec4 currentCursor = vec4(
+        (iCurrentCursor.xy * 2.0 - iResolution.xy) / iResolution.y,
+        iCurrentCursor.zw * 2.0 / iResolution.y
+    );
+    vec4 previousCursor = vec4(
+        (iPreviousCursor.xy * 2.0 - iResolution.xy) / iResolution.y,
+        iPreviousCursor.zw * 2.0 / iResolution.y
+    );
+    vec2 centerCC = getRectangleCenter(currentCursor);
+    vec2 centerCP = getRectangleCenter(previousCursor);
 
     // When drawing a parellelogram between cursors for the trail i need to determine where to start at the top-left or top-right vertex of the cursor
     float vertexFactor = determineStartVertexFactor(currentCursor.xy, previousCursor.xy);
@@ -98,21 +111,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec2 v2 = vec2(previousCursor.x + currentCursor.z * invertedVertexFactor, previousCursor.y);
     vec2 v3 = vec2(previousCursor.x + currentCursor.z * vertexFactor, previousCursor.y - previousCursor.w);
 
-    float sdfCurrentCursor = getSdfRectangle(vu, currentCursor.xy - (currentCursor.zw * offsetFactor), currentCursor.zw * 0.5);
+    float sdfCurrentCursor = getSdfRectangle(vu, centerCC, currentCursor.zw * 0.5);
     float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
 
-    float progress = clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1.0);
     float easedProgress = ease(progress);
     // Distance between cursors determine the total length of the parallelogram;
-    vec2 centerCC = getRectangleCenter(currentCursor);
-    vec2 centerCP = getRectangleCenter(previousCursor);
     float lineLength = distance(centerCC, centerCP);
 
     vec4 newColor = vec4(fragColor);
     // Draw trail
-    newColor = mix(newColor, TRAIL_COLOR, antialising(sdfTrail));
+    newColor = mix(newColor, TRAIL_COLOR, antialising(sdfTrail, aaWidth));
     // Draw current cursor
-    newColor = mix(newColor, TRAIL_COLOR, antialising(sdfCurrentCursor));
+    newColor = mix(newColor, TRAIL_COLOR, antialising(sdfCurrentCursor, aaWidth));
     newColor = mix(newColor, fragColor, step(sdfCurrentCursor, 0.));
     // newColor = mix(fragColor, newColor, OPACITY);
     fragColor = mix(fragColor, newColor, step(sdfCurrentCursor, easedProgress * lineLength));
