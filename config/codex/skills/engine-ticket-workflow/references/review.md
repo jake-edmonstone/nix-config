@@ -47,7 +47,8 @@ The default timeout is ten minutes; `--timeout <seconds>` changes only that dead
 ## Initial packet
 
 Include the stage/round, approved brief, private guidance paths, this procedure,
-worktree and fixed base, relevant source locations, and scope of the assignment.
+worktree and fixed base, repository style-guide path, relevant source locations,
+and scope of the assignment.
 For design, include the proposed plan and reuse locations. For code, provide the
 candidate fingerprint and neutral verification commands/results. Permit independent
 read-only source exploration. Exclude progress notes, the implementer's defense,
@@ -67,6 +68,21 @@ Both correctness and minimal-diff review matter. Passing tests do not settle
 misinterpreted requirements. Minimal diff does not justify missing tests, dense
 code, or ignoring original coverage. Preserve necessary inheritance even when
 the user generally prefers `final`; do not demand unrelated style normalization.
+Apply the `final` preference only to newly introduced leaf classes and structs.
+Adding `final` to an existing type, even one changed for the ticket, is unwanted
+diff churn.
+
+The patterns reviewer must read the repository's written style guide and check
+new or materially changed code against it independently of formatter results and
+nearby code. For C++ conditionals and loops, inspect both the full condition and
+controlled body against the brace rules: a single-statement body alone does not
+justify omitting braces. Check initialization forms, including explicit temporary
+construction, against the guide's recommendations. Prefer brace initialization
+where recommended and semantics are preserved; check initializer-list overload
+selection and narrowing before changing delimiters. Check other applicable rules
+that the formatter may not enforce, distinguishing recommendations from hard
+requirements. Cite the rule and source for findings; do not expand this check
+into cleanup of untouched code.
 
 ## Resolution and re-review
 

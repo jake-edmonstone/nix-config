@@ -50,6 +50,11 @@ missing inputs before resuming.
 
 Use direct format/lint tools on changed files only. Inspect format changes;
 avoid repository-wide rewrites or a `bazel run` target with unclear side effects.
+Separately inspect new or materially changed code against the written repository
+style guide. Formatter success is not full style compliance: required braces,
+recommended initialization forms and other rules may need manual checks even when
+formatting produces no changes. Check overload selection and narrowing when
+changing initialization syntax; do not apply brace initialization mechanically.
 Checks that require local generated outputs may alter ignored artifacts without
 changing source; distinguish this from changed tracked/untracked candidate files.
 

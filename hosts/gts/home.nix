@@ -6,7 +6,6 @@
 }:
 
 let
-  clangdBuiltinHeaders = "${pkgs.llvmPackages_22.libclang.lib}/lib/clang/${lib.versions.major pkgs.llvmPackages_22.libclang.version}/include";
   engineClangdDrivers = lib.concatStringsSep "," (
     lib.concatMap
       (
@@ -141,12 +140,7 @@ in
       If:
         PathMatch: '/scratch/dev/engine(-[^/]*)?/.*'
       CompileFlags:
-        # Put Clang's intrinsic headers ahead of GCC's explicit -isystem
-        # paths. Disable the implicit entry so it cannot demote this -I
-        # entry back to system-header priority during deduplication.
         Add:
-          - -nobuiltininc
-          - -I${clangdBuiltinHeaders}
           # Avoid a Clang recovery-AST mangling crash in persist.h. This
           # keeps background indexing on, but drops invalid expressions
           # instead of preserving them for editor features.

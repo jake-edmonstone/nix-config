@@ -15,6 +15,9 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/engine-compile-commands"
 ENTRY = {"file": "source.cpp", "directory": "/engine", "arguments": ["gcc", "-c", "source.cpp"]}
+GCC_ROOT = ("external/strike_bazel_tools++strike_cc_configure_extension+strike_cc_gcc15_el9/"
+            "opt/packages/gcc/15.2.0")
+GCC_BUILTINS = GCC_ROOT + "/lib/gcc/x86_64-pc-linux-gnu/15.2.0/include"
 
 
 class EngineCompileCommandsTests(unittest.TestCase):
@@ -157,6 +160,127 @@ class EngineCompileCommandsTests(unittest.TestCase):
         self.assertTrue(database.is_symlink())
         self.assertEqual(original.read_text(), json.dumps([ENTRY]))
         self.assertFalse(self.calls.exists())
+
+    def test_refresh_omits_only_gcc_builtin_headers(self):
+        arguments = ["gcc", "-isystem", GCC_BUILTINS, "-isystem" + GCC_BUILTINS,
+                     "-isystem", GCC_ROOT + "/include/c++/15.2.0", "-isystem", "/usr/include",
+                     "--sysroot=external/strike_sysroot_el9", "-DKEEP=1", "-c", "source.cpp"]
+        entry = dict(ENTRY, arguments=arguments, output="source.o")
+        result = self.run_helper("//core:one", DATABASE=json.dumps([entry]))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        expected = dict(entry, arguments=[arguments[0], *arguments[4:]])
+        self.assertEqual(json.loads((self.worktree / "compile_commands.json").read_text()), [expected])
+
+    def test_normalize_only_is_atomic_idempotent_and_does_not_invoke_bazel(self):
+        database = self.worktree / "compile_commands.json"
+        source = [dict(ENTRY, arguments=["gcc", "-isystem", str(self.worktree / GCC_BUILTINS),
+                                        "-c", "source.cpp"]), ENTRY]
+        database.write_text(json.dumps(source))
+        database.chmod(0o640)
+        result = self.run_helper("--normalize-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Normalized 1 entries", result.stdout)
+        self.assertEqual(json.loads(database.read_text()), [ENTRY, ENTRY])
+        self.assertEqual(database.stat().st_mode & 0o777, 0o640)
+        before = database.stat()
+        result = self.run_helper("--normalize-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Normalized 0 entries", result.stdout)
+        self.assertEqual(database.stat().st_ino, before.st_ino)
+        self.assertEqual(database.stat().st_mtime_ns, before.st_mtime_ns)
+        self.assertFalse(self.calls.exists())
+        package = self.worktree / ".engine-local-compile-commands"
+        self.assertFalse((package / "BUILD.bazel").exists())
+        self.assertFalse(list(package.glob("normalized-*")))
+        self.assertEqual(self.git("-C", str(self.worktree), "status", "--porcelain"), "")
+
+    def test_normalize_only_preserves_invalid_or_missing_database(self):
+        database = self.worktree / "compile_commands.json"
+        result = self.run_helper("--normalize-only")
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(database.exists())
+        entry = dict(ENTRY, arguments=["gcc", "-isystem", GCC_BUILTINS, "source.cpp"])
+        for value in ("[]", "[broken", json.dumps([entry]) + "junk", json.dumps([entry, {}])):
+            with self.subTest(value=value):
+                database.write_text(value)
+                result = self.run_helper("--normalize-only")
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(database.read_text(), value)
+        self.assertFalse(self.calls.exists())
+        self.assertFalse(list((self.worktree / ".engine-local-compile-commands").glob("normalized-*")))
+
+    def test_normalize_only_refuses_tracked_or_symlink_database(self):
+        database = self.worktree / "compile_commands.json"
+        original = self.path / "original.json"
+        original.write_text(json.dumps([ENTRY]))
+        database.symlink_to(original)
+        result = self.run_helper("--normalize-only")
+        self.assertEqual(result.returncode, 1)
+        self.assertTrue(database.is_symlink())
+        database.unlink()
+        database.write_text(original.read_text())
+        self.git("-C", str(self.worktree), "add", "--force", "compile_commands.json")
+        result = self.run_helper("--normalize-only")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("tracked files", result.stderr)
+        self.assertEqual(database.read_text(), original.read_text())
+        self.assertFalse(self.calls.exists())
+
+    def test_gcc_builtin_matching_is_narrow(self):
+        loader = importlib.machinery.SourceFileLoader("engine_compile_commands_flags", str(SCRIPT))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        paths = [GCC_ROOT + "/include/c++/15.2.0", GCC_BUILTINS + "-fixed", GCC_BUILTINS + "/subdir",
+                 "external/dependency/include", "/usr/lib/gcc/x86_64-linux-gnu/15/include",
+                 "/clang/lib/clang/22/include", "project/lib/gcc/target/15/include"]
+        for path in paths:
+            for flags in (["-isystem", path], ["-isystem" + path], ["-I", path], ["-iquote", path]):
+                with self.subTest(flags=flags):
+                    arguments = ["gcc", *flags, "-c", "source.cpp"]
+                    self.assertEqual(module.clangd_arguments(arguments), arguments)
+        for path in (GCC_BUILTINS, GCC_BUILTINS + "/", "./" + GCC_BUILTINS,
+                     GCC_BUILTINS.replace("gcc15_el9", "gcc16_el9").replace("15.2.0", "16.1.0")):
+            for flags in (["-isystem", path], ["-isystem" + path]):
+                with self.subTest(flags=flags):
+                    self.assertEqual(module.clangd_arguments(["gcc", *flags, "-c", "source.cpp"]),
+                                     ["gcc", "-c", "source.cpp"])
+
+    @unittest.skipUnless(os.environ.get("ENGINE_HEADER_WORKTREE") and os.environ.get("ENGINE_HEADER_CLANG"),
+                         "Set ENGINE_HEADER_WORKTREE and ENGINE_HEADER_CLANG for the real-toolchain check")
+    def test_real_toolchain_semaphores_and_intrinsics(self):
+        loader = importlib.machinery.SourceFileLoader("engine_compile_commands_headers", str(SCRIPT))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        root = Path(os.environ["ENGINE_HEADER_WORKTREE"])
+        entry = next(entry for entry in module.database_entries(root / "compile_commands.json")
+                     if entry["file"] == "marketaccess/risk/common/engine_state_v2/engine_state.cpp")
+        arguments = module.clangd_arguments(entry["arguments"])
+        flags = []
+        index = 1
+        while index < len(arguments):
+            argument = arguments[index]
+            if argument == "-isystem":
+                if "strike_bazel_tools" in arguments[index + 1]:
+                    flags.extend(arguments[index:index + 2])
+                index += 2
+                continue
+            if argument.startswith(("-D", "-U", "-std=", "--sysroot=", "-march=")):
+                flags.append(argument)
+            index += 1
+        for headers in (("semaphore", "immintrin.h"), ("immintrin.h", "semaphore")):
+            source = "".join(f"#include <{header}>\n" for header in (*headers, "limits.h", "cstdint",
+                             "atomic", "thread", "future", "condition_variable", "latch", "barrier", "expected"))
+            source += ("static_assert(SEM_VALUE_MAX > 0);\n"
+                       "static_assert(_POSIX_SEM_VALUE_MAX > 0);\n"
+                       "static_assert(std::counting_semaphore<>::max() > 0);\n"
+                       "__m128i twice(__m128i a) { return _mm_add_epi64(a, a); }\n")
+            with self.subTest(headers=headers):
+                result = subprocess.run([os.environ["ENGINE_HEADER_CLANG"], *flags,
+                                         "-Xclang", "-fno-recovery-ast", "-x", "c++", "-fsyntax-only", "-"],
+                                        input=source, cwd=root, capture_output=True, text=True, timeout=20)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_validation_streams_large_database(self):
         loader = importlib.machinery.SourceFileLoader("engine_compile_commands", str(SCRIPT))

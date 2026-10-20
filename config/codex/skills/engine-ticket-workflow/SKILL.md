@@ -50,8 +50,12 @@ but do not change their selection or introduce a profile.
   findings, then stop for explicit user approval of the reviewed plan.
 - The main agent is the sole engine code writer. Preserve pre-existing user edits
   recorded in `baseline.patch`; stop if overlapping changes cannot be safely
-  separated. Avoid unrelated formatting, renaming, cleanup, abstractions, and style
-  normalization. Do not silently change approved scope to satisfy a reviewer.
+  separated. Read and apply the repository's written style guide to new or
+  materially changed code; nearby conventions and a passing formatter do not
+  establish compliance. Avoid unrelated formatting, renaming, cleanup, abstractions,
+  and style normalization. Do not silently change approved scope to satisfy a reviewer.
+  Apply the leaf-type `final` preference only to newly introduced classes and
+  structs; changing an existing type does not justify adding `final`.
 - Read [verification.md](references/verification.md) before builds/tests and when
   asked to verify an existing PR, including its CI suite coverage. Freeze the
   candidate during verification and independent code review. Read

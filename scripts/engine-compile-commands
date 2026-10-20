@@ -4,6 +4,8 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -12,7 +14,12 @@ import tempfile
 ENGINE_REPO = Path("/scratch/dev/engine")
 PACKAGE = ".engine-local-compile-commands"
 OWNER = "engine-compile-commands-v1\n"
-USAGE = "Usage: engine-compile-commands <target>... [-- <Bazel build flags>...]"
+USAGE = ("Usage: engine-compile-commands <target>... [-- <Bazel build flags>...]\n"
+         "       engine-compile-commands --normalize-only (repair the existing database without Bazel)")
+GCC_BUILTIN_INCLUDE = re.compile(
+    r"(?:.*/)?external/strike_bazel_tools[^/]*\+strike_cc_gcc[^/]*/"
+    r"opt/packages/gcc/[^/]+/lib(?:32|64)?/gcc/[^/]+/[^/]+/include"
+)
 REFRESH_RULE = '''load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 
 def _refresh_impl(ctx):
@@ -55,7 +62,7 @@ def git(*args, cwd=None):
     return subprocess.check_output(["git", *args], cwd=cwd, text=True).strip()
 
 
-def validate_database(path):
+def database_entries(path):
     decoder = json.JSONDecoder()
     with path.open() as source:
         buffer = ""
@@ -103,19 +110,69 @@ def validate_database(path):
                 raise ValueError("Compilation database entry has no valid arguments.")
             count += 1
             buffer = buffer[end:]
+            yield entry
         buffer = buffer[1:]
         if token() or not count:
             raise ValueError("Compilation database is empty or has trailing content.")
 
 
-def refresh(targets, flags):
+def validate_database(path):
+    for _ in database_entries(path):
+        pass
+
+
+def clangd_arguments(arguments):
+    result = [arguments[0]]
+    index = 1
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "-isystem" and index + 1 < len(arguments):
+            path = arguments[index + 1]
+            consumed = 2
+        elif argument.startswith("-isystem") and argument != "-isystem":
+            path = argument[len("-isystem"):]
+            consumed = 1
+        else:
+            result.append(argument)
+            index += 1
+            continue
+        if not GCC_BUILTIN_INCLUDE.fullmatch(os.path.normpath(path)):
+            result.extend(arguments[index:index + consumed])
+        index += consumed
+    return result
+
+
+def normalize_database(database, package):
+    fd, name = tempfile.mkstemp(prefix="normalized-", suffix=".json", dir=package)
+    temporary = Path(name)
+    changed = 0
+    try:
+        with os.fdopen(fd, "w") as output:
+            output.write("[\n")
+            for index, entry in enumerate(database_entries(database)):
+                arguments = clangd_arguments(entry["arguments"])
+                changed += arguments != entry["arguments"]
+                entry["arguments"] = arguments
+                if index:
+                    output.write(",\n")
+                json.dump(entry, output, indent=2)
+            output.write("\n]\n")
+        if changed:
+            temporary.chmod(stat.S_IMODE(database.stat().st_mode))
+            os.replace(temporary, database)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return changed
+
+
+def refresh(targets, flags, normalize_only=False):
     root = Path(git("rev-parse", "--show-toplevel"))
     common = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir"))
     engine_common = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir", cwd=ENGINE_REPO))
     if common.resolve() != engine_common.resolve():
         raise ValueError("Run this command inside an engine checkout or worktree.")
-    if git("ls-files", "--", PACKAGE, cwd=root):
-        raise ValueError("The private refresh package contains tracked files; refusing to modify it.")
+    if git("ls-files", "--", PACKAGE, "compile_commands.json", cwd=root):
+        raise ValueError("The private refresh package or database contains tracked files; refusing to modify it.")
     package = root / PACKAGE
     marker = package / ".owner"
     if package.is_symlink() or (package.exists() and
@@ -132,6 +189,13 @@ def refresh(targets, flags):
     marker.write_text(OWNER)
     with (package / ".lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        database = root / "compile_commands.json"
+        if database.is_symlink() or (database.exists() and not database.is_file()):
+            raise ValueError("Refusing to replace a compilation database that is not a regular file.")
+        if normalize_only:
+            changed = normalize_database(database, package)
+            print(f"Normalized {changed} entries in {database}; no Bazel invocation.")
+            return
         build = (
             'load(":refresh.bzl", "refresh_script")\n\n'
             "refresh_script(\n"
@@ -150,9 +214,6 @@ def refresh(targets, flags):
         )
         (package / "refresh.bzl").write_text(REFRESH_RULE)
         (package / "BUILD.bazel").write_text(build)
-        database = root / "compile_commands.json"
-        if database.is_symlink() or (database.exists() and not database.is_file()):
-            raise ValueError("Refusing to replace a compilation database that is not a regular file.")
         backup = None
         if database.exists():
             fd, name = tempfile.mkstemp(prefix="previous-", suffix=".json", dir=package)
@@ -165,7 +226,7 @@ def refresh(targets, flags):
                 raise
         try:
             subprocess.run(["bazel", "run", f"//{PACKAGE}:refresh", "--", *flags], cwd=root, check=True)
-            validate_database(database)
+            normalize_database(database, package)
         except BaseException:
             if backup is not None:
                 try:
@@ -184,6 +245,13 @@ def main(argv):
     if argv == ["--help"] or argv == ["-h"]:
         print(USAGE)
         return 0
+    if argv == ["--normalize-only"]:
+        try:
+            refresh([], [], normalize_only=True)
+            return 0
+        except (OSError, ValueError) as error:
+            print(f"engine-compile-commands: {error}", file=sys.stderr)
+            return 1
     separator = argv.index("--") if "--" in argv else len(argv)
     targets = argv[:separator]
     flags = argv[separator + 1:]
