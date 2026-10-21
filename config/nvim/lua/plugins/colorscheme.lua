@@ -25,6 +25,9 @@ local overrides = {
   MiniFilesBorder = { bg = "NONE" },
   TreesitterContextBottom = { underline = true, sp = palette.comment },
   LualineModified = { fg = yellow, bold = true },
+  SnacksDiffAddLineNr = { fg = palette.green, bg = "NONE" },
+  SnacksDiffDeleteLineNr = { fg = palette.red, bg = "NONE" },
+  SnacksDiffContextLineNr = { fg = palette.comment, bg = "NONE" },
 }
 
 if is_dark then
