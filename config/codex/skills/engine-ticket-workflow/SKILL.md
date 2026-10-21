@@ -56,6 +56,13 @@ but do not change their selection or introduce a profile.
   and style normalization. Do not silently change approved scope to satisfy a reviewer.
   Apply the leaf-type `final` preference only to newly introduced classes and
   structs; changing an existing type does not justify adding `final`.
+  Make newly introduced variables and read-only member functions `const` wherever
+  their intended use permits it. Check actual mutation and interfaces, including
+  structured bindings; preserve necessary mutation, moves and assignability.
+  Prefer `constexpr` over `const` for new variable declarations when the existing
+  initialization permits it and semantics are preserved. Do not add declarations,
+  extract literals or restructure code solely to use `constexpr`.
+  Do not add `const` or `constexpr` to pre-existing declarations as part of another edit.
 - Read [verification.md](references/verification.md) before builds/tests and when
   asked to verify an existing PR, including its CI suite coverage. Freeze the
   candidate during verification and independent code review. Read
@@ -65,7 +72,9 @@ but do not change their selection or introduce a profile.
 - Stop after three unsuccessful fix/review rounds per stage, or sooner for an
   unresolved design dispute, and ask the user. Report uncertainty instead of
   manufacturing confidence or endlessly optimizing the patch.
-- Present the final diff, verification evidence, unresolved risks, and `pr-draft.md`
+- Before drafting or suggesting a PR title/body, including in chat, apply the
+  repository-guideline check in [records.md](references/records.md#pr-drafts).
+  Present the final diff, verification evidence, unresolved risks, and `pr-draft.md`
   for final user approval. Never commit, push, open/change a PR, deploy, or perform
   live trading actions. Keep a reviewed candidate unchanged while awaiting approval.
 

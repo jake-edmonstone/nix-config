@@ -72,6 +72,17 @@ Apply the `final` preference only to newly introduced leaf classes and structs.
 Adding `final` to an existing type, even one changed for the ticket, is unwanted
 diff churn.
 
+Check newly introduced variable declarations, including structured/loop bindings,
+and newly introduced member functions for const-correctness. Require const where
+their intended use permits it, and justify mutable exceptions from actual writes,
+called interfaces, move behavior or assignability. Nearby non-const code is not
+a reason to omit const from new declarations. Do not demand const additions to
+pre-existing variables or methods, even in otherwise changed code.
+For new variable declarations, prefer constexpr over const when the existing
+initialization permits it and semantics are preserved. Do not request additional
+declarations, literal extraction or restructuring solely to use constexpr, or
+constexpr upgrades to pre-existing declarations.
+
 The patterns reviewer must read the repository's written style guide and check
 new or materially changed code against it independently of formatter results and
 nearby code. For C++ conditionals and loops, inspect both the full condition and

@@ -190,6 +190,19 @@ rather than growing a transcript of all tickets.
 - `pr-draft.md`: the final proposed title/body, full Jira link, change summary,
   verification and known limits, consistent with the engine PR guidelines.
 
+### PR drafts
+
+Before writing or suggesting a PR title/body, including a chat-only recommendation,
+read the repository's current PR and commit-message guidelines (start with the root
+README). Check the required title format, component prefix and issue-link placement
+against that source. A ticket title, Jira key or earlier draft does not establish
+the required format. Apply this check again when revising a draft, and keep the
+saved `pr-draft.md` consistent with the final suggestion. Keep repository-specific
+rules and ticket content in private records rather than copying them into this
+generic workflow.
+
+### Approval and evidence records
+
 Record the user's explicit brief, plan and final approvals with date and scope.
 Absence of a reply or a passing review is not approval. These are conversational
 gates, independent of the CLI's shell approval policy. Until a gate is approved,
