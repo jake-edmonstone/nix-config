@@ -7,11 +7,7 @@
 let
   theme = import ../theme.nix;
 
-  ankiConnectSrc = pkgs.fetchgit {
-    url = "https://git.sr.ht/~foosoft/anki-connect";
-    rev = "25.11.9.0";
-    hash = "sha256-cnAH4qIuxSJIM7vmSDU+eppnRi6Out9oSWHBHKCGLZI=";
-  };
+  ankiConnectSrc = pkgs.ankiAddons.anki-connect.src;
 
   # AnkiWeb shared addon 688199788 is AnKing-VIP/AnkiRecolor ("ReColor"), a
   # Python addon that restyles Anki's Qt + card chrome. The addon directory
@@ -19,12 +15,7 @@ let
   # color choices. Previously we deployed only meta.json, which is why the
   # theme never applied — without __init__.py + support files, Anki reads
   # the metadata but has no code to execute.
-  ankiRecolorSrc = pkgs.fetchFromGitHub {
-    owner = "AnKing-VIP";
-    repo = "AnkiRecolor";
-    rev = "3.3"; # latest release (2025-08-11); matches version pinned in meta.json
-    hash = "sha256-TbDUVCfqDXQmCwRgDW+hLZPfIElQAW2wFFgWOc3iKiU=";
-  };
+  ankiRecolorSrc = pkgs.ankiAddons.recolor.src;
 
   # Merge upstream's src/addon/ with our selected-palette meta.json into one
   # deploy-ready directory. Activation copies it into Anki's writable addon
