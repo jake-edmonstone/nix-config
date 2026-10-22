@@ -13,7 +13,7 @@ return {
   { "jay-babu/mason-nvim-dap.nvim", enabled = false },
   {
     "mfussenegger/nvim-dap",
-    config = function()
+    opts = function()
       local dap = require("dap")
 
       -- GDB 14+ implements DAP directly; Nix supplies GDB 17.2 on Linux.
@@ -51,22 +51,6 @@ return {
       -- User-specific project profiles live in this configuration repository,
       -- so they do not create untracked files in source checkouts.
       require("local.engine_dap").configure(dap)
-
-      vim.api.nvim_set_hl(0, "DapStoppedLine", { default = true, link = "Visual" })
-      for name, sign in pairs(LazyVim.config.icons.dap) do
-        sign = type(sign) == "table" and sign or { sign }
-        vim.fn.sign_define(
-          "Dap" .. name,
-          { text = sign[1], texthl = sign[2] or "DiagnosticInfo", linehl = sign[3], numhl = sign[3] }
-        )
-      end
-
-      -- Keep LazyVim's launch.json support, including JSON-with-comments files.
-      local vscode = require("dap.ext.vscode")
-      local json = require("plenary.json")
-      vscode.json_decode = function(str)
-        return vim.json.decode(json.json_strip_comments(str))
-      end
     end,
   },
 }
