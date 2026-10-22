@@ -137,11 +137,13 @@ class EngineCompileCommandsTests(unittest.TestCase):
         database = self.worktree / "compile_commands.json"
         original = json.dumps([dict(ENTRY, file="original.cpp")])
         for env in ({"BAZEL_EXIT": "1"}, {"NO_DATABASE": "1"}, {"DATABASE": "[]"}, {"DATABASE": "[broken"},
-                    {"DATABASE": "[{}]"}, {"DATABASE": json.dumps([ENTRY]) + "junk"}):
+                    {"DATABASE": "[{}]"}, {"DATABASE": json.dumps([dict(ENTRY, directory=None)])},
+                    {"DATABASE": json.dumps([ENTRY]) + "junk"}):
             with self.subTest(env=env):
                 database.write_text(original)
                 result = self.run_helper("//core:one", **env)
                 self.assertEqual(result.returncode, 1)
+                self.assertNotIn("Traceback", result.stderr)
                 self.assertEqual(database.read_text(), original)
                 self.assertFalse(list((self.worktree / ".engine-local-compile-commands").glob("previous-*")))
 
@@ -290,10 +292,13 @@ class EngineCompileCommandsTests(unittest.TestCase):
         database = self.path / "large.json"
         database.write_text(json.dumps([dict(ENTRY, file="x" * 100000), ENTRY]))
         module.validate_database(database)
-        for value in ("[]", "[", "{}", "[1]", json.dumps([ENTRY])[:-1] + ",]", "[{}]"):
+        for value, error in (("[]", ValueError), ("[", ValueError), ("{}", ValueError),
+                             ("[1]", TypeError), (json.dumps([ENTRY])[:-1] + ",]", ValueError),
+                             ("[{}]", TypeError), (json.dumps([dict(ENTRY, file=42)]), TypeError),
+                             (json.dumps([dict(ENTRY, directory=None)]), TypeError)):
             with self.subTest(value=value):
                 database.write_text(value)
-                with self.assertRaises(ValueError):
+                with self.assertRaises(error):
                     module.validate_database(database)
 
     def test_restore_failure_keeps_original_backup(self):

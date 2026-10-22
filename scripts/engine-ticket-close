@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+export LC_ALL=C
+
+engine_repo=/scratch/dev/engine
+dev_root=/scratch/dev
+
+die() {
+  printf 'engine-ticket-close: %s\n' "$*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: engine-ticket-close [slug-or-worktree-name-or-path]
+
+Remove the current or named engine ticket worktree and its tmux session.
+Accepts both olog-tpa and engine-olog-tpa, or an explicit worktree path.
+Always asks for confirmation. Keeps the branch, ticket records, and shared caches.
+Tracked edits and untracked non-ignored files must be dealt with first.
+EOF
+}
+
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  usage
+  exit 0
+fi
+(($# <= 1)) || die 'Expected at most one workspace.'
+[[ ${1:-} != -* ]] || die "Unknown option: $1"
+for tool in git tmux realpath sort; do
+  command -v "$tool" >/dev/null 2>&1 || die "Required command is unavailable: $tool"
+done
+
+[[ $(git -C "$engine_repo" rev-parse --show-toplevel) == "$engine_repo" ]] \
+  || die "Engine repository root is not $engine_repo."
+common_dir=$(git -C "$engine_repo" rev-parse --path-format=absolute --git-common-dir)
+
+if (($# == 0)); then
+  worktree=$(git rev-parse --show-toplevel) || die 'Run inside a ticket worktree or provide its slug or path.'
+elif [[ $1 == */* || $1 == . || $1 == .. ]]; then
+  worktree=$(realpath -ms -- "$1")
+elif [[ $1 == engine-* ]]; then
+  worktree="$dev_root/$1"
+  slug_worktree="$dev_root/engine-$1"
+  if [[ -e $slug_worktree || -L $slug_worktree ]]; then
+    [[ ! -e $worktree && ! -L $worktree ]] || die 'Workspace name is ambiguous; provide its explicit path.'
+    worktree=$slug_worktree
+  fi
+else
+  worktree="$dev_root/engine-$1"
+fi
+
+[[ $worktree == "$dev_root"/engine-* && ${worktree##*/} =~ ^engine-[a-z0-9]+(-[a-z0-9]+)*$ ]] \
+  || die 'Only ticket worktrees directly under the engine development directory can be removed.'
+[[ ${worktree%/*} == "$dev_root" && $worktree != "$engine_repo" ]] \
+  || die 'The main checkout and nested paths cannot be removed.'
+[[ -d $worktree && $(realpath -e -- "$worktree") == "$worktree" ]] \
+  || die "Worktree is missing or its path contains a symlink: $worktree"
+slug=${worktree##*/engine-}
+
+check_worktree() {
+  local field registered=false selected=false submodules status
+  [[ -d $worktree && ! -L $worktree && $(realpath -e -- "$worktree") == "$worktree" ]] \
+    || die 'Worktree path changed or became a symlink.'
+  [[ $(git -C "$worktree" rev-parse --show-toplevel) == "$worktree" &&
+     $(git -C "$worktree" rev-parse --path-format=absolute --git-common-dir) == "$common_dir" ]] \
+    || die 'Target is not a worktree of the configured engine repository.'
+  while IFS= read -r -d '' field; do
+    case $field in
+      'worktree '*)
+        selected=false
+        if [[ ${field#worktree } == "$worktree" ]]; then
+          selected=true
+          registered=true
+        fi
+        ;;
+      locked*)
+        [[ $selected == false ]] || die 'Worktree is locked; unlock it explicitly before cleanup.'
+        ;;
+    esac
+  done < <(git -C "$engine_repo" worktree list --porcelain -z)
+  [[ $registered == true ]] || die 'Target is not a registered engine worktree.'
+  submodules=$(git -C "$worktree" submodule status --recursive) || die 'Could not inspect submodules.'
+  while IFS= read -r field; do
+    [[ -z $field || $field == -* ]] || die 'Initialized submodules must be dealt with before cleanup.'
+  done <<< "$submodules"
+  status=$(git -C "$worktree" status --porcelain=v1 --untracked-files=all --ignore-submodules=none) \
+    || die 'Could not inspect worktree changes.'
+  if [[ -n $status ]]; then
+    printf '%s\n' "$status" >&2
+    die 'Worktree has tracked edits or untracked files; nothing was removed.'
+  fi
+}
+
+find_session() {
+  local sessions id name metadata paths path confirmed panes
+  session_id=
+  session_name=
+  session_panes=
+  if ! sessions=$(tmux list-sessions -F '#{session_id}' 2>&1); then
+    case $sessions in
+      'no server running on '* | 'error connecting to '*' (No such file or directory)') return ;;
+      *) die "Could not inspect tmux sessions: $sessions" ;;
+    esac
+  fi
+  while IFS= read -r id; do
+    [[ -n $id ]] || continue
+    name=$(tmux display-message -p -t "$id" '#{session_name}') || die 'A tmux session changed during inspection.'
+    metadata=$(tmux show-options -qv -t "$id" @engine_ticket_worktree) || die 'Could not inspect tmux metadata.'
+    if [[ $name == "$slug" && -n $metadata && $metadata != "$worktree" ]]; then
+      die "Session $name points at a different worktree."
+    fi
+    if [[ $metadata == "$worktree" || ( $name == "$slug" && -z $metadata ) ]]; then
+      if [[ -z $metadata ]]; then
+        confirmed=false
+        paths=$(tmux list-panes -s -t "$id" -F '#{pane_current_path}') || die 'Could not inspect legacy session panes.'
+        while IFS= read -r path; do
+          if [[ $path == "$worktree" || $path == "$worktree/"* ]]; then
+            confirmed=true
+          fi
+        done <<< "$paths"
+        [[ $confirmed == true ]] || die "Legacy session $name has no pane in the worktree; association is uncertain."
+      fi
+      [[ -z $session_id ]] || die 'Multiple tmux sessions refer to this worktree.'
+      panes=$(tmux list-panes -s -t "$id" -F '  #{window_name}:#{pane_index}  #{pane_current_command}  #{pane_current_path}') \
+        || die 'Could not inspect session programs.'
+      session_id=$id
+      session_name=$name
+      session_panes=$panes
+    fi
+  done <<< "$sessions"
+}
+
+ignored_files() {
+  git -C "$worktree" -c core.quotePath=true ls-files --others --ignored --exclude-standard --directory
+}
+
+check_worktree
+branch=$(git -C "$worktree" symbolic-ref --quiet --short HEAD) || die 'Detached HEAD worktrees must be handled manually.'
+head=$(git -C "$worktree" rev-parse HEAD)
+ignored=$(ignored_files) || die 'Could not inspect ignored files.'
+find_session
+original_session=$session_id
+original_name=$session_name
+
+printf 'Worktree: %s\nBranch:   %s (kept)\nSession:  %s\n' "$worktree" "$branch" "${session_name:-none}"
+if [[ -n $session_id ]]; then
+  printf '%s\n' "$session_panes"
+  printf '\nClosing the session terminates its programs, including any unsaved editor buffers.\n'
+  printf 'Attached clients will move to another session, or detach if no other session remains.\n'
+fi
+printf '\nIgnored paths to remove with the worktree (symlink destinations are kept):\n%s\n' "${ignored:-(none)}"
+printf '\nThe branch, saved ticket records, and shared caches will NOT be removed.\n'
+[[ -t 0 ]] || die 'Confirmation requires an interactive terminal; nothing was removed.'
+read -r -p 'Type yes to remove this worktree and close its session: ' answer || die 'Confirmation cancelled.'
+[[ $answer == yes ]] || die 'Cancelled; nothing was removed.'
+
+find_session
+[[ $session_id == "$original_session" && $session_name == "$original_name" ]] \
+  || die 'The associated session changed after the preview; run again.'
+check_worktree
+current_ignored=$(ignored_files) || die 'Could not recheck ignored files.'
+[[ $(git -C "$worktree" symbolic-ref --quiet --short HEAD) == "$branch" &&
+   $(git -C "$worktree" rev-parse HEAD) == "$head" && $current_ignored == "$ignored" ]] \
+  || die 'The branch, commit, or ignored paths changed after the preview; run again.'
+
+cd "$engine_repo"
+git worktree remove -- "$worktree" || die 'Git could not remove the worktree; its tmux session was left running.'
+printf 'Removed %s. Branch %s was kept.\n' "$worktree" "$branch"
+
+if [[ -n $session_id ]]; then
+  destinations=$(tmux list-sessions -F '#{session_activity} #{session_id}') \
+    || die 'Worktree removed, but tmux inspection failed; the session was not closed.'
+  destination=
+  while read -r _activity id; do
+    if [[ $id != "$session_id" ]]; then
+      destination=$id
+      break
+    fi
+  done < <(printf '%s\n' "$destinations" | sort -rn)
+  clients=$(tmux list-clients -F '#{client_name}|#{session_id}') \
+    || die 'Worktree removed, but client inspection failed; the session was not closed.'
+  if [[ -n $destination ]]; then
+    while IFS='|' read -r client attached_session; do
+      if [[ -n $client && $attached_session == "$session_id" ]]; then
+        tmux switch-client -c "$client" -t "$destination" \
+          || die 'Worktree removed, but a client could not be switched; the session was not closed.'
+      fi
+    done <<< "$clients"
+  fi
+  printf 'Closing tmux session %s.\n' "$session_name"
+  tmux kill-session -t "$session_id" || die 'Worktree removed, but its tmux session could not be closed.'
+fi

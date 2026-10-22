@@ -46,6 +46,8 @@ in
         stylua
         pyright
         ruff
+        bash-language-server
+        shellcheck
         shfmt
         tinymist
         websocat

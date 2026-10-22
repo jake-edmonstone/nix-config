@@ -3,13 +3,12 @@
 import fcntl
 import json
 import os
-from pathlib import Path
 import re
 import stat
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 ENGINE_REPO = Path("/scratch/dev/engine")
 PACKAGE = ".engine-local-compile-commands"
@@ -101,9 +100,9 @@ def database_entries(path):
                         raise
                     refill()
             if not isinstance(entry, dict) or not isinstance(entry.get("file"), str):
-                raise ValueError("Compilation database entry has no source file.")
+                raise TypeError("Compilation database entry has no source file.")
             if not isinstance(entry.get("directory"), str):
-                raise ValueError("Compilation database entry has no working directory.")
+                raise TypeError("Compilation database entry has no working directory.")
             arguments = entry.get("arguments")
             if not (isinstance(arguments, list) and arguments
                     and all(isinstance(arg, str) for arg in arguments)):
@@ -249,7 +248,7 @@ def main(argv):
         try:
             refresh([], [], normalize_only=True)
             return 0
-        except (OSError, ValueError) as error:
+        except (OSError, TypeError, ValueError) as error:
             print(f"engine-compile-commands: {error}", file=sys.stderr)
             return 1
     separator = argv.index("--") if "--" in argv else len(argv)
@@ -263,7 +262,7 @@ def main(argv):
     try:
         refresh(targets, flags)
         return 0
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+    except (OSError, TypeError, ValueError, subprocess.CalledProcessError) as error:
         print(f"engine-compile-commands: {error}", file=sys.stderr)
         return 1
 
