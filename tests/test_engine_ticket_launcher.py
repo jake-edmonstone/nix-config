@@ -1,12 +1,11 @@
 import json
 import os
-from pathlib import Path
 import shlex
 import subprocess
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,7 +47,7 @@ class EngineTicketLauncherTests(unittest.TestCase):
             env["MOCK_ENGINE_REPO"] = str(engine)
             result = subprocess.run(
                 ["bash", str(script), "EVAL-9999", path.name],
-                env=env, capture_output=True, text=True, timeout=5,
+                env=env, capture_output=True, text=True, timeout=5, check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             events = [json.loads(line) for line in calls.read_text().splitlines()]

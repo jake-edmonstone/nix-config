@@ -1,16 +1,14 @@
-import argparse
-from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
 import io
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from unittest import mock
-
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[1]
@@ -18,6 +16,7 @@ SKILL = REPO / "config/codex/skills/engine-ticket-workflow"
 SCRIPT = SKILL / "scripts/jira.py"
 sys.path.insert(0, str(SCRIPT.parent))
 SPEC = importlib.util.spec_from_file_location("engine_ticket_jira", SCRIPT)
+assert SPEC is not None and SPEC.loader is not None
 jira = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(jira)
 
@@ -47,7 +46,7 @@ class JiraTests(unittest.TestCase):
     def args(self, *args):
         return jira.parser().parse_args(["--data-dir", str(self.data), "--cloud-id", "fixture-cloud", *args])
 
-    def response(self, data, *, status=200, sse=False, result=None, request_id=1):
+    def response(self, data, *, status=200, sse=False, result=None, request_id: int | str = 1):
         result = result if result is not None else {"isError": False, "content": [{"type": "text", "text": json.dumps({"data": data})}]}
         body = json.dumps({"jsonrpc": "2.0", "id": request_id, "result": result})
         if sse:
@@ -56,9 +55,12 @@ class JiraTests(unittest.TestCase):
 
     def run_main(self, *args, response=None, side_effect=None):
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(jira.subprocess, "run", return_value=response or self.response(self.issue), side_effect=side_effect) as run:
-            with redirect_stdout(out), redirect_stderr(err):
-                code = jira.main(["--data-dir", str(self.data), "--cloud-id", "fixture-cloud", *args])
+        with (
+            mock.patch.object(jira.subprocess, "run", return_value=response or self.response(self.issue), side_effect=side_effect) as run,
+            redirect_stdout(out),
+            redirect_stderr(err),
+        ):
+            code = jira.main(["--data-dir", str(self.data), "--cloud-id", "fixture-cloud", *args])
         return code, out.getvalue(), err.getvalue(), run
 
     def test_operations_and_defaults(self):
@@ -241,7 +243,7 @@ class JiraTests(unittest.TestCase):
             self.sleep.reset_mock()
             failure = subprocess.CompletedProcess([], 0, "Unavailable" + jira.STATUS_MARKER + str(status) + "\n", "")
             with self.subTest(status=status):
-                code, out, err, run = self.run_main("issue", "CE-1668", side_effect=[failure, self.response(self.issue)])
+                code, _, err, run = self.run_main("issue", "CE-1668", side_effect=[failure, self.response(self.issue)])
                 self.assertEqual(code, 0, err)
                 self.assertEqual(run.call_count, 2)
                 self.sleep.assert_called_once_with(1)
@@ -288,7 +290,7 @@ class JiraTests(unittest.TestCase):
             self.sleep.reset_mock()
             failure = subprocess.CompletedProcess([], 28, body + jira.STATUS_MARKER + "200\n", "")
             with self.subTest(body=body):
-                code, out, err, run = self.run_main("issue", "CE-1668", response=failure)
+                code, _, _, run = self.run_main("issue", "CE-1668", response=failure)
                 self.assertEqual(code, 1)
                 run.assert_called_once()
                 self.sleep.assert_not_called()
@@ -359,7 +361,7 @@ class JiraTests(unittest.TestCase):
         path.write_text("# Existing evidence\nUser note.\n")
         self.issue.update(appliedContentFormat="html")
         self.issue["fields"]["description"] = '<p>Rich text</p>\n```\n````'
-        code, out, err, _ = self.run_main("issue", "CE-1668", "--view", "full")
+        code, _, err, _ = self.run_main("issue", "CE-1668", "--view", "full")
         self.assertEqual(code, 0, err)
         content = path.read_text()
         self.assertTrue(content.startswith("# Existing evidence\nUser note.\n"))
@@ -401,7 +403,7 @@ class JiraTests(unittest.TestCase):
     def test_invalid_results_cannot_create_ticket_paths(self):
         for args, data in [(("issue", "CE-1668"), {"key": "CE-9999"}), (("search", "query"), {"issues": [{"key": "../../escape", "fields": {"summary": "Bad"}}]}), (("comments", "CE-1668"), {}), (("resources",), {})]:
             with self.subTest(args=args):
-                code, out, err, _ = self.run_main(*args, response=self.response(data))
+                code, out, _, _ = self.run_main(*args, response=self.response(data))
                 self.assertEqual(code, 1)
                 self.assertEqual(out, "")
                 self.assertFalse(self.data.exists())

@@ -1,17 +1,22 @@
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LAUNCHER = ROOT / "scripts/gts/codex-vdi"
 PROXY_VARIABLES = (
-    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
-    "http_proxy", "https_proxy", "all_proxy", "no_proxy",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
 )
 
 
@@ -36,7 +41,11 @@ class CodexVdiTests(unittest.TestCase):
         mock.chmod(0o700)
         for command in ("systemctl", "curl", "codex"):
             (self.path / command).symlink_to(mock)
-        self.env = {key: value for key, value in os.environ.items() if key not in PROXY_VARIABLES}
+        self.env = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in PROXY_VARIABLES
+        }
         self.env["PATH"] = str(self.path) + os.pathsep + self.env["PATH"]
         self.env["MOCK_CALLS"] = str(self.calls)
 
@@ -47,6 +56,7 @@ class CodexVdiTests(unittest.TestCase):
             capture_output=True,
             text=True,
             timeout=5,
+            check=False,
         )
 
     def read_calls(self):
@@ -65,14 +75,20 @@ class CodexVdiTests(unittest.TestCase):
                 self.assertEqual(len(calls), 1)
                 self.assertEqual(calls[0]["command"], "codex")
                 self.assertEqual(calls[0]["args"], [argument])
-                self.assertTrue(all(value is None for value in calls[0]["env"].values()))
+                self.assertTrue(
+                    all(value is None for value in calls[0]["env"].values())
+                )
 
     def test_starts_service_before_checking_and_launching(self):
         result = self.run_launcher()
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.read_calls()
-        self.assertEqual([call["command"] for call in calls], ["systemctl", "curl", "codex"])
-        self.assertEqual(calls[0]["args"], ["--user", "start", "codex-vdi-proxy.service"])
+        self.assertEqual(
+            [call["command"] for call in calls], ["systemctl", "curl", "codex"]
+        )
+        self.assertEqual(
+            calls[0]["args"], ["--user", "start", "codex-vdi-proxy.service"]
+        )
         self.assertTrue(all(value is None for value in calls[0]["env"].values()))
 
     def test_service_failure_stops_before_network_or_codex(self):
@@ -84,8 +100,10 @@ class CodexVdiTests(unittest.TestCase):
     def test_network_failure_stops_before_codex(self):
         result = self.run_launcher(MOCK_CURL_EXIT="7")
         self.assertEqual(result.returncode, 1)
-        self.assertEqual([call["command"] for call in self.read_calls()], ["systemctl", "curl"])
-        self.assertIn('SSH tunnel in your Windows VDI terminal', result.stderr)
+        self.assertEqual(
+            [call["command"] for call in self.read_calls()], ["systemctl", "curl"]
+        )
+        self.assertIn("SSH tunnel in your Windows VDI terminal", result.stderr)
 
     def test_tls_failure_does_not_fall_back_to_direct_access(self):
         result = self.run_launcher(MOCK_CURL_EXIT="60")
@@ -95,7 +113,9 @@ class CodexVdiTests(unittest.TestCase):
     def test_probe_uses_proxy_but_keeps_tls_checks_and_accepts_http_challenge(self):
         self.assertEqual(self.run_launcher().returncode, 0)
         arguments = self.read_calls()[1]["args"]
-        self.assertEqual(arguments[arguments.index("--proxy") + 1], "http://127.0.0.1:18181")
+        self.assertEqual(
+            arguments[arguments.index("--proxy") + 1], "http://127.0.0.1:18181"
+        )
         self.assertEqual(arguments[arguments.index("--noproxy") + 1], "")
         self.assertEqual(arguments[-1], "https://chatgpt.com/")
         for forbidden in ("--fail", "--insecure", "-k"):
@@ -112,7 +132,9 @@ class CodexVdiTests(unittest.TestCase):
         self.assertIn(".striketechnologies.com", env["NO_PROXY"].split(","))
 
     def test_preserves_existing_bypass_entries(self):
-        result = self.run_launcher(NO_PROXY="internal.example", no_proxy="another.example")
+        result = self.run_launcher(
+            NO_PROXY="internal.example", no_proxy="another.example"
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         bypass = self.read_calls()[-1]["env"]["NO_PROXY"].split(",")
         self.assertIn("internal.example", bypass)
@@ -131,13 +153,21 @@ class CodexVdiTests(unittest.TestCase):
         arguments = self.read_calls()[-1]["args"]
         self.assertEqual(arguments[0], "--no-daemon")
         for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"):
-            self.assertIn(f'shell_environment_policy.filters.{key}="exclude"', arguments)
+            self.assertIn(
+                f'shell_environment_policy.filters.{key}="exclude"', arguments
+            )
 
     def test_preserves_resume_arguments_and_quoting(self):
-        args = ("resume", "a-session-id", "a prompt with spaces", "--model", "gpt-6.1-sol")
+        args = (
+            "resume",
+            "a-session-id",
+            "a prompt with spaces",
+            "--model",
+            "gpt-6.1-sol",
+        )
         result = self.run_launcher(*args)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.read_calls()[-1]["args"][-len(args):], list(args))
+        self.assertEqual(self.read_calls()[-1]["args"][-len(args) :], list(args))
 
     def test_preserves_codex_exit_code(self):
         self.assertEqual(self.run_launcher(MOCK_CODEX_EXIT="23").returncode, 23)
@@ -148,7 +178,9 @@ class CodexVdiTests(unittest.TestCase):
         self.assertEqual(dict(os.environ), before)
 
     def test_shell_syntax(self):
-        result = subprocess.run(["bash", "-n", str(LAUNCHER)], capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", "-n", str(LAUNCHER)], capture_output=True, text=True, check=False
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
 
 

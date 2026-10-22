@@ -1,18 +1,17 @@
-import fcntl
 import argparse
 import errno
+import fcntl
 import importlib.util
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
 import tomllib
 import unittest
+from pathlib import Path
 from unittest import mock
-
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[1]
@@ -65,7 +64,7 @@ class WorkflowTests(unittest.TestCase):
         return [sys.executable, str(SCRIPT), "--engine-repo", str(self.engine), "--data-dir", str(self.data), "--log-dir", str(self.logs), "--bazel-bin", str(self.mock), *args]
 
     def run_helper(self, *args, cwd=None, env=None, check=True):
-        result = subprocess.run(self.invocation(*args), cwd=cwd or self.engine, env={**os.environ, **(env or {})}, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(self.invocation(*args), cwd=cwd or self.engine, env={**os.environ, **(env or {})}, capture_output=True, text=True, timeout=10, check=False)
         if check:
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         return result
@@ -271,6 +270,7 @@ class WorkflowTests(unittest.TestCase):
             fcntl.flock(lock, fcntl.LOCK_EX)
             process = subprocess.Popen(self.invocation("bazel", self.key, "--", "build", "//fixture:lib"), cwd=self.engine, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             self.addCleanup(lambda: process.kill() if process.poll() is None else None)
+            assert process.stdout is not None
             self.assertIn("Waiting", process.stdout.readline())
             self.git("branch", "-m", "CE-1234/developer/other")
             fcntl.flock(lock, fcntl.LOCK_UN)
@@ -376,6 +376,7 @@ class WorkflowTests(unittest.TestCase):
     def test_evidence_disk_failure_does_not_report_verification_success(self):
         path = self.initialize()
         spec = importlib.util.spec_from_file_location("helper", SCRIPT)
+        assert spec is not None and spec.loader is not None
         helper = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(helper)
         args = argparse.Namespace(ticket=self.key, data_dir=self.data, log_dir=self.logs,
@@ -385,9 +386,12 @@ class WorkflowTests(unittest.TestCase):
             if file == path / "verification.md":
                 raise OSError(errno.ENOSPC, "No space left on device")
             return original(file)
-        with mock.patch.object(helper, "private_append", side_effect=append), mock.patch.object(helper, "engine_workspace", return_value=(self.engine, f"{self.key}/developer/fixture")):
-            with self.assertRaises(OSError):
-                helper.run_bazel(args, self.engine, path, self.git("rev-parse", "HEAD"))
+        with (
+            mock.patch.object(helper, "private_append", side_effect=append),
+            mock.patch.object(helper, "engine_workspace", return_value=(self.engine, f"{self.key}/developer/fixture")),
+            self.assertRaises(OSError),
+        ):
+            helper.run_bazel(args, self.engine, path, self.git("rev-parse", "HEAD"))
         self.assertEqual(len(list(self.logs.glob("*/*.log"))), 1)
         self.assertNotIn("Result: passing", (path / "verification.md").read_text())
 
@@ -419,7 +423,7 @@ class WorkflowTests(unittest.TestCase):
 
     def run_review_fixture(self, invocation, **env):
         return subprocess.run(invocation, cwd=self.engine, capture_output=True, text=True, timeout=8,
-                              env={**os.environ, "CAPTURE": str(self.root / "launch.json"), **env})
+                              env={**os.environ, "CAPTURE": str(self.root / "launch.json"), **env}, check=False)
 
     def test_review_launches_both_roles_at_standard_with_independent_stdin_packets(self):
         for role, model, effort in [("engine_correctness_reviewer", "gpt-6.1-sol", "medium"),

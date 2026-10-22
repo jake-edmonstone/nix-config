@@ -107,46 +107,50 @@ in
     vim.g.engine_clangd_query_driver = ${builtins.toJSON engineClangdDrivers}
   '';
 
-  home.packages = with pkgs; [
-    python3 # Keep the CLI without the scientific Python/Jupyter environment.
-    # Keep the command-line toolchain in lockstep with Neovim's clangd.
-    # Clang 22 handles this machine's GCC 15 / C++23 projects correctly.
-    llvmPackages_22.clang-tools
-    gdb
-    netcat-openbsd
-    trash-cli
-    flatbuffers # provides flatc
-    flatbuffersLanguageServer
-    fcat
-  ];
+  home = {
+    packages = with pkgs; [
+      python3 # Keep the CLI without the scientific Python/Jupyter environment.
+      # Keep the command-line toolchain in lockstep with Neovim's clangd.
+      # Clang 22 handles this machine's GCC 15 / C++23 projects correctly.
+      llvmPackages_22.clang-tools
+      gdb
+      netcat-openbsd
+      trash-cli
+      flatbuffers # provides flatc
+      flatbuffersLanguageServer
+      fcat
+    ];
 
-  # Bazel's outputs and action cache are large and fully rebuildable. The
-  # engine documents this /scratch layout; keeping it here prevents a future
-  # Home Manager switch from silently returning them to the small root disk.
-  home.file.".bazelrc" = {
-    force = true;
-    text = ''
-      startup --output_user_root=/scratch/bazel-cache
-      build --disk_cache=/scratch/bazel-disk-cache
-      build --experimental_disk_cache_gc_max_size=500G
-    '';
-  };
+    file = {
+      # Bazel's outputs and action cache are large and fully rebuildable. The
+      # engine documents this /scratch layout; keeping it here prevents a future
+      # Home Manager switch from silently returning them to the small root disk.
+      ".bazelrc" = {
+        force = true;
+        text = ''
+          startup --output_user_root=/scratch/bazel-cache
+          build --disk_cache=/scratch/bazel-disk-cache
+          build --experimental_disk_cache_gc_max_size=500G
+        '';
+      };
 
-  # Private clangd settings for the GTS engine and sibling Git worktrees.
-  # Keep the toolchain override out of the source tree and unrelated projects.
-  home.file.".config/clangd/config.yaml" = {
-    force = true;
-    text = ''
-      If:
-        PathMatch: '/scratch/dev/engine(-[^/]*)?/.*'
-      CompileFlags:
-        Add:
-          # Avoid a Clang recovery-AST mangling crash in persist.h. This
-          # keeps background indexing on, but drops invalid expressions
-          # instead of preserving them for editor features.
-          - -Xclang
-          - -fno-recovery-ast
-    '';
+      # Private clangd settings for the GTS engine and sibling Git worktrees.
+      # Keep the toolchain override out of the source tree and unrelated projects.
+      ".config/clangd/config.yaml" = {
+        force = true;
+        text = ''
+          If:
+            PathMatch: '/scratch/dev/engine(-[^/]*)?/.*'
+          CompileFlags:
+            Add:
+              # Avoid a Clang recovery-AST mangling crash in persist.h. This
+              # keeps background indexing on, but drops invalid expressions
+              # instead of preserving them for editor features.
+              - -Xclang
+              - -fno-recovery-ast
+        '';
+      };
+    };
   };
 
   programs = {

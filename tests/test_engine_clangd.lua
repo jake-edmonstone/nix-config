@@ -35,11 +35,11 @@ assert(server.cmd_env.EXISTING == "preserved")
 assert(server.cmd_env.XDG_CACHE_HOME == "/scratch/dev/.cache")
 
 local launches = {}
-vim.lsp.rpc.start = function(command, dispatchers, process_options)
+rawset(vim.lsp.rpc, "start", function(command, dispatchers, process_options)
   local launch = { command = command, dispatchers = dispatchers, options = process_options }
   table.insert(launches, launch)
   return launch
-end
+end)
 
 for _, path in ipairs({ "/scratch/dev/engine", "/scratch/dev/engine-ticket", "/scratch/dev/engine-ticket/" }) do
   local dispatchers = {}

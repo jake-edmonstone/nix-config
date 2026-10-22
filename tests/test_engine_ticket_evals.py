@@ -1,14 +1,14 @@
-import json
 import argparse
-from pathlib import Path
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
-from engine_ticket_evals import runner
 import test_engine_ticket_workflow as fixtures
+from engine_ticket_evals import runner
 
 
 class HarnessTests(unittest.TestCase):
@@ -19,6 +19,13 @@ class HarnessTests(unittest.TestCase):
 
     def baseline(self):
         return {"head": "a", "branch": "master", "index": "", "patch": "", "files": [], "untracked": {}}
+
+    def test_workflow_rejects_missing_module_spec_or_loader(self):
+        for spec in (None, mock.Mock(loader=None)):
+            with self.subTest(spec=spec), mock.patch.object(
+                runner.importlib.util, "spec_from_file_location", return_value=spec
+            ), self.assertRaisesRegex(ImportError, "Cannot load the workflow helper"):
+                runner.workflow()
 
     def test_grader_checks_state_not_success_claims(self):
         before = self.baseline()
@@ -96,11 +103,14 @@ class HarnessTests(unittest.TestCase):
     def test_rpc_handles_multiple_buffered_messages_and_errors(self):
         program = "import json,sys; req=json.loads(input()); print(json.dumps({'method':'notice'})+'\\n'+json.dumps({'id':req['id'],'result':{'ok':True}}),flush=True); req=json.loads(input()); print(json.dumps({'id':req['id'],'error':{'message':'failure'}}),flush=True)"
         rpc = runner.Rpc([sys.executable, "-c", program], self.root / "trace", self.root / "stderr", 3)
+        received = []
+        rpc.on_event = received.append
         try:
             self.assertEqual(rpc.request("first", {}), {"ok": True})
             with self.assertRaises(RuntimeError):
                 rpc.request("second", {})
             self.assertEqual(len(rpc.events), 3)
+            self.assertEqual(received, rpc.events)
             requests = [json.loads(line) for line in (self.root / "trace.requests.jsonl").read_text().splitlines()]
             self.assertEqual([request["method"] for request in requests], ["first", "second"])
         finally:
@@ -121,6 +131,11 @@ class HarnessTests(unittest.TestCase):
 
 
 class PilotTests(unittest.TestCase):
+    root: Path
+    engine: Path
+    data: Path
+    key: str
+
     setUp = fixtures.WorkflowTests.setUp
     git = fixtures.WorkflowTests.git
     invocation = fixtures.WorkflowTests.invocation

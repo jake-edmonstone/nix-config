@@ -1,16 +1,17 @@
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
 import unittest
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAVIGATION = (ROOT / "modules/tmux.nix").read_text().split(
     "# Smart pane switching", 1)[1].split("# Pop-ups", 1)[0]
-CHECK = re.search(r'is_vim="(.*?)"\n', NAVIGATION, re.S).group(1)
+MATCH = re.search(r'is_vim="(.*?)"\n', NAVIGATION, re.DOTALL)
+assert MATCH is not None
+CHECK = MATCH.group(1)
 
 
 class TmuxNavigationTests(unittest.TestCase):
@@ -26,7 +27,7 @@ class TmuxNavigationTests(unittest.TestCase):
     def detects(self, processes):
         result = subprocess.run(["sh", "-c", CHECK.replace("#{pane_tty}", "/dev/pts/test")],
                                 env=dict(self.env, NAV_PS_OUTPUT=processes),
-                                capture_output=True, text=True, timeout=5)
+                                capture_output=True, text=True, timeout=5, check=False)
         self.assertIn(result.returncode, (0, 1), result.stderr)
         return result.returncode == 0
 
@@ -64,7 +65,7 @@ class TmuxNavigationTests(unittest.TestCase):
                            check=True, capture_output=True, text=True, timeout=5)
             result = subprocess.run([*command, "source-file", "-"],
                                     input="# Smart pane switching" + NAVIGATION,
-                                    capture_output=True, text=True, timeout=5)
+                                    capture_output=True, text=True, timeout=5, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             for key in ("C-h", "C-j", "C-k", "C-l", "C-\\"):
                 result = subprocess.run([*command, "list-keys", "-T", "root", key],
@@ -73,7 +74,7 @@ class TmuxNavigationTests(unittest.TestCase):
                 self.assertIn("([^[:space:]]+/)?g?[.]?", result.stdout)
                 self.assertNotIn("if-shell -F", result.stdout)
         finally:
-            subprocess.run([*command, "kill-server"], capture_output=True, timeout=5)
+            subprocess.run([*command, "kill-server"], capture_output=True, timeout=5, check=False)
 
 
 if __name__ == "__main__":
