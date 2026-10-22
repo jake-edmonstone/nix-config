@@ -107,6 +107,8 @@ in
       bind-key -T prefix l send-keys -R C-l \; clear-history
 
       # Pop-ups
+      set -g popup-style 'fg=default,bg=default'
+      set -g popup-border-style 'fg=${palette.purple},bg=default'
       bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=${palette.purple}' -b rounded tmux-session-picker '${pickerColors}'
       bind w display-popup -w 80% -h 80% -d "#{pane_current_path}"
       unbind k
@@ -139,6 +141,7 @@ in
 
       set -g automatic-rename-format '#{?#{==:#{pane_current_command},codex-raw},codex,#{pane_current_command}}'
       set -g window-status-style fg=${statusMuted},bg=default
+      set -g window-status-current-style none
       set -g window-status-format ' #[fg=${statusMuted}]#I #[fg=${statusText}]#W '
       set -g window-status-current-format ' #[bg=#{@ACCENT},fg=${activeText},bold] #I:#W #[bg=default,fg=#{@ACCENT}]'
     '';

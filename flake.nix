@@ -46,24 +46,7 @@
       ...
     }:
     let
-      # TODO: temporary tmux 3.7 redraw regression workaround.
-      # tmux 3.7 through 3.7c causes Codex output to corrupt tmux popup
-      # rendering on this setup, especially flickering/cutting off the popup
-      # title border while Codex is streaming. Remove this overlay once nixpkgs
-      # ships a release containing the upstream redraw fix.
-      tmuxOverlay = _: prev: {
-        tmux = prev.tmux.overrideAttrs (_old: {
-          version = "3.6b";
-          src = prev.fetchFromGitHub {
-            owner = "tmux";
-            repo = "tmux";
-            rev = "refs/tags/3.6b";
-            hash = "sha256-iW4K/OxSVpxVkyI5Dy6lzwVf/8nXyjcHtL76Ezmxavc=";
-          };
-        });
-      };
-      codexOverlay = [ codex-cli.overlays.default ];
-      overlays = codexOverlay ++ [ tmuxOverlay ];
+      overlays = [ codex-cli.overlays.default ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits
       # for bare pkgs.nixfmt as a formatter. nixfmt-tree is the documented
