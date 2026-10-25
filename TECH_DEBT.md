@@ -3,6 +3,25 @@
 Temporary workarounds and blocked updates in this configuration. Keep the
 corresponding `TODO` comments in the code until each item is resolved.
 
+## Nix MCP server dependency compatibility
+
+**Status:** Application-scoped workaround verified on macOS on 2026-10-24:
+full configuration evaluation, package build, MCP initialization, and tool discovery passed.
+
+The locked nixpkgs revision selects MCP SDK 2.x, but FastMCP 3.4.7 requires
+MCP 1.x. Consequently, `fastmcp-slim` is marked broken and prevents evaluation
+of the configuration through `programs.mcp.servers.nixos.command`.
+
+- Temporary code: `mcpNixos` in `modules/codex.nix` uses nixpkgs' `mcp_1`
+  within a Python package scope used only by `mcp-nixos`. The global Python
+  environment is unchanged; broken-package checks remain enabled.
+- Upstream: [nixpkgs#563493: update FastMCP to 4.0.10](https://github.com/NixOS/nixpkgs/pull/563493).
+  [nixpkgs#577109](https://github.com/NixOS/nixpkgs/pull/577109) discusses the
+  MCP 1.x workaround and the risks of mixing SDK versions in a shared scope.
+- Once the locked nixpkgs package works without the override, remove
+  `mcpNixos` and its `TODO`, restore `${pkgs.mcp-nixos}/bin/mcp-nixos` as the
+  server command, and verify MCP startup/tool discovery before removing this entry.
+
 ## Sioyek macOS packaging
 
 **Status:** Local workaround verified on macOS 27.0.1 on 2026-10-04; waiting

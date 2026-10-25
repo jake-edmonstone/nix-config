@@ -8,6 +8,13 @@
 let
   home = config.home.homeDirectory;
   theme = import ../theme.nix;
+  # TODO: remove once nixpkgs fastmcp supports MCP 2.x (nixpkgs#563493).
+  # Keep the compatible SDK scoped to this application, not global Python.
+  mcpNixos = pkgs.mcp-nixos.override {
+    python3Packages = pkgs.python3Packages.overrideScope (_: prev: {
+      mcp = prev.mcp_1;
+    });
+  };
   chromeTheme = palette: {
     accent = palette.pink;
     contrast = 60;
@@ -30,7 +37,7 @@ in
   programs.mcp = {
     enable = true;
     servers.nixos = {
-      command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
+      command = "${mcpNixos}/bin/mcp-nixos";
     };
   };
 
