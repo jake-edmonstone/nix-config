@@ -1,8 +1,7 @@
 {
   description = "Jake's system configuration";
 
-  # Run ./install.sh for first-time macOS setup, or ./install-alma.sh on the
-  # GTS AlmaLinux host.
+  # Run ./install.sh for first-time macOS setup.
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -59,10 +58,6 @@
       formatter.aarch64-darwin = formatterFor "aarch64-darwin";
       formatter.x86_64-linux = formatterFor "x86_64-linux";
 
-      # Expose the locked Home Manager CLI so install-alma.sh can bootstrap
-      # without fetching an unrelated Home Manager revision.
-      packages.x86_64-linux.home-manager = home-manager.packages.x86_64-linux.default;
-
       # Bootstrap with the CLI from the same locked nix-darwin input.
       packages.aarch64-darwin.darwin-rebuild = nix-darwin.packages.aarch64-darwin.darwin-rebuild;
 
@@ -90,16 +85,5 @@
           }
         ];
       };
-
-      homeConfigurations."jedmonstone@jedmonstone-dev.striketechnologies.com" =
-        home-manager.lib.homeManagerConfiguration
-          {
-            pkgs = import nixpkgs {
-              system = "x86_64-linux";
-              inherit overlays;
-              config.allowUnfree = true;
-            };
-            modules = [ ./hosts/gts ];
-          };
     };
 }
