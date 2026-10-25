@@ -97,25 +97,30 @@ does not contain the watcher commit, so the nightly override is still required.
 
 ## tmux 3.7 popup redraw regression
 
-**Status:** Fixed on tmux `master`; waiting for a release containing the fix to
-reach nixpkgs.
+**Status:** Stock tmux 3.8 trial prepared on 2026-10-24. The locked nixpkgs
+contains 3.8 and its isolated navigation/configuration tests pass. Interactive
+Ghostty verification during Codex streaming is still required; the existing
+tmux server has not been restarted.
 
 tmux 3.7 through 3.7c corrupts or repeatedly redraws the title border of tmux
-popups while Codex is streaming output. The configuration therefore pins tmux
-3.6b, the latest maintenance release from the unaffected 3.6 series. This matches
+popups while Codex is streaming output. The configuration previously pinned
+tmux 3.6b, a maintenance release from the unaffected 3.6 series. This matches
 [tmux#5336](https://github.com/tmux/tmux/issues/5336): scrolling or full-region
 redraws in a pane behind `display-popup` unnecessarily repaint the popup.
 
-- Temporary code: `tmuxOverlay` in `flake.nix`.
+- Trial code: `flake.nix` now uses stock nixpkgs tmux, with a `TODO` pending
+  visual verification. Neither flake inputs nor the Neovim pin were updated.
 - Upstream fix:
   [tmux@824a072](https://github.com/tmux/tmux/commit/824a07290f853a97219ee2624a46c0aada246efb),
   developed through [tmux#5398](https://github.com/tmux/tmux/pull/5398).
-- tmux 3.7c was released on 2026-08-17, but does not contain the fix. Its
-  `screen_redraw_update()` still marks an existing overlay for repaint on every
-  redraw, and neither its commit range nor `CHANGES` includes the master fix.
-  As of 2026-09-07, nixpkgs unstable packages 3.7c, so updating nixpkgs does not
-  remove the need for the 3.6b pin.
-- When nixpkgs ships a tmux release containing the fix, remove the overlay,
-  rebuild, restart the tmux server, and test the session picker while Codex is
-  actively generating text. Keep the pin if the popup title still flickers or
-  is cut off.
+- tmux 3.7c does not contain the fix; 3.8 does. Removing the pin makes the next
+  rebuild install 3.8, but does not replace an already-running 3.6b server.
+- After rebuilding, coordinate a server migration without killing active work.
+  First test an isolated 3.8 server with the usual config and session picker
+  while Codex streams. Check the title border, clipping, flicker and navigation
+  responsiveness. Only retire this entry and its `TODO` after the visual test
+  passes on the normal setup.
+- If the issue recurs, restore the previous `tmuxOverlay` from Git history
+  (tag `3.6b`, source hash `sha256-iW4K/OxSVpxVkyI5Dy6lzwVf/8nXyjcHtL76Ezmxavc=`)
+  and retain this entry with the test result. Navigation detection is independent
+  of the version trial and should remain process-based.

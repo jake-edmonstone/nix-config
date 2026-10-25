@@ -17,13 +17,7 @@ vim.keymap.set("n", "==", function()
 end, { desc = "Indent whole file", silent = true })
 
 -- Spell fix: single key, replaces ZZ/ZQ which are redundant with :w/:q
-vim.keymap.set("n", "Z", function()
-  local word = vim.fn.expand("<cword>")
-  local suggestions = vim.fn.spellsuggest(word, 1)
-  if #suggestions > 0 then
-    vim.cmd.normal({ "ciw" .. suggestions[1], bang = true })
-  end
-end, { silent = true, desc = "Replace with first spelling suggestion" })
+vim.keymap.set("n", "Z", "1z=", { silent = true, desc = "Replace with first spelling suggestion" })
 
 -- center cursor after half-page scroll
 vim.keymap.set("n", "<C-u>", "<C-u>zz", { silent = true, desc = "Half-page up (centered)" })

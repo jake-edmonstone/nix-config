@@ -15,7 +15,7 @@ in
       disableStartupPopups = true;
       promptToReturnFromSubprocess = false;
       gui = {
-        wrapLinesInStagingView = false;
+        wrapLinesInDiffView = false;
         theme = {
           activeBorderColor = [
             palette.pink

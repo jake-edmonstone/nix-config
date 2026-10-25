@@ -1,7 +1,7 @@
 _:
 
 let
-  palette = (import ../theme.nix).palette;
+  inherit (import ../theme.nix) palette;
 in
 
 {

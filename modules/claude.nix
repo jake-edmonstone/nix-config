@@ -21,6 +21,13 @@ let
 in
 
 {
+  # Claude's LSP plugins need these on its PATH, independently of Neovim's
+  # wrapper-local dependencies. Nix shares the same package store paths.
+  home.packages = with pkgs; [
+    lua-language-server
+    pyright
+  ];
+
   programs.claude-code = {
     enable = true;
     context = lib.mkDefault ../config/claude/CLAUDE.md;

@@ -97,15 +97,20 @@ in
       bind c new-window -c "#{pane_current_path}"
 
       # Smart pane switching with awareness of Vim splits, SSH, and fzf
-      is_vim='#{m/r:^(g?(view|vim|vimdiff|nvim|nvimdiff|lvim)|fzf|ssh|mosh)$,#{pane_current_command}}'
-      bind-key -n 'C-h' if-shell -F "$is_vim" 'send-keys C-h'  'select-pane -L'
-      bind-key -n 'C-j' if-shell -F "$is_vim" 'send-keys C-j'  'select-pane -D'
-      bind-key -n 'C-k' if-shell -F "$is_vim" 'send-keys C-k'  'select-pane -U'
-      bind-key -n 'C-l' if-shell -F "$is_vim" 'send-keys C-l'  'select-pane -R'
-      bind-key -n C-\\ if-shell -F "$is_vim" 'send-keys C-\\' 'select-pane -l'
+      # Upstream vim-tmux-navigator detection handles child/wrapped editors.
+      # It scans the whole tty, so running background editors can also match.
+      is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
+        | grep -iqE '^[^TXZ ]+ +([^[:space:]]+/)?g?[.]?(view|l?n?vim?x?|fzf|ssh|mosh)(diff)?(-wrapped)?$'"
+      bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
+      bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
+      bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
+      bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
+      bind-key -n C-\\ if-shell "$is_vim" 'send-keys C-\\' 'select-pane -l'
       bind-key -T prefix l send-keys -R C-l \; clear-history
 
       # Pop-ups
+      set -g popup-style 'fg=default,bg=default'
+      set -g popup-border-style 'fg=${palette.purple},bg=default'
       bind s display-popup -E -w 80% -h 70% -T ' Sessions ' -S 'fg=${palette.purple}' -b rounded tmux-session-picker '${pickerColors}'
       bind w display-popup -w 80% -h 80% -d "#{pane_current_path}"
       unbind k
@@ -138,6 +143,7 @@ in
 
       set -g automatic-rename-format '#{?#{==:#{pane_current_command},codex-raw},codex,#{pane_current_command}}'
       set -g window-status-style fg=${statusMuted},bg=default
+      set -g window-status-current-style none
       set -g window-status-format ' #[fg=${statusMuted}]#I #[fg=${statusText}]#W '
       set -g window-status-current-format ' #[bg=#{@ACCENT},fg=${activeText},bold] #I:#W #[bg=default,fg=#{@ACCENT}]'
     '';

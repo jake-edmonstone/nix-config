@@ -10,6 +10,11 @@ COURSE_PATHS=(
   #academic/undergrad/4A/pmath352
 )
 
+if (( ${#COURSE_PATHS[@]} == 0 )); then
+  echo "No courses selected; nothing to update."
+  exit 0
+fi
+
 tmpdir="$(mktemp -d)"
 source_tmps=()
 cleanup() {

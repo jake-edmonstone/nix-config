@@ -9,6 +9,8 @@
     ../modules/sioyek.nix
   ];
 
+  targets.darwin.currentHostDefaults.NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;
+
   home = {
     sessionVariables = {
       NH_SHOW_ACTIVATION_LOGS = "1";

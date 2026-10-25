@@ -2,35 +2,37 @@
 
 local api = vim.api
 local ns = api.nvim_create_namespace("mini_files_git")
-local palette = vim.g.theme
-
-api.nvim_set_hl(0, "MiniFilesGitAdd", { fg = palette.green })
-api.nvim_set_hl(0, "MiniFilesGitChange", { fg = palette.cyan })
-api.nvim_set_hl(0, "MiniFilesGitDelete", { fg = palette.red })
+local function setHighlights()
+  local palette = vim.g.theme
+  api.nvim_set_hl(0, "MiniFilesGitNormal", { fg = palette.foreground })
+  api.nvim_set_hl(0, "MiniFilesGitStaged", { fg = palette.green })
+  api.nvim_set_hl(0, "MiniFilesGitUnstaged", { fg = palette.red })
+  api.nvim_set_hl(0, "MiniFilesGitMixed", { fg = palette.yellow })
+  api.nvim_set_hl(0, "MiniFilesGitIgnored", { fg = palette.comment })
+end
 
 local gitStatusCache = {}
 local pendingFetches = {}
 local cacheTimeout = 10
 
-local statusMap = {
-  [" M"] = { symbol = "•", hlGroup = "MiniFilesGitChange" },
-  ["M "] = { symbol = "✹", hlGroup = "MiniFilesGitChange" },
-  ["MM"] = { symbol = "≠", hlGroup = "MiniFilesGitChange" },
-  ["A "] = { symbol = "+", hlGroup = "MiniFilesGitAdd" },
-  ["AA"] = { symbol = "≈", hlGroup = "MiniFilesGitAdd" },
-  [" D"] = { symbol = "-", hlGroup = "MiniFilesGitDelete" },
-  ["D "] = { symbol = "-", hlGroup = "MiniFilesGitDelete" },
-  ["AM"] = { symbol = "⊕", hlGroup = "MiniFilesGitChange" },
-  ["AD"] = { symbol = "-•", hlGroup = "MiniFilesGitChange" },
-  ["R "] = { symbol = "→", hlGroup = "MiniFilesGitChange" },
-  ["RM"] = { symbol = "→", hlGroup = "MiniFilesGitChange" },
-  ["RD"] = { symbol = "→", hlGroup = "MiniFilesGitChange" },
-  ["U "] = { symbol = "‖", hlGroup = "MiniFilesGitChange" },
-  ["UU"] = { symbol = "⇄", hlGroup = "MiniFilesGitAdd" },
-  ["UA"] = { symbol = "⊕", hlGroup = "MiniFilesGitAdd" },
-  ["??"] = { symbol = "?", hlGroup = "MiniFilesGitAdd" },
-  ["!!"] = { symbol = "!", hlGroup = "MiniFilesGitChange" },
-}
+local function staging(status)
+  local index = status:sub(1, 1)
+  return index ~= " " and index ~= "U" and index ~= "?", status:sub(2, 2) ~= " "
+end
+
+local function filenameHighlight(status, directoryState)
+  if status == "!!" then
+    return "MiniFilesGitIgnored"
+  end
+  local staged, unstaged = staging(status)
+  if directoryState then
+    staged, unstaged = directoryState.staged, directoryState.unstaged
+  end
+  if staged then
+    return unstaged and "MiniFilesGitMixed" or "MiniFilesGitStaged"
+  end
+  return "MiniFilesGitNormal"
+end
 
 local statusPriority = {
   ["UU"] = 6,
@@ -61,7 +63,7 @@ local function fetchGitStatus(cwd, callback)
   )
 end
 
-local function addStatus(gitStatusMap, untrackedDirs, status, filePath)
+local function addStatus(gitStatusMap, untrackedDirs, directoryStates, status, filePath)
   local isUntrackedDir = status == "??" and filePath:sub(-1) == "/"
   filePath = filePath:gsub("/$", "")
   if isUntrackedDir then
@@ -75,8 +77,13 @@ local function addStatus(gitStatusMap, untrackedDirs, status, filePath)
     return
   end
   local priority = statusPriority[status] or 0
+  local staged, unstaged = staging(status)
   for i = 1, #parts - 1 do
     local currentKey = table.concat(parts, "/", 1, i)
+    local state = directoryStates[currentKey] or { staged = false, unstaged = false }
+    state.staged = state.staged or staged
+    state.unstaged = state.unstaged or unstaged
+    directoryStates[currentKey] = state
     local existing = gitStatusMap[currentKey]
     if not existing or (statusPriority[existing] or 0) < priority then
       gitStatusMap[currentKey] = status
@@ -87,6 +94,7 @@ end
 local function parseGitStatus(content)
   local gitStatusMap = {}
   local untrackedDirs = {}
+  local directoryStates = {}
   local offset = 1
 
   while offset <= #content do
@@ -100,7 +108,7 @@ local function parseGitStatus(content)
     local status = record:sub(1, 2)
     local filePath = record:sub(4)
     if #status == 2 and filePath ~= "" then
-      addStatus(gitStatusMap, untrackedDirs, status, filePath)
+      addStatus(gitStatusMap, untrackedDirs, directoryStates, status, filePath)
 
       -- In porcelain -z output, rename/copy records are followed by the old
       -- path as a second NUL-delimited field. The first path is the destination.
@@ -114,7 +122,7 @@ local function parseGitStatus(content)
     end
   end
 
-  return { statusMap = gitStatusMap, untrackedDirs = untrackedDirs }
+  return { statusMap = gitStatusMap, untrackedDirs = untrackedDirs, directoryStates = directoryStates }
 end
 
 local function updateMiniWithGit(buf_id, cwd, gitStatus)
@@ -139,6 +147,7 @@ local function updateMiniWithGit(buf_id, cwd, gitStatus)
     local lines = api.nvim_buf_get_lines(buf_id, 0, nlines, false)
     local statusMapByPath = gitStatus.statusMap or {}
     local untrackedDirs = gitStatus.untrackedDirs or {}
+    local directoryStates = gitStatus.directoryStates or {}
 
     for i = 1, nlines do
       local entry = MiniFiles.get_fs_entry(buf_id, i)
@@ -162,20 +171,33 @@ local function updateMiniWithGit(buf_id, cwd, gitStatus)
         end
       end
 
-      if status then
-        local info = statusMap[status] or { symbol = "✗", hlGroup = "NonText" }
-        api.nvim_buf_set_extmark(buf_id, ns, i - 1, 0, {
-          sign_text = info.symbol,
-          sign_hl_group = info.hlGroup,
-          priority = 2,
+      local line = lines[i]
+      local _, prefixStart = line:find("^/%d+/")
+      local _, nameStart = line:find("^/%d+/.-/")
+      if prefixStart and nameStart then
+        local nameHighlight = status and filenameHighlight(status, directoryStates[relativePath])
+          or "MiniFilesGitNormal"
+        local first, second = (status or "  "):sub(1, 1), (status or "  "):sub(2, 2)
+        local firstHighlight = first == " " and nameHighlight or "MiniFilesGitStaged"
+        local secondHighlight = second == " " and nameHighlight or "MiniFilesGitUnstaged"
+        if status == "??" then
+          firstHighlight = "MiniFilesGitUnstaged"
+        elseif status == "!!" then
+          firstHighlight, secondHighlight = "MiniFilesGitIgnored", "MiniFilesGitIgnored"
+        end
+        api.nvim_buf_set_extmark(buf_id, ns, i - 1, prefixStart, {
+          virt_text = { { first, firstHighlight }, { second, secondHighlight }, { " ", nameHighlight } },
+          virt_text_pos = "inline",
+          hl_mode = "replace",
+          right_gravity = false,
         })
 
-        local line = lines[i]
-        local _, nameStart = line:find("^/%d+/.-/")
-        if nameStart then
+        if status then
           api.nvim_buf_set_extmark(buf_id, ns, i - 1, nameStart, {
             end_col = #line,
-            hl_group = info.hlGroup,
+            hl_group = nameHighlight,
+            priority = 4097,
+            right_gravity = false,
           })
         end
       end
@@ -239,6 +261,12 @@ local M = {}
 
 function M.setup()
   local group = api.nvim_create_augroup("MiniFiles_git", { clear = true })
+  setHighlights()
+
+  api.nvim_create_autocmd("ColorScheme", {
+    group = group,
+    callback = setHighlights,
+  })
 
   api.nvim_create_autocmd("User", {
     group = group,
