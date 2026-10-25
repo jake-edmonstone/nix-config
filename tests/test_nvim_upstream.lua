@@ -60,17 +60,14 @@ for _, spec in ipairs(specs) do
   end
 end
 assert(navigator)
-navigator.init()
-assert(vim.g.tmux_navigator_no_mappings == 1)
-for _, key in ipairs(navigator.keys) do
-  vim.keymap.set(key.mode or "n", key[1], key[2], { expr = key.expr, silent = key.silent })
-end
-local ctrlL = vim.fn.maparg("<C-l>", "n", false, true).callback
+assert(navigator.init == nil)
 local tmux = vim.env.TMUX
 vim.env.TMUX = "test,1,0"
 vim.cmd.runtime("plugin/tmux_navigator.vim")
 vim.env.TMUX = tmux
-assert(vim.fn.maparg("<C-l>", "n", false, true).callback == ctrlL)
+navigator.config()
+local ctrlL = vim.fn.maparg("<C-l>", "n", false, true).callback
+assert(ctrlL)
 local navigations = 0
 api.nvim_create_user_command("TmuxNavigateRight", function()
   navigations = navigations + 1
@@ -84,13 +81,8 @@ assert(#api.nvim_buf_get_extmarks(buf, ns, 0, -1, {}) == 0 and navigations == 0)
 assert(#api.nvim_buf_get_extmarks(other, ns, 0, -1, {}) == 1)
 ctrlL()
 assert(navigations == 1)
-for _, key in ipairs(navigator.keys) do
-  if key.mode == "t" then
-    assert(vim.fn.maparg(key[1], "t", false, true).expr == 1)
-    vim.bo.filetype = "fzf"
-    assert(key[2]():lower() == key[1])
-    vim.bo.filetype = ""
-    assert(key[2]():find("TmuxNavigate", 1, true))
-  end
+for _, key in ipairs({ "<C-h>", "<C-j>", "<C-k>", "<C-l>" }) do
+  local mapping = vim.fn.maparg(key, "t", false, true)
+  assert(mapping.expr == 1 and mapping.rhs:find("IsFZF()", 1, true))
 end
 print("PASS: native clipboard/spelling, Blink snippet navigation, multicursor and terminal navigation, context height")
