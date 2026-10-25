@@ -47,8 +47,6 @@
       ...
     }:
     let
-      # TODO: confirm stock tmux 3.8 fixes popup flicker in Ghostty while Codex
-      # streams, then retire the trial entry in TECH_DEBT.md. Previously pinned 3.6b.
       overlays = [ codex-cli.overlays.default ];
       # `nix fmt` — RFC 166 formatter wrapped in treefmt so `nix fmt .` works
       # without the "passing directories is deprecated" warning current nix emits
