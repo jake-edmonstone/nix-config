@@ -46,8 +46,10 @@ in
   '';
 
   targets.darwin.defaults."com.superlogical.rex" = {
-    # Captured from Rex's preferences after selecting the material in its UI.
+    # Captured from Rex's saved UI preferences; do not include runtime state.
+    "rex.agents.names-sessions" = true;
     "Workspace.interfaceStyle" = "blendTheme";
+    "Workspace.usesPaneGlass" = false;
     "Workspace.paneDensity" = "compact";
     # Rex forces headers on when its sidebar is hidden; floats may ignore this.
     "Workspace.showsPaneHeaders" = false;
@@ -55,6 +57,9 @@ in
     "Workspace.terminalFontPointSize" = 18.0;
     "Workspace.terminalCellHeightPercent" = 8.0;
     "Workspace.terminalCursorStyleForced" = false;
+    "Workspace.terminalCopyOnSelect" = true;
+    "Workspace.terminalSelectionRoundedCorners" = true;
+    "Workspace.terminalSmoothScrolling" = true;
     "Workspace.cursorShadersEnabled" = true;
     "Workspace.cursorShader" = "warp";
   };

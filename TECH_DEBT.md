@@ -75,13 +75,16 @@ endpoint. The CLI reads the latter directly; an empty file skips Sentry setup.
 - Remove the workaround once the daemon opt-out reliably disables CLI Sentry
   too. Confirm with a rebuild from a directory without an existing `.cache`.
 
-## Neovim nightly for watcher-backed autoread
+## Neovim nightly for watcher-backed autoread and multicursors
 
-**Status:** Waiting for the required Neovim commit to reach the nixpkgs Neovim
-package.
+**Status:** Waiting for both watcher-backed autoread and native multicursor
+support to reach the nixpkgs Neovim package.
 
 Neovim nightly is used so `autoread` notices external edits through file-system
-watchers without custom polling autocommands.
+watchers without custom polling autocommands. The configuration also relies on
+native multicursors (the `Q` workflow and `nvim.multicursor` namespace used by
+the Ctrl-L clearing binding). Both features must be available before leaving
+nightly, including when evaluating Neovim 0.13 as a replacement.
 
 As of 2026-09-07, nixpkgs unstable packages Neovim 0.12.5. Its release branch
 does not contain the watcher commit, so the nightly override is still required.
@@ -91,7 +94,9 @@ does not contain the watcher commit, so the nightly override is still required.
   - `flake.nix`: the `neovim-nightly-overlay` input and Darwin package override.
   - `config/nvim/lua/config/autocmds.lua`: the commented pre-watcher fallback.
   - `config/nvim/lua/config/options.lua`: the `autoread` dependency note.
-- Once nixpkgs Neovim contains the change, remove the nightly input, output
+- Once nixpkgs Neovim contains both features, verify external-edit autoread
+  and native multicursor creation/clearing with the existing Neovim tests.
+  Then remove the nightly input, output
   argument, and package override; delete the commented fallback and its `TODO`.
   Keep `vim.o.autoread = true`, but remove its nightly-specific comment.
 

@@ -73,6 +73,7 @@ in
       approvals_reviewer = "user";
 
       tui = {
+        alternate_screen = "never";
         vim_mode_default = true;
         theme = if theme.isDark then "dracula" else "catppuccin-latte";
       };
