@@ -73,7 +73,9 @@ in
       approvals_reviewer = "user";
 
       tui = {
-        alternate_screen = "never";
+        # TODO: restore "never" for terminal-owned scrollback once diff color
+        # leakage is fixed; see TECH_DEBT.md.
+        alternate_screen = "always";
         vim_mode_default = true;
         theme = if theme.isDark then "dracula" else "catppuccin-latte";
       };

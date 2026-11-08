@@ -127,6 +127,34 @@ was marked completed on 2026-11-03.
   override and its `TODO`. Restart Neovim in Rex and verify `:checkhealth snacks`,
   an image-file preview, and inline images before removing this entry.
 
+## Codex diff colors leaking in Rex
+
+**Status:** Tracking visual corruption as of 2026-11-08; related Rex reports
+remain active, with no confirmed fix. Codex's alternate screen is temporarily
+enabled as a possible mitigation; its effect on the corruption is not yet verified.
+
+Codex's red/green diff highlighting sometimes appears on unrelated content.
+A Rex report describes Codex colors changing after scrolling; two others
+describe tool-output backgrounds spreading beyond their intended blocks in Pi.
+These suggest a terminal rendering/state issue, but do not establish whether
+our symptom originates in Rex, its underlying terminal engine, or Codex.
+
+- Upstream: [Incorrect coloring behavior in Codex](https://discord.com/channels/1546797889009881158/1564380403790520320)
+  (2026-10-26).
+- Related: [Pi tool background color bleeds across entire terminal pane](https://discord.com/channels/1546797889009881158/1568083488488558632)
+  (2026-11-06), and [Terminal background colors bleed into the entire viewport](https://discord.com/channels/1546797889009881158/1565286750769647647)
+  (2026-10-29). These are similar symptoms in another application, not confirmed
+  duplicates of the Codex issue.
+- Temporary code: `programs.codex.settings.tui.alternate_screen = "always"`
+  in `modules/codex.nix` lets Codex own its screen and scrolling instead of
+  relying on the terminal's scrollback. This is unrelated to the Neovim-only
+  Snacks detection override above.
+- Revisit these reports and Rex/Codex release notes for a confirmed fix.
+  Restore `alternate_screen = "never"` for terminal-owned scrollback, rebuild,
+  and restart Codex. Verify diff colors stay confined to the correct lines
+  while generating, scrolling, and resizing, then remove the `TODO` and this
+  entry.
+
 ## Rex Timewarrior status integration
 
 **Status:** Blocked by missing custom status-widget support in Rex as of
