@@ -27,8 +27,8 @@ Appearance defaults currently cover the UI-selected blendTheme material,
 compact panes, hidden pane headers, Maple Mono NF at 18pt, 8% additional cell height,
 application-controlled cursor shape and the experimental Warp trail.
 They also preserve copy-on-selection, rounded selections, smooth scrolling,
-pane glass disabled, and permission for agents to name new sessions. Agent
-naming changes apply to new agent sessions, not existing ones.
+pane glass disabled, and agent session naming disabled. Naming changes apply
+to new agent sessions, not existing ones.
 Check these in Settings after switching. The trail is not the custom Ghostty
 GLSL shader. Disable it in modules/rex.nix if it feels slow, especially in Low
 Power Mode, or causes sustained idle CPU use.

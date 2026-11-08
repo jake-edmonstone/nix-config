@@ -47,7 +47,7 @@ in
 
   targets.darwin.defaults."com.superlogical.rex" = {
     # Captured from Rex's saved UI preferences; do not include runtime state.
-    "rex.agents.names-sessions" = true;
+    "rex.agents.names-sessions" = false;
     "Workspace.interfaceStyle" = "blendTheme";
     "Workspace.usesPaneGlass" = false;
     "Workspace.paneDensity" = "compact";
