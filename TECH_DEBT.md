@@ -130,8 +130,8 @@ was marked completed on 2026-11-03.
 ## Codex diff colors leaking in Rex
 
 **Status:** Tracking visual corruption as of 2026-11-08; related Rex reports
-remain active, with no confirmed fix. Codex's alternate screen is temporarily
-enabled as a possible mitigation; its effect on the corruption is not yet verified.
+remain active, with no confirmed fix or local workaround. Terminal-owned
+scrollback remains preferred despite the visual issue.
 
 Codex's red/green diff highlighting sometimes appears on unrelated content.
 A Rex report describes Codex colors changing after scrolling; two others
@@ -145,15 +145,14 @@ our symptom originates in Rex, its underlying terminal engine, or Codex.
   (2026-11-06), and [Terminal background colors bleed into the entire viewport](https://discord.com/channels/1546797889009881158/1565286750769647647)
   (2026-10-29). These are similar symptoms in another application, not confirmed
   duplicates of the Codex issue.
-- Temporary code: `programs.codex.settings.tui.alternate_screen = "always"`
-  in `modules/codex.nix` lets Codex own its screen and scrolling instead of
-  relying on the terminal's scrollback. This is unrelated to the Neovim-only
-  Snacks detection override above.
+- No configuration workaround is installed. Keep
+  `programs.codex.settings.tui.alternate_screen = "never"` in
+  `modules/codex.nix` for terminal-owned scrollback. This is unrelated to the
+  Neovim-only Snacks detection override above.
 - Revisit these reports and Rex/Codex release notes for a confirmed fix.
-  Restore `alternate_screen = "never"` for terminal-owned scrollback, rebuild,
-  and restart Codex. Verify diff colors stay confined to the correct lines
-  while generating, scrolling, and resizing, then remove the `TODO` and this
-  entry.
+  Verify diff colors stay confined to the correct lines while generating,
+  scrolling, and resizing with terminal-owned scrollback before removing
+  this entry. No scrollback configuration change is needed on resolution.
 
 ## Rex Timewarrior status integration
 
