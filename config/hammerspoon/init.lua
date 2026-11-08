@@ -21,7 +21,7 @@ local POLL_TIMEOUT = 10 -- give up after 10 seconds
 
 -- App registry: key = hotkey letter, value = bundle ID
 local apps = {
-	t = "com.mitchellh.ghostty",
+	t = "com.superlogical.rex",
 	b = "com.apple.Safari",
 	-- e = "com.microsoft.Outlook",
 	e = "com.apple.mail",
@@ -38,7 +38,7 @@ local apps = {
 
 -- Split views: key = hotkey letter, value = {left, right, ratio}
 local splits = {
-	n = { left = "com.mitchellh.ghostty", right = "net.imput.helium", ratio = 0.6 },
+	n = { left = "com.superlogical.rex", right = "net.imput.helium", ratio = 0.6 },
 }
 
 local function getUsableWindow(app)

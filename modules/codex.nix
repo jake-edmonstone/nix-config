@@ -39,12 +39,17 @@ in
     servers.nixos = {
       command = "${mcpNixos}/bin/mcp-nixos";
     };
+    servers.superlogical = {
+      url = "https://www.superlogical.com/rex/community-mcp";
+    };
   };
 
   programs.codex = {
     enable = true;
     package = pkgs.codex;
     enableMcpIntegration = true;
+    # Preserve Codex-written state such as hook trust; declared settings still win.
+    mutableSettings = true;
 
     context = ''
       Use `trash` for filesystem deletions so files remain recoverable. Never use `rm` or `unlink`.

@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   repo = "${config.home.homeDirectory}/nix-config/scripts";
@@ -7,6 +12,7 @@ let
   scripts = lib.attrNames (lib.filterAttrs (_: t: t == "regular") (builtins.readDir ../scripts));
 in
 {
+  home.packages = [ pkgs.jq ];
   # Mutable symlinks — tracked scripts can be edited without rebuilding. New
   # scripts appear in the flake and deploy after they are added to Git's index.
   home.file = lib.listToAttrs (

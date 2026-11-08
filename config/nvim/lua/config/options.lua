@@ -13,10 +13,9 @@ vim.o.relativenumber = false
 vim.o.swapfile = false
 vim.o.clipboard = "unnamedplus"
 
--- Over SSH, route the + register through OSC 52 directly so yanks work inside
--- AND outside tmux. Nvim's auto-fallback is skipped when 'clipboard' is set,
--- so we wire it explicitly here. The terminal (Ghostty, etc.) receives the
--- OSC 52 escape and writes to the Mac clipboard.
+-- Over SSH, route the + register through OSC 52 directly. Nvim's auto-fallback
+-- is skipped when 'clipboard' is set; the terminal receives the escape and
+-- writes to the local clipboard.
 if vim.env.SSH_TTY then
   vim.g.clipboard = "osc52"
 end

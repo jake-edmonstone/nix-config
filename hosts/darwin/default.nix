@@ -183,7 +183,7 @@ in
 
   security.pam.services.sudo_local = {
     touchIdAuth = true;
-    reattach = true; # Touch ID works inside tmux via pam_reattach
+    reattach = true; # Preserve Touch ID across detached terminal sessions.
   };
 
   environment.shells = [ pkgs.fish ];

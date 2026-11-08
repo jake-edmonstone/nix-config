@@ -13,7 +13,6 @@ in
   imports = [
     ../modules/git.nix
     ../modules/fish.nix
-    ../modules/tmux.nix
     ../modules/fzf.nix
     ../modules/lazygit.nix
     ../modules/neovim.nix

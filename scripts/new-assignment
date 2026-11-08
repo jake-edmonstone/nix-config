@@ -61,8 +61,20 @@ done
 [[ "$course" =~ ^[A-Za-z0-9._-]+$ ]] || die "invalid --course (allowed: letters, numbers, dot, underscore, hyphen)"
 [[ "$assignment_raw" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "invalid --assignment (expected an integer or decimal identifier)"
 
-require_cmd tmux
+require_cmd rex
 require_cmd nvim
+require_cmd jq
+require_cmd trash
+
+clients="$(rex --autostart=false client ls --json)" || die "cannot contact Rex; open Rex first"
+client="$(jq -er --arg target "${REX_CLIENT:-}" '
+  [.clients[] | select(.connection_state == "connected"
+    and .info.kind == "app" and .info.platform == "macos"
+    and .principal.transport == "unix")
+    | select($target == "" or .client_id == $target or .info.label == $target)]
+  | if length == 1 then .[0].client_id
+    else error("open one local Rex app, or set REX_CLIENT to its full client ID") end
+' <<<"$clients")" || die "cannot select Rex client; open Rex and check REX_CLIENT"
 
 work_root="${TYPST_ROOT:-$HOME/work}"
 undergrad_root="$work_root/academic/undergrad"
@@ -113,13 +125,18 @@ else
 fi
 
 target_dir="$assignments_root/$folder_name"
+session_name_raw="typst-${course}-a${assignment_norm}"
+session_name="$(printf '%s' "$session_name_raw" | tr -c '[:alnum:]' '_')"
+sessions="$(rex --autostart=false ls --json)" || die "cannot list Rex sessions"
+jq -e --arg label "$session_name" '[.sessions[] | select(.label == $label)] | length == 0' \
+  <<<"$sessions" >/dev/null || die "Rex session label already exists: $session_name"
 if ! mkdir "$target_dir"; then
   die "target already exists or could not be created: $target_dir"
 fi
 
 cleanup_partial_assignment() {
   local status=$?
-  rm -rf -- "$target_dir"
+  trash "$target_dir" || true
   exit "$status"
 }
 trap cleanup_partial_assignment EXIT
@@ -265,25 +282,9 @@ for idx in "${!qnums[@]}"; do
   fi
 done
 
-# File generation is complete. Preserve the assignment if tmux or Neovim
+# File generation is complete. Preserve the assignment if Rex or Neovim
 # cannot be started; those launch failures should not destroy valid work.
 trap - EXIT
-
-session_name_raw="typst-${course}-a${assignment_norm}"
-session_name="$(printf '%s' "$session_name_raw" | tr -c '[:alnum:]' '_')"
-session_pane="$session_name:1.1"
-printf -v open_command 'cd %q && nvim %q' "$target_dir" "$main_file"
-printf -v nvim_command 'nvim %q' "$main_file"
-
-if tmux has-session -t "$session_name" 2>/dev/null; then
-  tmux send-keys -t "$session_pane" C-c
-  tmux send-keys -t "$session_pane" "$open_command" C-m
-else
-  tmux new-session -d -s "$session_name" -c "$target_dir" "${SHELL:-/bin/sh}"
-  tmux send-keys -t "$session_pane" "$nvim_command" C-m
-fi
-
-tmux has-session -t "$session_name" 2>/dev/null || die "tmux session was not created: $session_name"
 
 printf 'new-assignment: target directory: %s\n' "$target_dir"
 if [[ ${#created_files[@]} -gt 0 ]]; then
@@ -292,11 +293,12 @@ if [[ ${#created_files[@]} -gt 0 ]]; then
     printf '  %s\n' "$f"
   done
 fi
-printf 'new-assignment: tmux session: %s\n' "$session_name"
+created="$(rex new "$session_name" -c "$target_dir" --json -- "$(command -v nvim)" "$main_file")" ||
+  die "could not create Rex session; generated files preserved at $target_dir"
+session_id="$(jq -er '.session_id | select(type == "string" and length > 0)' <<<"$created")" ||
+  die "Rex returned no session ID; files preserved at $target_dir; inspect rex ls before retrying"
+printf 'new-assignment: Rex session: %s (%s)\n' "$session_name" "$session_id"
 printf 'new-assignment: opening main file: %s\n' "$main_file"
 
-if [[ -n "${TMUX:-}" ]]; then
-  tmux switch-client -t "$session_name:1"
-else
-  tmux attach -t "$session_name"
-fi
+rex --autostart=false -C "$client" 'do' session.select "session_id=$session_id" ||
+  die "could not display $session_id; files preserved; select it in Rex or enable Remote Control"

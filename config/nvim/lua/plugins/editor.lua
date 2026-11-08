@@ -98,34 +98,4 @@ return {
       },
     },
   },
-
-  {
-    "christoomey/vim-tmux-navigator",
-    cmd = {
-      "TmuxNavigateLeft",
-      "TmuxNavigateDown",
-      "TmuxNavigateUp",
-      "TmuxNavigateRight",
-      "TmuxNavigatePrevious",
-      "TmuxNavigatorProcessList",
-    },
-    keys = {
-      { "<c-h>", desc = "Navigate left (tmux)" },
-      { "<c-j>", desc = "Navigate down (tmux)" },
-      { "<c-k>", desc = "Navigate up (tmux)" },
-      { "<c-l>", desc = "Clear multicursors or navigate right (tmux)" },
-      { "<c-\\>", desc = "Navigate previous (tmux)" },
-    },
-    config = function()
-      -- Override after the plugin installs its defaults; keep terminal mappings upstream.
-      vim.keymap.set("n", "<C-l>", function()
-        local ns = vim.api.nvim_get_namespaces()["nvim.multicursor"]
-        if ns and #vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { limit = 1 }) > 0 then
-          vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
-        else
-          vim.cmd.TmuxNavigateRight()
-        end
-      end, { silent = true, desc = "Clear multicursors or navigate right (tmux)" })
-    end,
-  },
 }

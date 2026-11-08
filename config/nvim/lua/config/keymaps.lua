@@ -1,3 +1,13 @@
+-- Clear native multicursors before using the usual right-window navigation.
+vim.keymap.set("n", "<C-l>", function()
+  local ns = vim.api.nvim_get_namespaces()["nvim.multicursor"]
+  if ns and #vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { limit = 1 }) > 0 then
+    vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+  else
+    vim.cmd.wincmd("l")
+  end
+end, { silent = true, desc = "Clear multicursors or navigate right" })
+
 -- move cursor back after yank in visual mode
 vim.keymap.set("v", "y", "ygv<Esc>", { silent = true, desc = "Yank without moving cursor" })
 

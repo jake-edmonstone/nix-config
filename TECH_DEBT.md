@@ -94,3 +94,55 @@ does not contain the watcher commit, so the nightly override is still required.
 - Once nixpkgs Neovim contains the change, remove the nightly input, output
   argument, and package override; delete the commented fallback and its `TODO`.
   Keep `vim.o.autoread = true`, but remove its nightly-specific comment.
+
+## Rex Timewarrior status integration
+
+**Status:** Blocked by missing custom status-widget support in Rex as of
+2026-11-07.
+
+The former tmux status line displayed the active Timewarrior tag and current
+interval duration, refreshed every five seconds. The native Rex
+setup has no equivalent persistent status display. Rex's program-status
+protocol is not a general-purpose replacement for a configurable status bar.
+
+- Upstream: [UI Modification Hooks](https://discord.com/channels/1546797889009881158/1567573986416656404),
+  an active request for custom status text, colors, and Lua-driven UI modules.
+- No workaround is installed: avoid nesting tmux solely for its status line
+  or dedicating a Rex pane to a timer. The tmux module and its status helper
+  have been removed as part of the migration to Rex; Timewarrior remains installed.
+- Revisit when Rex supports custom status widgets. Add a native display of
+  the active tag and elapsed time, with no idle polling when practical, then
+  remove this entry after verifying start/stop updates and refresh cost.
+
+## Rex keyboard copy mode
+
+**Status:** Native vi-style copy mode is an accepted feature request, not yet
+shipped as of 2026-11-07.
+
+Rex cannot currently replace tmux's keyboard-driven scrollback navigation,
+selection, and copying. The tmux configuration has been removed, so this is a
+known workflow gap in the native Rex setup.
+
+- Upstream: [terminal vi copy mode support](https://discord.com/channels/1546797889009881158/1558373508117958686).
+- No workaround is installed. Community scripts open `rex capture` output in
+  a floating Neovim pane, but this is a snapshot, not native copy mode; for
+  alternate-screen applications it contains only the visible screen.
+- Revisit when native support ships. Configure an entry shortcut and verify
+  keyboard scrolling, selection, clipboard copying, and cancellation in both
+  shell scrollback and fullscreen programs before removing this entry.
+
+## Rex tab-number hints with Ctrl-B
+
+**Status:** Tracking an upstream feature request as of 2026-11-07; no local
+workaround or code change is needed now.
+
+Holding Cmd reveals Rex's tab-number hints, but they do not appear while a
+tmux-style key sequence is pending. Our Ctrl-B then 1-9 bindings select tabs
+through `client.tab.goto`, so it would be useful to see the corresponding
+numbers immediately after pressing Ctrl-B.
+
+- Upstream: [Consistent tab numbering](https://discord.com/channels/1546797889009881158/1566437212436955156),
+  which requests showing the number legend while a key sequence is pending.
+- Check future Rex updates for this behavior. Verify that Ctrl-B reveals
+  the hints and that their numbers match Ctrl-B then 1-9 in the active tab
+  layout. Enable a native option if required, then remove this entry.

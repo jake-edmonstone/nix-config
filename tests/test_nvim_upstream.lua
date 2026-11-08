@@ -2,7 +2,7 @@ local root = assert(arg[1])
 local api = vim.api
 local lazy = vim.fn.stdpath("data") .. "/lazy/"
 vim.opt.runtimepath:append(root .. "/config/nvim")
-for _, plugin in ipairs({ "blink.cmp", "LuaSnip", "vim-tmux-navigator" }) do
+for _, plugin in ipairs({ "blink.cmp", "LuaSnip" }) do
   vim.opt.runtimepath:append(lazy .. plugin)
 end
 
@@ -51,38 +51,27 @@ end))
 luasnip.unlink_current()
 
 local specs = dofile(root .. "/config/nvim/lua/plugins/editor.lua")
-local navigator
 for _, spec in ipairs(specs) do
-  if spec[1] == "christoomey/vim-tmux-navigator" then
-    navigator = spec
-  elseif spec[1] == "nvim-treesitter/nvim-treesitter-context" then
+  if spec[1] == "nvim-treesitter/nvim-treesitter-context" then
     assert(spec.opts.max_lines == 0)
   end
 end
-assert(navigator)
-assert(navigator.init == nil)
-local tmux = vim.env.TMUX
-vim.env.TMUX = "test,1,0"
-vim.cmd.runtime("plugin/tmux_navigator.vim")
-vim.env.TMUX = tmux
-navigator.config()
 local ctrlL = vim.fn.maparg("<C-l>", "n", false, true).callback
 assert(ctrlL)
-local navigations = 0
-api.nvim_create_user_command("TmuxNavigateRight", function()
-  navigations = navigations + 1
-end, { force = true })
+vim.cmd.vsplit()
+vim.cmd.wincmd("l")
+local right = api.nvim_get_current_win()
+vim.cmd.wincmd("h")
+local left = api.nvim_get_current_win()
 local ns = api.nvim_create_namespace("nvim.multicursor")
 local other = api.nvim_create_buf(false, true)
 api.nvim_buf_set_extmark(other, ns, 0, 0, {})
 api.nvim_buf_set_extmark(buf, ns, 0, 0, {})
 ctrlL()
-assert(#api.nvim_buf_get_extmarks(buf, ns, 0, -1, {}) == 0 and navigations == 0)
+assert(#api.nvim_buf_get_extmarks(buf, ns, 0, -1, {}) == 0 and api.nvim_get_current_win() == left)
 assert(#api.nvim_buf_get_extmarks(other, ns, 0, -1, {}) == 1)
 ctrlL()
-assert(navigations == 1)
-for _, key in ipairs({ "<C-h>", "<C-j>", "<C-k>", "<C-l>" }) do
-  local mapping = vim.fn.maparg(key, "t", false, true)
-  assert(mapping.expr == 1 and mapping.rhs:find("IsFZF()", 1, true))
-end
-print("PASS: native clipboard/spelling, Blink snippet navigation, multicursor and terminal navigation, context height")
+assert(api.nvim_get_current_win() == right)
+print(
+  "PASS: native clipboard/spelling, Blink snippet navigation, multicursor clearing, window navigation, context height"
+)
