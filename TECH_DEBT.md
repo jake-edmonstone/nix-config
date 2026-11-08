@@ -100,6 +100,33 @@ does not contain the watcher commit, so the nightly override is still required.
   argument, and package override; delete the commented fallback and its `TODO`.
   Keep `vim.o.autoread = true`, but remove its nightly-specific comment.
 
+## Snacks image detection in Rex
+
+**Status:** Temporary detection override added on 2026-11-08; no Rex-specific
+Snacks issue or PR was found when checked that day.
+
+Snacks' supported-terminal table does not include Rex, so it reports missing
+Kitty graphics support and cannot select inline Unicode-placeholder rendering.
+Rex supports both capabilities: [maintainer confirmation](https://discord.com/channels/1546797889009881158/1565841234893733959).
+A separate [large-image rendering bug](https://discord.com/channels/1546797889009881158/1567145399859544156)
+was marked completed on 2026-11-03.
+
+- Temporary code: the Snacks plugin `init` in
+  `config/nvim/lua/plugins/editor.lua` sets `SNACKS_GHOSTTY=true` only when
+  `TERM_PROGRAM=rex`. This is the
+  [documented environment-detection override](https://github.com/folke/snacks.nvim/blob/main/docs/image.md),
+  applied inside Neovim, not a global change to terminal identity. It selects
+  both graphics and placeholder support; `image.force` alone would not enable
+  inline rendering.
+- The health check also unconditionally looks for a `kitty`, `wezterm`, or
+  `ghostty` executable. That error can remain despite working images; do not
+  install an unused terminal just to silence it. Detection will report Ghostty
+  while the override is active.
+- Upstream: [Snacks terminal detection](https://github.com/folke/snacks.nvim/blob/main/lua/snacks/image/terminal.lua).
+- Once the installed Snacks version recognizes Rex natively, remove the
+  override and its `TODO`. Restart Neovim in Rex and verify `:checkhealth snacks`,
+  an image-file preview, and inline images before removing this entry.
+
 ## Rex Timewarrior status integration
 
 **Status:** Blocked by missing custom status-widget support in Rex as of

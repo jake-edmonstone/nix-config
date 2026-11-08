@@ -24,6 +24,13 @@ return {
 
   {
     "folke/snacks.nvim",
+    init = function()
+      -- TODO: remove once Snacks recognizes Rex's Kitty graphics and placeholders.
+      -- Use the documented detection override; see TECH_DEBT.md.
+      if vim.env.TERM_PROGRAM == "rex" then
+        vim.env.SNACKS_GHOSTTY = "true"
+      end
+    end,
     opts = {
       explorer = { enabled = false },
       -- Inline image rendering (PDF / LaTeX / Mermaid / raster) via Kitty
