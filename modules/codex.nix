@@ -86,6 +86,7 @@ in
         "${home}/work/academic/undergrad/4A/cs350".trust_level = "trusted";
         "${home}/work/research/drp-presentation".trust_level = "trusted";
         "${home}/projects/jake-edmonstone.github.io".trust_level = "trusted";
+        "${home}/projects/poker-study".trust_level = "trusted";
         "${home}/projects".trust_level = "trusted";
         "${home}/misc".trust_level = "trusted";
         "${home}".trust_level = "trusted";
