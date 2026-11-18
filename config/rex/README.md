@@ -27,8 +27,11 @@ Appearance defaults currently cover the UI-selected blendTheme material,
 compact panes, hidden pane headers, Maple Mono NF at 18pt, 8% additional cell height,
 application-controlled cursor shape and the experimental Warp trail.
 They also preserve copy-on-selection, rounded selections, smooth scrolling,
-pane glass disabled, and agent session naming disabled. Naming changes apply
-to new agent sessions, not existing ones.
+pane glass disabled, inactive-pane fading (`both`), standard inactive-window
+pane styles, themed shell icons, up to three tab icons without tinting, tabs
+filling available space, processes shown in Activity, the experimental quick
+switcher, and agent session naming disabled. Naming changes apply to new agent
+sessions, not existing ones.
 Check these in Settings after switching. The trail is not the custom Ghostty
 GLSL shader. Disable it in modules/rex.nix if it feels slow, especially in Low
 Power Mode, or causes sustained idle CPU use.
@@ -69,8 +72,10 @@ them. These are native Rex shortcuts, with no process-detection plugin or
 Neovim-to-Rex CLI handoff. Neovim's internal splits are navigated separately;
 Ctrl-L clears native multicursors before moving to the right editor split.
 
-No custom status widget or tmux vi copy mode is implemented. Use Rex's native
-copy/paste shortcuts.
+Ctrl-B then [ enters Rex's native copy mode (currently Bleeding Edge).
+Use h/j/k/l to move, v/V/Ctrl-V to select, y or Enter to copy and exit, and
+Esc or q to cancel. Cmd-Shift-C remains available as the default entry shortcut.
+No custom status widget is implemented.
 
 ## Restart and Reboot
 

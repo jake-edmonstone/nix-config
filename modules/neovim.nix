@@ -48,7 +48,7 @@ in
         shellcheck
         shfmt
         tinymist
-        haskell-language-server
+        # haskell-language-server
         websocat
         typstyle # conform.nvim formatter for typst (LazyVim typst extra)
         tectonic # modern LaTeX engine (~80 MB vs texlive's ~4 GB)

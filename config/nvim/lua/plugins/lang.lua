@@ -17,7 +17,7 @@ return {
       ensure_installed = {
         "cpp",
         "typst",
-        "haskell",
+        -- "haskell",
         -- Needed by Snacks.image for inline image rendering inside docs
         -- written in these languages (checkhealth flags them when missing).
         -- `norg` omitted: not in nvim-treesitter's registry (maintained by
@@ -106,11 +106,11 @@ return {
   },
 
   -- Haskell
-  {
-    "mrcjkb/haskell-tools.nvim",
-    version = "^6",
-    ft = "haskell",
-  },
+  -- {
+  --   "mrcjkb/haskell-tools.nvim",
+  --   version = "^6",
+  --   ft = "haskell",
+  -- },
 
   -- LLVM TableGen / IR
   {

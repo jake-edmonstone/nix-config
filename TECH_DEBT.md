@@ -53,28 +53,6 @@ when switching apps with Hyper.
   package renders PDFs and exposes a valid application PID. Test both opening
   from Finder/Hyper-P and hiding when switching to another app.
 
-## Determinate Nix creates project-local Sentry caches
-
-**Status:** Upstream issue open as of 2026-09-19; explicitly disable the CLI's
-Sentry endpoint as well as the daemon's.
-
-Root-owned `.cache/nix/sentry` directories recur in project directories.
-[DeterminateSystems/nix-src#626](https://github.com/DeterminateSystems/nix-src/issues/626)
-reports the same problem with missing or empty home-directory environment data.
-On this machine, `telemetry.sentry.endpoint = null` was applied in
-`/etc/determinate/config.json`, but `/etc/nix/sentry-endpoint` still held a live
-endpoint. The CLI reads the latter directly; an empty file skips Sentry setup.
-
-- Temporary code: `environment.etc."nix/sentry-endpoint"` in
-  `hosts/darwin/default.nix`.
-- First activation requires moving the existing unmanaged endpoint file to
-  `/etc/nix/sentry-endpoint.before-nix-darwin`.
-- After a Determinate installer/upgrade, verify the endpoint remains empty;
-  the installer may replace files it originally owned. Reapply the configuration
-  if necessary. This is a declarative workaround, not an upstream fix.
-- Remove the workaround once the daemon opt-out reliably disables CLI Sentry
-  too. Confirm with a rebuild from a directory without an existing `.cache`.
-
 ## Neovim nightly for watcher-backed autoread and multicursors
 
 **Status:** Waiting for both watcher-backed autoread and native multicursor
@@ -154,6 +132,36 @@ our symptom originates in Rex, its underlying terminal engine, or Codex.
   scrolling, and resizing with terminal-owned scrollback before removing
   this entry. No scrollback configuration change is needed on resolution.
 
+## Rex scrollback restoration and agent resumption
+
+**Status:** Tracking missing native recovery features as of 2026-11-08.
+Agent resumption has a maintainer-confirmed plan, but no announced release date;
+scrollback restoration is requested, not confirmed as scheduled.
+
+Rex already restores sessions, tabs, splits, names, IDs, and working directories
+after a server restart, as shipped in
+[preview.23 on 2026-10-29](https://discord.com/channels/1546797889009881158/1547349572299395172/1565448157691777055).
+Terminals return as fresh shells: their previous scrollback and running programs
+are not restored, and agent conversations are not automatically resumed.
+
+- Scrollback: [Restore sessions after a server restart](https://discord.com/channels/1546797889009881158/1565461187422846977)
+  explicitly requests saving previous terminal output. Its layout portion has
+  shipped; that does not mean scrollback restoration has shipped too.
+- Agent resumption: [Native Coding Agent Lifecycle Tracking and Crash/Restart Auto-Resume](https://discord.com/channels/1546797889009881158/1565927087624429599).
+  On 2026-10-31, Mitchell confirmed there is a plan. This would launch agents
+  against saved conversations, not recover arbitrary interrupted computation.
+- Related: [Layout restore discussion](https://discord.com/channels/1546797889009881158/1565463064038604908)
+  includes community proposals for live server upgrades that preserve terminal
+  connections and running processes. This is distinct from restoring after a
+  reboot; it is not confirmed as implemented in Rex.
+- No local recovery scripts are installed. Keep the server running to preserve
+  live work; closing the GUI alone does not require restoration.
+- Revisit Rex release notes and these discussions for native support. Test in
+  a disposable session that scrollback survives a server restart and Codex
+  resumes the correct saved conversation in its original pane and directory.
+  Do not test by stopping the server while unrelated work is running. Resolve
+  each missing capability independently; remove this entry when both work.
+
 ## Rex Timewarrior status integration
 
 **Status:** Blocked by missing custom status-widget support in Rex as of
@@ -173,35 +181,32 @@ protocol is not a general-purpose replacement for a configurable status bar.
   the active tag and elapsed time, with no idle polling when practical, then
   remove this entry after verifying start/stop updates and refresh cost.
 
-## Rex keyboard copy mode
+## Rex tab-number hints and toolbar reveal with Ctrl-B
 
-**Status:** Native vi-style copy mode is an accepted feature request, not yet
-shipped as of 2026-11-07.
-
-Rex cannot currently replace tmux's keyboard-driven scrollback navigation,
-selection, and copying. The tmux configuration has been removed, so this is a
-known workflow gap in the native Rex setup.
-
-- Upstream: [terminal vi copy mode support](https://discord.com/channels/1546797889009881158/1558373508117958686).
-- No workaround is installed. Community scripts open `rex capture` output in
-  a floating Neovim pane, but this is a snapshot, not native copy mode; for
-  alternate-screen applications it contains only the visible screen.
-- Revisit when native support ships. Configure an entry shortcut and verify
-  keyboard scrolling, selection, clipboard copying, and cancellation in both
-  shell scrollback and fullscreen programs before removing this entry.
-
-## Rex tab-number hints with Ctrl-B
-
-**Status:** Tracking an upstream feature request as of 2026-11-07; no local
-workaround or code change is needed now.
+**Status:** Rechecked on 2026-11-17. Prefix-triggered tab-number hints remain
+an active feature request; no native prefix-triggered toolbar reveal setting
+was found. No local workaround is installed.
 
 Holding Cmd reveals Rex's tab-number hints, but they do not appear while a
 tmux-style key sequence is pending. Our Ctrl-B then 1-9 bindings select tabs
 through `client.tab.goto`, so it would be useful to see the corresponding
 numbers immediately after pressing Ctrl-B.
+When the toolbar is set to Show on hover, pressing Ctrl-B should also reveal
+it so those numbers and tabs are visible without moving the pointer.
 
 - Upstream: [Consistent tab numbering](https://discord.com/channels/1546797889009881158/1566437212436955156),
   which requests showing the number legend while a key sequence is pending.
+- Related: [Extend hold key number hints for windows](https://discord.com/channels/1546797889009881158/1561730133327618088)
+  also discusses custom modifiers and prefix-based tab navigation.
+- [Show key sequence hints](https://www.superlogical.com/rex/docs/reference/mac-settings#keyboard)
+  lists possible next keys in a separate overlay; it is not a substitute for
+  numbers on the actual tabs. [Reveal Toolbar](https://www.superlogical.com/rex/docs/reference/mac-actions#action-client-toolbar-reveal)
+  (`client.toolbar.reveal`, normally Cmd-Option-T) can reveal an auto-hidden
+  toolbar manually. No dedicated upstream request for revealing it on prefix
+  was found; the linked numbering requests do not establish that it is planned.
 - Check future Rex updates for this behavior. Verify that Ctrl-B reveals
-  the hints and that their numbers match Ctrl-B then 1-9 in the active tab
-  layout. Enable a native option if required, then remove this entry.
+  the toolbar in Show on hover mode and displays tab-number hints matching
+  Ctrl-B then 1-9 in the active tab layout. Check that the toolbar hides again
+  after completing or cancelling the sequence. Enable native options if
+  required, and resolve the two capabilities independently before removing
+  this entry.

@@ -51,8 +51,16 @@ in
     "Workspace.interfaceStyle" = "blendTheme";
     "Workspace.usesPaneGlass" = false;
     "Workspace.paneDensity" = "compact";
+    "Workspace.inactivePaneFadeMode" = "both";
+    "Workspace.usesStandardInactiveWindowPaneStyles" = true;
     # Rex forces headers on when its sidebar is hidden; floats may ignore this.
     "Workspace.showsPaneHeaders" = false;
+    "Workspace.shellIconTheme" = "themed";
+    "Workspace.tabIconCount" = 3;
+    "Workspace.tabIconTintMode" = "off";
+    "Workspace.tabsFillAvailableSpace" = true;
+    "Workspace.showsProcessesInActivity" = true;
+    "Workspace.experiments.usesNewQuickSwitcher" = true;
     "Workspace.terminalFontName" = "Maple Mono NF";
     "Workspace.terminalFontPointSize" = 18.0;
     "Workspace.terminalCellHeightPercent" = 8.0;

@@ -5,20 +5,20 @@ let
     ps: with ps; [
       numpy
       matplotlib
-      scikit-learn
-      torch
-      torchvision
+      # scikit-learn
+      # torch
+      # torchvision
       pandas
       playwright
-      nbclient
-      nbformat
-      jupyter
-      jupyterlab
-      jupyterlab-lsp
-      jupyterlab-vim
-      python-lsp-server
-      ipykernel
-      jupytext
+      # nbclient
+      # nbformat
+      # jupyter
+      # jupyterlab
+      # jupyterlab-lsp
+      # jupyterlab-vim
+      # python-lsp-server
+      # ipykernel
+      # jupytext
     ]
   );
 in

@@ -9,6 +9,7 @@ rex.bind("ctrl+b>-", "pane.split", { direction = "down" })
 rex.bind("ctrl+b>s", "session.switch")
 rex.bind("ctrl+b>w", "pane.new_floating")
 rex.bind("ctrl+b>z", "pane.zoom")
+rex.bind("ctrl+b>[", "pane.copy_mode.enter")
 -- Use Rex's native close and activity-based confirmation.
 rex.bind("ctrl+b>x", "client.close")
 rex.bind("ctrl+b>r", "client.config.reload")
