@@ -29,9 +29,9 @@ application-controlled cursor shape and the experimental Warp trail.
 They also preserve copy-on-selection, rounded selections, smooth scrolling,
 pane glass disabled, inactive-pane fading (`both`), standard inactive-window
 pane styles, themed shell icons, up to three tab icons without tinting, tabs
-filling available space, processes shown in Activity, the experimental quick
-switcher, and agent session naming disabled. Naming changes apply to new agent
-sessions, not existing ones.
+filling available space, and processes shown in Activity. The experimental
+quick switcher and agent session naming are disabled. Naming changes apply to
+new agent sessions, not existing ones.
 Check these in Settings after switching. The trail is not the custom Ghostty
 GLSL shader. Disable it in modules/rex.nix if it feels slow, especially in Low
 Power Mode, or causes sustained idle CPU use.

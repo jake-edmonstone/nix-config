@@ -60,7 +60,7 @@ in
     "Workspace.tabIconTintMode" = "off";
     "Workspace.tabsFillAvailableSpace" = true;
     "Workspace.showsProcessesInActivity" = true;
-    "Workspace.experiments.usesNewQuickSwitcher" = true;
+    "Workspace.experiments.usesNewQuickSwitcher" = false;
     "Workspace.terminalFontName" = "Maple Mono NF";
     "Workspace.terminalFontPointSize" = 18.0;
     "Workspace.terminalCellHeightPercent" = 8.0;
