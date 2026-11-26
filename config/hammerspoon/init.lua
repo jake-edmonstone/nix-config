@@ -18,6 +18,8 @@ local pendingTimer = nil
 
 local POLL_INTERVAL = 0.05 -- only used while an app is launching or reopening
 local POLL_TIMEOUT = 10 -- give up after 10 seconds
+local FOCUS_POLL_INTERVAL = 0.005
+local FOCUS_TIMEOUT = 0.5
 
 -- App registry: key = hotkey letter, value = bundle ID
 local apps = {
@@ -151,7 +153,23 @@ local function switchTo(bundleID)
 			return
 		end
 		target.win:maximize()
-		hideOthersExcept(bundleID)
+		if target.app:isFrontmost() then
+			hideOthersExcept(bundleID)
+			return
+		end
+
+		-- Activation can return before macOS hands off focus.
+		local deadline = hs.timer.absoluteTime() + FOCUS_TIMEOUT * 1000000000
+		pendingTimer = hs.timer.waitUntil(function()
+			return target.app:isFrontmost() or hs.timer.absoluteTime() >= deadline
+		end, function()
+			pendingTimer = nil
+			if target.app:isFrontmost() then
+				hideOthersExcept(bundleID)
+			else
+				log.wf("timed out waiting for %s to become frontmost", bundleID)
+			end
+		end, FOCUS_POLL_INTERVAL)
 	end)
 end
 

@@ -88,9 +88,8 @@ was marked completed on 2026-11-03.
 
 ## Codex diff colors leaking in Rex
 
-**Status:** Tracking visual corruption as of 2026-11-08; related Rex reports
-remain active, with no confirmed fix or local workaround. Terminal-owned
-scrollback remains preferred despite the visual issue.
+**Status:** Local workaround confirmed on 2026-11-21; no confirmed upstream
+fix. Keep tracking because we want to use program-colored padding.
 
 Codex's red/green diff highlighting sometimes appears on unrelated content.
 A Rex report describes Codex colors changing after scrolling; two others
@@ -104,40 +103,46 @@ our symptom originates in Rex, its underlying terminal engine, or Codex.
   (2026-11-06), and [Terminal background colors bleed into the entire viewport](https://discord.com/channels/1546797889009881158/1565286750769647647)
   (2026-10-29). These are similar symptoms in another application, not confirmed
   duplicates of the Codex issue.
-- No configuration workaround is installed. Keep
-  `programs.codex.settings.tui.alternate_screen = "never"` in
-  `modules/codex.nix` for terminal-owned scrollback. This is unrelated to the
-  Neovim-only Snacks detection override above.
+- Workaround: In Rex on macOS, set **Settings > Interface > Padding >
+  [Fill with program colors](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-padding-fill-with-program-colors)**
+  to **Off**. This stopped the bleed even though it affected content inside
+  the terminal, not just the margins.
+- Codex now owns scrollback via `tui.alternate_screen = "always"` in
+  `modules/codex.nix`. This is not a confirmed fix for the color bleed.
 - Revisit these reports and Rex/Codex release notes for a confirmed fix.
-  Verify diff colors stay confined to the correct lines while generating,
-  scrolling, and resizing with terminal-owned scrollback before removing
-  this entry. No scrollback configuration change is needed on resolution.
+  Turn **Fill with program colors** back on and verify diff colors stay
+  confined to the correct lines while generating, scrolling, and resizing
+  before removing this entry. Also retest with terminal-owned scrollback
+  (`tui.alternate_screen = "never"`), where the issue was observed.
 
 ## Rex scrollback restoration and agent resumption
 
-**Status:** Tracking missing native recovery features as of 2026-11-08.
-Agent resumption has a maintainer-confirmed plan, but no announced release date;
-scrollback restoration is requested, not confirmed as scheduled.
+**Status:** Rex shipped OSC 7577 program resume in Server `0.1.0-preview.25`
+on 2026-11-25, bundled with macOS `0.1.0-preview.35`. Waiting for Codex to
+support the protocol and, separately, for Rex to restore scrollback after a
+server restart.
 
 Rex already restores sessions, tabs, splits, names, IDs, and working directories
 after a server restart, as shipped in
 [preview.23 on 2026-10-29](https://discord.com/channels/1546797889009881158/1547349572299395172/1565448157691777055).
-Terminals return as fresh shells: their previous scrollback and running programs
-are not restored, and agent conversations are not automatically resumed.
+Terminals without a supported, trusted resume command return as fresh shells.
+Program resume launches a new process and does not restore terminal scrollback
+or recover arbitrary interrupted computation.
 
 - Scrollback: [Restore sessions after a server restart](https://discord.com/channels/1546797889009881158/1565461187422846977)
   explicitly requests saving previous terminal output. Its layout portion has
   shipped; that does not mean scrollback restoration has shipped too.
-- Agent resumption: [Native Coding Agent Lifecycle Tracking and Crash/Restart Auto-Resume](https://discord.com/channels/1546797889009881158/1565927087624429599).
-  On 2026-10-31, Mitchell confirmed there is a plan. This would launch agents
-  against saved conversations, not recover arbitrary interrupted computation.
+- Codex resumption: Rex supports the [OSC 7577 Program Resume Protocol](https://www.superlogical.com/rex/docs/build/program-resume)
+  and ships a Codex trust rule, but Codex does not yet report a resume command.
+  Claude Code already resumes via its Rex hook. See [Rex Session Restore](https://www.superlogical.com/rex/docs/features/session-restore).
 - Related: [Layout restore discussion](https://discord.com/channels/1546797889009881158/1565463064038604908)
   includes community proposals for live server upgrades that preserve terminal
   connections and running processes. This is distinct from restoring after a
   reboot; it is not confirmed as implemented in Rex.
 - No local recovery scripts are installed. Keep the server running to preserve
   live work; closing the GUI alone does not require restoration.
-- Revisit Rex release notes and these discussions for native support. Test in
+- Revisit Codex release notes for OSC 7577 support and Rex release notes for
+  scrollback restoration. Test in
   a disposable session that scrollback survives a server restart and Codex
   resumes the correct saved conversation in its original pane and directory.
   Do not test by stopping the server while unrelated work is running. Resolve
@@ -155,12 +160,29 @@ protocol is not a general-purpose replacement for a configurable status bar.
 
 - Upstream: [UI Modification Hooks](https://discord.com/channels/1546797889009881158/1567573986416656404),
   an active request for custom status text, colors, and Lua-driven UI modules.
+- Related: [Widgets?](https://discord.com/channels/1546797889009881158/1565714558062952459),
+  a request for persistent custom widgets across tabs and panes. Rex deferred
+  it on 2026-10-30 and mentioned future plans without giving a timeline.
 - No workaround is installed: avoid nesting tmux solely for its status line
   or dedicating a Rex pane to a timer. The tmux module and its status helper
   have been removed as part of the migration to Rex; Timewarrior remains installed.
 - Revisit when Rex supports custom status widgets. Add a native display of
   the active tag and elapsed time, with no idle polling when practical, then
   remove this entry after verifying start/stop updates and refresh cost.
+
+## Rex Back and Forward toggle missing with top tabs
+
+**Status:** Reproduced on macOS on 2026-11-24. The toggle is missing when
+the toolbar layout is Above, but the buttons work in that layout once enabled.
+
+- Workaround: In **Settings > Interface**, switch the toolbar layout to a
+  sidebar, enable **Show Back and Forward buttons**, then switch back to
+  **Above**. The arrows remain visible in the top toolbar.
+- Upstream: [Back and forward buttons are not supported for horizontal?](https://discord.com/channels/1546797889009881158/1574879519154770022)
+  is marked deferred. The [settings reference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-window-show-back-and-forward-buttons)
+  describes support in both the tab bar and the sidebar.
+- Remove this entry once the toggle can be changed directly with the toolbar
+  set to Above and the arrows still work there.
 
 ## Rex tab-number hints and toolbar reveal with Ctrl-B
 

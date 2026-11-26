@@ -59,14 +59,14 @@ in
     '';
 
     settings = {
-      model = "gpt-6.1-sol";
+      model = "gpt-6.2-sol";
       model_reasoning_effort = "high";
       sandbox_mode = "workspace-write";
       approval_policy = "on-request";
       approvals_reviewer = "user";
 
       tui = {
-        alternate_screen = "never";
+        alternate_screen = "always";
         vim_mode_default = true;
         theme = if theme.isDark then "dracula" else "catppuccin-latte";
       };
