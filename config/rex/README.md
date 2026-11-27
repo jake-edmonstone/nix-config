@@ -81,7 +81,9 @@ No custom status widget is implemented.
 
 Since preview.23, Rex saves sessions, tabs, splits, floating panes, names and
 IDs across server restarts. Terminals reopen as fresh shells in their saved
-working directories; running programs and scrollback are not restored.
+working directories unless they have a trusted OSC 7577 resume record.
+Neovim panes use a local bridge to restore buffers and layout, not unsaved
+text or terminal jobs. Terminal scrollback is not restored.
 Closing the app without stopping its server leaves running programs intact.
 No resurrect plugin is needed for basic layout restoration. See the
 [preview.23 release notes](https://discord.com/channels/1546797889009881158/1547349572299395172/1565448157691777055).

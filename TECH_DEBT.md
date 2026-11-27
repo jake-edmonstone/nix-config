@@ -139,14 +139,31 @@ or recover arbitrary interrupted computation.
   includes community proposals for live server upgrades that preserve terminal
   connections and running processes. This is distinct from restoring after a
   reboot; it is not confirmed as implemented in Rex.
-- No local recovery scripts are installed. Keep the server running to preserve
-  live work; closing the GUI alone does not require restoration.
+- Keep the server running to preserve live work; closing the GUI alone does
+  not require restoration. Neovim has a separate local workaround below.
 - Revisit Codex release notes for OSC 7577 support and Rex release notes for
   scrollback restoration. Test in
   a disposable session that scrollback survives a server restart and Codex
   resumes the correct saved conversation in its original pane and directory.
   Do not test by stopping the server while unrelated work is running. Resolve
   each missing capability independently; remove this entry when both work.
+
+## Local Neovim resume in Rex
+
+**Status:** Local OSC 7577 bridge pending native support in
+[neovim/neovim#42995](https://github.com/neovim/neovim/issues/42995).
+
+`config/nvim/lua/config/rex_resume.lua` writes private, per-instance layout
+snapshots under Neovim's state directory and reports `nvim -S <snapshot>`.
+`config/rex/init.lua` trusts only that command with a path under
+`~/.local/state/nvim/osc7577` (or the equivalent under `XDG_STATE_HOME`).
+LazyVim's Persistence sessions remain separate. The snapshots do not store
+unsaved text or restart terminal jobs, and are not automatically pruned.
+
+Once native support is in the configured Neovim build, verify in an isolated
+Rex server that separate panes resume twice with their own layouts and a
+deliberate quit does not reopen Neovim. Then remove the local bridge and
+replace or remove the Rex rule as required by the native implementation.
 
 ## Rex Timewarrior status integration
 

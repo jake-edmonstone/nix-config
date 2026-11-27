@@ -1,3 +1,9 @@
+-- TODO: revisit this rule when Neovim supports OSC 7577 natively (see TECH_DEBT.md).
+local state = os.getenv("XDG_STATE_HOME") or "~/.local/state"
+rex.set("resume.trust.nvim", {
+	command = { "nvim", "-S", rex.match.under(state .. "/nvim/osc7577") },
+})
+
 -- Native Rex sessions, tabs and panes.
 rex.bind("ctrl+p", "client.tab.previous")
 rex.bind("ctrl+n", "client.tab.next")
